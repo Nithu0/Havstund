@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Intranett — Havstund</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    body{background:var(--cream)}
+    .intra-top{background:var(--sea-deep);color:#fff;padding:18px 0}
+    .intra-top .wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+    .intra-top .logo{color:#fff}
+    .intra-top .logo span{color:var(--turq)}
+    .intra-top .who{margin-left:auto;font-size:14px;color:#cfe2e7;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+    .intra-top .who b{color:#fff}
+    .intra-top .btn{padding:9px 16px;font-size:14px}
+
+    .dash{padding:34px 0 70px}
+    .dash h2{margin-bottom:4px}
+    .dash .lead{margin-bottom:26px}
+
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:30px}
+    .kpi{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:20px 22px;box-shadow:var(--shadow)}
+    .kpi .label{font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);font-weight:700}
+    .kpi .val{font-size:32px;font-weight:800;color:var(--sea-deep);margin-top:8px;line-height:1}
+    .kpi .val small{font-size:15px;font-weight:600;color:var(--muted)}
+
+    .panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:24px 26px;box-shadow:var(--shadow);margin-bottom:24px}
+    .panel h3{margin-bottom:16px}
+    .panel .sub{color:var(--muted);font-size:14px;margin:-10px 0 16px}
+
+    /* Søylediagram */
+    .chart{display:flex;align-items:flex-end;gap:14px;height:200px;padding:8px 4px 0}
+    .bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end}
+    .bar{width:100%;max-width:54px;background:linear-gradient(180deg,var(--turq),var(--teal));
+      border-radius:8px 8px 0 0;min-height:4px;transition:height .4s ease;position:relative}
+    .bar .b-val{position:absolute;top:-22px;left:50%;transform:translateX(-50%);font-size:13px;font-weight:700;color:var(--sea-deep)}
+    .bar-label{font-size:12px;color:var(--muted);font-weight:600;text-align:center;white-space:nowrap}
+
+    /* Tabeller */
+    .tbl{width:100%;border-collapse:collapse;font-size:14px}
+    .tbl th{text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);
+      padding:10px 12px;border-bottom:2px solid var(--line)}
+    .tbl td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+    .tbl tr:last-child td{border-bottom:none}
+    .tbl .belop{font-weight:700;color:var(--sea-deep);white-space:nowrap}
+    .tbl select{padding:7px 10px;font-size:13px;border-radius:8px;width:auto;min-width:130px}
+    .pill{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+      padding:3px 10px;border-radius:20px}
+    .pill.forespurt{background:#fff0dd;color:var(--clay-d)}
+    .pill.bekreftet{background:#d8f3f6;color:#0a6f7a}
+    .pill.fullfort{background:#dfeede;color:#2c6b35}
+    .pill.avlyst{background:#f3ddd8;color:#9a3b2c}
+
+    /* Innhold-editor */
+    .content-row{display:grid;grid-template-columns:200px 1fr auto;gap:14px;align-items:start;
+      padding:14px 0;border-bottom:1px solid var(--line)}
+    .content-row:last-child{border-bottom:none}
+    .content-row .nokkel{font-weight:700;color:var(--sea-deep);font-size:14px;padding-top:10px;word-break:break-word}
+    .content-row textarea{min-height:48px}
+    .content-row .save-cell{padding-top:2px}
+    .content-row .btn{padding:9px 16px;font-size:13px}
+    .saved-tag{font-size:12px;color:#2c6b35;font-weight:700;margin-left:8px}
+
+    .links-row{display:flex;gap:14px;flex-wrap:wrap}
+    .muted-note{color:var(--muted);font-size:14px}
+    .loading{color:var(--muted);font-size:15px;padding:18px 0}
+
+    @media(max-width:900px){
+      .kpis{grid-template-columns:repeat(2,1fr)}
+      .content-row{grid-template-columns:1fr}
+    }
+    @media(max-width:640px){
+      .kpis{grid-template-columns:1fr}
+      .chart{gap:6px}
+    }
+  </style>
+</head>
+<body>
+  <header class="intra-top">
+    <div class="wrap">
+      <div class="logo">Havstund <span>·</span> <small style="display:block;font-size:10px;letter-spacing:3px;color:#9fc6cf;text-transform:uppercase">Intranett</small></div>
+      <div class="who" id="who">
+        <span id="whoNavn"></span>
+        <a href="/" class="btn btn-light">Til nettsiden</a>
+        <button class="btn btn-light" id="logoutBtn">Logg ut</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="dash">
+    <div class="wrap">
+      <div class="eyebrow">Internt dashbord</div>
+      <h2>Oversikt</h2>
+      <p class="lead">Besøk, bookinger og innhold for Havstund.</p>
+
+      <!-- KPI-kort -->
+      <section class="kpis" id="kpis">
+        <div class="kpi"><div class="label">Besøk i dag</div><div class="val" id="kpiIdag">–</div></div>
+        <div class="kpi"><div class="label">Besøk 7 dager</div><div class="val" id="kpi7d">–</div></div>
+        <div class="kpi"><div class="label">Nye bookinger</div><div class="val" id="kpiNye">–</div></div>
+        <div class="kpi"><div class="label">Omsetning 30 dager</div><div class="val" id="kpiOms">–</div></div>
+      </section>
+
+      <!-- Søylediagram -->
+      <section class="panel">
+        <h3>Besøk siste 7 dager</h3>
+        <div class="chart" id="chart"><div class="loading">Laster …</div></div>
+      </section>
+
+      <!-- Bookinger -->
+      <section class="panel">
+        <h3>Bookinger</h3>
+        <p class="sub">Endre status direkte i listen.</p>
+        <div id="bookingWrap"><div class="loading">Laster bookinger …</div></div>
+      </section>
+
+      <!-- Innhold -->
+      <section class="panel">
+        <h3>Innhold</h3>
+        <p class="sub">Rediger tekster som vises på nettsiden.</p>
+        <div id="contentWrap"><div class="loading">Laster innhold …</div></div>
+      </section>
+
+      <!-- Lenker -->
+      <section class="panel">
+        <h3>Verktøy</h3>
+        <div class="links-row" id="linksRow">
+          <a href="/chat-innboks" class="btn btn-ghost">Chat-innboks</a>
+          <a href="/okonomi" class="btn btn-primary" id="okonomiLink" style="display:none">Økonomi-modell</a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="js/intranett.js"></script>
+</body>
+</html>

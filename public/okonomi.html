@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Havstund — Økonomi-modell (intern)</title>
+<link rel="stylesheet" href="css/styles.css">
+<style>
+  .topbar{background:var(--sea-deep);color:#fff;padding:16px 0}
+  .topbar .wrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .topbar h1{font-size:22px;color:#fff}
+  .topbar a{margin-left:auto;color:#cfe2e7;font-size:14px}
+  .scenarios{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}
+  .chip{cursor:pointer;border:1.5px solid var(--line);background:#fff;border-radius:30px;padding:8px 16px;font-weight:600;font-size:14px}
+  .chip.active{background:var(--sea);color:#fff;border-color:var(--sea)}
+  .dash{display:grid;grid-template-columns:390px 1fr;gap:26px;align-items:start}
+  .group{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+  .group h3{font-size:16px;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .group .stream-sum{margin-left:auto;font-size:14px;color:var(--teal);font-weight:700}
+  .row2{display:flex;align-items:center;gap:10px;margin:9px 0}
+  .row2 label{flex:1;margin:0;font-weight:500;color:var(--ink);font-size:14px}
+  input.num{width:120px;text-align:right;padding:9px 11px}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px}
+  .kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
+  .kpi .lbl{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
+  .kpi .val{font-size:26px;font-weight:800;color:var(--sea-deep);margin-top:4px}
+  .kpi .val.pos{color:#1d8a55}.kpi .val.neg{color:#c0492f}
+  .kpi .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .panel-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:var(--shadow);margin-bottom:18px}
+  .panel-card h3{margin-bottom:4px}
+  .panel-card .hint{font-size:13px;color:var(--muted);margin-bottom:14px}
+  .bars{display:flex;gap:5px;align-items:flex-end;height:210px;border-bottom:2px solid var(--line);padding-top:10px}
+  .barwrap{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%}
+  .bar{width:70%;border-radius:5px 5px 0 0;transition:.3s;min-height:2px}
+  .barlbl{font-size:10px;color:var(--muted);margin-top:6px}
+  .legend{display:flex;gap:18px;font-size:13px;color:var(--muted);margin-top:10px;flex-wrap:wrap}
+  .dot{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:middle}
+  .break{display:flex;gap:14px;align-items:center;background:#fffaf1;border:1px solid var(--line);border-radius:12px;padding:16px}
+  .break .big{font-size:34px;font-weight:800;color:var(--clay)}
+  table.brk{width:100%;border-collapse:collapse;font-size:14px}
+  table.brk td{padding:9px 6px;border-bottom:1px solid var(--line)}
+  table.brk td:last-child{text-align:right;font-weight:700;color:var(--sea-deep)}
+  table.brk .barcell{width:38%}
+  .minibar{height:10px;border-radius:5px;background:var(--turq)}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+  @media(max-width:900px){.dash{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap">
+    <h1>Havstund — Økonomi-modell</h1>
+    <a href="index.html">← Tilbake til nettsiden</a>
+  </div>
+</div>
+
+<div class="wrap" style="padding-top:24px;padding-bottom:60px">
+  <p class="lead">Juster tallene og se hva som skal til. Bygget på de 6 inntektskildene i forretningsplanen. Alt lagres i nettleseren din — ingenting sendes noe sted.</p>
+
+  <div class="scenarios" id="scenarios">
+    <span style="align-self:center;font-weight:600;color:var(--muted)">Scenario:</span>
+    <button class="chip" data-scn="forsiktig">Forsiktig</button>
+    <button class="chip active" data-scn="middels">Middels</button>
+    <button class="chip" data-scn="optimistisk">Optimistisk</button>
+    <span style="flex:1"></span>
+    <button class="chip" id="lagre">💾 Lagre</button>
+    <button class="chip" id="nullstill">↺ Nullstill</button>
+  </div>
+
+  <div class="dash">
+    <!-- ============ INPUTS ============ -->
+    <div class="inputs" id="inputs">
+
+      <div class="group">
+        <h3>🎨 Opplevelser <span class="stream-sum" id="sum_opplevelser"></span></h3>
+        <div class="row2"><label>Økter per måned</label><input class="num" id="opplevelser_okter" type="number"></div>
+        <div class="row2"><label>Snitt deltakere per økt</label><input class="num" id="opplevelser_deltakere" type="number"></div>
+        <div class="row2"><label>Snittpris per deltaker (kr)</label><input class="num" id="opplevelser_pris" type="number"></div>
+        <div class="row2"><label>Store events per måned</label><input class="num" id="storevents_antall" type="number"></div>
+        <div class="row2"><label>Inntekt per stor event (kr)</label><input class="num" id="storevents_inntekt" type="number"></div>
+      </div>
+
+      <div class="group">
+        <h3>🍽️ Servise (Havstund Signatur) <span class="stream-sum" id="sum_servise"></span></h3>
+        <div class="row2"><label>Faste kunder (restaurant/hotell)</label><input class="num" id="servise_kunder" type="number"></div>
+        <div class="row2"><label>Snitt per kunde per måned (kr)</label><input class="num" id="servise_snitt" type="number"></div>
+      </div>
+
+      <div class="group">
+        <h3>🛒 Nettbutikk <span class="stream-sum" id="sum_nettbutikk"></span></h3>
+        <div class="row2"><label>Salg per måned (kr)</label><input class="num" id="nettbutikk" type="number"></div>
+      </div>
+
+      <div class="group">
+        <h3>🧒 Skole + Barneklubb <span class="stream-sum" id="sum_tilskudd"></span></h3>
+        <div class="row2"><label>Tilskudd / offentlig betaling per mnd (kr)</label><input class="num" id="tilskudd" type="number"></div>
+      </div>
+
+      <div class="group">
+        <h3>🏛️ Kulturhub <span class="stream-sum" id="sum_kulturhub"></span></h3>
+        <div class="row2"><label>Residens / utstilling per mnd (kr)</label><input class="num" id="kulturhub" type="number"></div>
+      </div>
+
+      <div class="group">
+        <h3>🎫 Medlemskap <span class="stream-sum" id="sum_medlem"></span></h3>
+        <div class="row2"><label>Antall medlemmer</label><input class="num" id="medlemmer" type="number"></div>
+        <div class="row2"><label>Pris per medlem per mnd (kr)</label><input class="num" id="medlempris" type="number"></div>
+      </div>
+
+      <div class="group" style="border-color:var(--clay)">
+        <h3>💸 Kostnader</h3>
+        <div class="row2"><label>Faste kostnader per mnd (kr)</label><input class="num" id="faste" type="number"></div>
+        <div class="row2"><label>Lønn per mnd (kr)</label><input class="num" id="lonn" type="number"></div>
+        <div class="row2"><label>Materialer (% av opplevelse + nettbutikk)</label><input class="num" id="variabel_pst" type="number"></div>
+      </div>
+    </div>
+
+    <!-- ============ RESULTS ============ -->
+    <div class="results">
+      <div class="kpis">
+        <div class="kpi"><div class="lbl">Inntekt / mnd (snitt)</div><div class="val" id="kpi_inntekt"></div><div class="sub">sum alle kilder</div></div>
+        <div class="kpi"><div class="lbl">Kostnad / mnd</div><div class="val" id="kpi_kostnad"></div><div class="sub">faste + lønn + materialer</div></div>
+        <div class="kpi"><div class="lbl">Resultat / mnd</div><div class="val" id="kpi_resultat"></div><div class="sub" id="kpi_margin"></div></div>
+        <div class="kpi"><div class="lbl">Årsresultat</div><div class="val" id="kpi_aar"></div><div class="sub">med sesong-svingning</div></div>
+        <div class="kpi"><div class="lbl">Break-even</div><div class="val" id="kpi_breakeven"></div><div class="sub">økter/mnd for å gå i null</div></div>
+        <div class="kpi"><div class="lbl">Beste / verste mnd</div><div class="val" id="kpi_minmax" style="font-size:18px"></div><div class="sub">resultat gjennom året</div></div>
+      </div>
+
+      <div class="panel-card">
+        <h3>Året rundt — sommer finansierer vinter</h3>
+        <p class="hint">Opplevelser svinger med sesongen (topp i juli); servise, nettbutikk, tilskudd og medlemskap er jevnt. Søyle = inntekt, strek = kostnad.</p>
+        <div class="bars" id="bars"></div>
+        <div class="legend">
+          <span><span class="dot" style="background:var(--turq)"></span>Inntekt (overskudd)</span>
+          <span><span class="dot" style="background:#c0492f"></span>Inntekt (underskudd)</span>
+          <span><span class="dot" style="background:var(--sea-deep)"></span>Kostnadsnivå</span>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <h3>Inntekt per kilde (snitt/mnd)</h3>
+        <table class="brk"><tbody id="brk"></tbody></table>
+      </div>
+
+      <div class="break">
+        <div class="big" id="be_big"></div>
+        <div id="be_txt" style="font-size:14px;color:var(--ink)"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/okonomi.js"></script>
+</body>
+</html>

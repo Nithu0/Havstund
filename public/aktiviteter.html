@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book en opplevelse — Havstund · Keramikk & kunst på Ballstad, Lofoten</title>
+<meta name="description" content="Book en keramikkopplevelse hos Havstund på Ballstad i Lofoten. Velg aktivitet, dato og antall — vi bekrefter forespørselen din.">
+<link rel="stylesheet" href="css/styles.css">
+<style>
+  .book-hero{background:linear-gradient(120deg,var(--sea),var(--teal));color:#fff;padding:64px 0 56px}
+  .book-hero h1{color:#fff;font-size:clamp(30px,5vw,48px);max-width:18ch}
+  .book-hero p{color:#dff1f4;max-width:56ch;margin-top:12px;font-size:clamp(16px,2vw,19px)}
+  .akt-grid{display:grid;gap:22px;grid-template-columns:repeat(3,1fr)}
+  .form-card{max-width:640px;margin:0 auto}
+  .row{display:grid;gap:14px;grid-template-columns:1fr 1fr}
+  .ok-box{background:#fff;border:1px solid var(--line);border-left:4px solid var(--turq);
+    border-radius:var(--r);padding:26px;box-shadow:var(--shadow);display:none}
+  .ok-box h3{color:var(--sea-deep);margin-bottom:8px}
+  .ok-box p{color:var(--muted);margin-bottom:14px}
+  .feil{display:none;background:#fdecea;border:1px solid #f3c4bd;color:#9a2b1c;
+    border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:14px}
+  @media(max-width:900px){.akt-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:640px){.akt-grid{grid-template-columns:1fr}.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- ===================== NAV ===================== -->
+<header class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="/">Hav<span>stund</span><small>Ballstad · Lofoten</small></a>
+    <button class="nav-toggle" id="navToggle" aria-label="Meny">☰</button>
+    <nav class="nav-links" id="navLinks">
+      <a href="/">Forsiden</a>
+      <a href="#aktiviteter">Aktiviteter</a>
+      <a href="#book" class="btn btn-primary" style="padding:9px 18px">Book</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ===================== HERO ===================== -->
+<section class="book-hero">
+  <div class="wrap">
+    <div class="eyebrow" style="color:#bfe9ec">Booking</div>
+    <h1>Book et øyeblikk med havet</h1>
+    <p>Velg en opplevelse, dato og antall plasser. Du sender en forespørsel — vi bekrefter
+       tidspunktet med deg så snart vi kan. Priser i NOK, inkl. materialer og brenning.</p>
+  </div>
+</section>
+
+<!-- ===================== AKTIVITETER ===================== -->
+<section class="section" id="aktiviteter">
+  <div class="wrap">
+    <div class="center reveal in" style="max-width:680px;margin-bottom:34px">
+      <div class="eyebrow">Opplevelser</div>
+      <h2>Velg det som passer deg</h2>
+      <p class="lead center" style="margin-top:12px">Fra en rolig drop-in-time til en hel dag ved hjulet.</p>
+    </div>
+    <div class="akt-grid" id="aktivitet-kort">
+      <p class="lead">Laster aktiviteter …</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== BOOKING-SKJEMA ===================== -->
+<section class="section alt" id="book">
+  <div class="wrap">
+    <div class="center reveal in" style="max-width:640px;margin-bottom:30px">
+      <div class="eyebrow">Send forespørsel</div>
+      <h2>Booking</h2>
+      <p class="lead center" style="margin-top:12px">Fyll ut, så tar vi kontakt for å bekrefte tidspunktet.</p>
+    </div>
+
+    <div class="card form-card">
+      <!-- Bekreftelse -->
+      <div class="ok-box" id="bekreftelse">
+        <h3>Takk — vi har mottatt forespørselen din!</h3>
+        <p>Status: <strong>forespurt</strong>. Vi bekrefter tidspunktet på e-post snart.
+           Du trenger ikke gjøre noe mer akkurat nå.</p>
+        <button type="button" class="btn btn-ghost" id="ny-booking">Send en ny forespørsel</button>
+      </div>
+
+      <!-- Skjema -->
+      <form id="booking-form" novalidate>
+        <div class="feil" id="skjema-feil"></div>
+
+        <div class="field">
+          <label for="f-aktivitet">Aktivitet</label>
+          <select id="f-aktivitet" required>
+            <option value="">Laster …</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="f-dato">Ønsket dato</label>
+            <input type="date" id="f-dato" required>
+          </div>
+          <div class="field">
+            <label for="f-tid">Ønsket tidspunkt</label>
+            <input type="text" id="f-tid" placeholder="f.eks. 12:00 eller formiddag">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="f-antall">Antall personer</label>
+            <input type="number" id="f-antall" min="1" value="1" required>
+          </div>
+          <div class="field">
+            <label for="f-tlf">Telefon</label>
+            <input type="tel" id="f-tlf" placeholder="Valgfritt">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="f-navn">Navn</label>
+          <input type="text" id="f-navn" required>
+        </div>
+
+        <div class="field">
+          <label for="f-epost">E-post</label>
+          <input type="email" id="f-epost" required>
+        </div>
+
+        <div class="field">
+          <label for="f-melding">Melding (valgfritt)</label>
+          <textarea id="f-melding" placeholder="Spesielle ønsker, anledning, allergier …"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%">Send booking</button>
+        <p style="font-size:13px;color:var(--muted);margin-top:12px;text-align:center">
+          Dette er en uforpliktende forespørsel — du betaler først når tidspunktet er bekreftet.
+        </p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FOOTER ===================== -->
+<footer>
+  <div class="wrap">
+    <div class="footer-bottom">
+      <span>© Havstund · Ballstad, Lofoten</span>
+      <a href="/">Tilbake til forsiden</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Enkel mobilmeny-veksling
+  (function () {
+    var t = document.getElementById('navToggle');
+    var l = document.getElementById('navLinks');
+    if (t && l) t.addEventListener('click', function () { l.classList.toggle('open'); });
+  })();
+</script>
+<script src="js/track.js" defer></script>
+<script src="js/chat-widget.js" defer></script>
+<script src="js/booking.js"></script>
+</body>
+</html>

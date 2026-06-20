@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Min konto — Havstund</title>
+<meta name="description" content="Logg inn eller opprett konto hos Havstund for å se og administrere dine bookinger.">
+<link rel="stylesheet" href="css/styles.css">
+<style>
+  .konto-wrap{max-width:560px}
+  .konto-wrap.bred{max-width:760px}
+  .tabs{display:flex;gap:8px;margin-bottom:22px;border-bottom:1px solid var(--line)}
+  .tab{flex:1;background:none;border:none;cursor:pointer;font-family:var(--font);font-weight:700;
+    font-size:15px;color:var(--muted);padding:12px 8px;border-bottom:3px solid transparent;transition:.18s}
+  .tab.active{color:var(--sea-deep);border-bottom-color:var(--clay)}
+  .pane{display:none}
+  .pane.active{display:block}
+  .melding{border-radius:10px;padding:11px 14px;font-size:14px;margin-bottom:14px;display:none}
+  .melding.vis{display:block}
+  .melding.feil{background:#fdecec;color:#9b2226;border:1px solid #f3c5c5}
+  .melding.ok{background:#e7f6f3;color:#0a6b5e;border:1px solid #bfe6df}
+  .konto-meta{display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
+  .konto-meta .rad{display:flex;justify-content:space-between;gap:12px;font-size:15px;
+    padding:8px 0;border-bottom:1px solid var(--line)}
+  .konto-meta .rad span:first-child{color:var(--muted)}
+  .konto-meta .rad span:last-child{font-weight:600;color:var(--sea-deep)}
+  .rolle-merke{display:inline-block;background:var(--turq);color:#04323a;font-weight:700;font-size:11px;
+    letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:20px}
+  .booking-liste{list-style:none;margin:14px 0 0;padding:0}
+  .booking-liste li{border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:10px;background:#fff}
+  .booking-liste .b-topp{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
+  .booking-liste .b-akt{font-weight:700;color:var(--sea-deep)}
+  .booking-liste .b-dato{color:var(--muted);font-size:14px}
+  .booking-liste .b-bunn{margin-top:6px;font-size:14px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+  .status-pill{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.5px;
+    text-transform:uppercase;padding:3px 10px;border-radius:20px;background:var(--sand);color:var(--ink)}
+  .status-pill.bekreftet{background:#cdeee6;color:#0a6b5e}
+  .status-pill.avlyst{background:#f3d2d2;color:#9b2226}
+  .status-pill.fullfort{background:#d7e6ea;color:var(--sea)}
+  .tom{color:var(--muted);font-size:15px;margin-top:10px}
+  .snarveier{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px}
+  .topp-lenke{display:inline-block;margin-bottom:18px;font-size:14px;color:var(--sea);font-weight:600}
+  .topp-lenke:hover{color:var(--clay)}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="logo" href="/">Hav<span>stund</span><small>Ballstad · Lofoten</small></a>
+    <nav class="nav-links">
+      <a href="/">Hjem</a>
+      <a href="/konto">Min konto</a>
+    </nav>
+  </div>
+</header>
+
+<section class="section">
+  <div class="wrap">
+    <a class="topp-lenke" href="/">← Tilbake til forsiden</a>
+
+    <!-- ============ IKKE INNLOGGET: logg inn / opprett konto ============ -->
+    <div id="utlogget" class="konto-wrap" style="display:none">
+      <p class="eyebrow">Min Havstund</p>
+      <h2>Velkommen</h2>
+      <p class="lead" style="margin:8px 0 24px">
+        Logg inn for å se dine bookinger, eller opprett en konto.
+      </p>
+
+      <div class="card">
+        <div class="tabs" role="tablist">
+          <button type="button" class="tab active" data-tab="logg-inn">Logg inn</button>
+          <button type="button" class="tab" data-tab="opprett">Opprett konto</button>
+        </div>
+
+        <!-- Logg inn -->
+        <div class="pane active" id="pane-logg-inn">
+          <div class="melding feil" id="feil-login"></div>
+          <form id="skjema-login" novalidate>
+            <div class="field">
+              <label for="login-epost">E-post</label>
+              <input type="email" id="login-epost" name="epost" autocomplete="email" required>
+            </div>
+            <div class="field">
+              <label for="login-passord">Passord</label>
+              <input type="password" id="login-passord" name="passord" autocomplete="current-password" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%">Logg inn</button>
+          </form>
+        </div>
+
+        <!-- Opprett konto -->
+        <div class="pane" id="pane-opprett">
+          <div class="melding feil" id="feil-register"></div>
+          <form id="skjema-register" novalidate>
+            <div class="field">
+              <label for="reg-navn">Navn</label>
+              <input type="text" id="reg-navn" name="navn" autocomplete="name" required>
+            </div>
+            <div class="field">
+              <label for="reg-epost">E-post</label>
+              <input type="email" id="reg-epost" name="epost" autocomplete="email" required>
+            </div>
+            <div class="field">
+              <label for="reg-passord">Passord</label>
+              <input type="password" id="reg-passord" name="passord" autocomplete="new-password" required>
+              <small style="color:var(--muted);font-size:13px">Minst 6 tegn.</small>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%">Opprett konto</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ INNLOGGET: Min side ============ -->
+    <div id="innlogget" class="konto-wrap bred" style="display:none">
+      <p class="eyebrow">Min side</p>
+      <h2 id="hilsen">Hei</h2>
+
+      <div class="melding ok" id="melding-side"></div>
+
+      <div class="grid g2" style="margin-top:20px">
+        <div class="card">
+          <h3>Min konto</h3>
+          <div class="konto-meta" style="margin-top:12px">
+            <div class="rad"><span>Navn</span><span id="vis-navn">—</span></div>
+            <div class="rad"><span>E-post</span><span id="vis-epost">—</span></div>
+            <div class="rad"><span>Rolle</span><span><span class="rolle-merke" id="vis-rolle">kunde</span></span></div>
+          </div>
+          <div class="snarveier">
+            <a href="/intranett" class="btn btn-ghost" id="lenke-intranett" style="display:none">Intranett</a>
+            <a href="/okonomi" class="btn btn-ghost" id="lenke-okonomi" style="display:none">Økonomi</a>
+            <button type="button" class="btn btn-ghost" id="knapp-logg-ut">Logg ut</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Mine bookinger</h3>
+          <ul class="booking-liste" id="booking-liste"></ul>
+          <p class="tom" id="booking-tom" style="display:none">Du har ingen bookinger ennå.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<script src="js/track.js" defer></script>
+<script src="js/chat-widget.js" defer></script>
+<script src="js/konto.js"></script>
+</body>
+</html>
