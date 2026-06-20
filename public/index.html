@@ -1,293 +1,687 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Havstund — Et øyeblikk med havet · Keramikk & kunst på Ballstad, Lofoten</title>
-<meta name="description" content="Havstund er et keramikk- og kunststudio på Ballstad i Lofoten. Lag noe ekte av Lofoten med dine egne hender — opplevelser, kurs, servise og kunst. Et øyeblikk med havet.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="css/styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-no="Havstund — Et øyeblikk med havet" data-en="Havstund — A moment with the sea">Havstund — Et øyeblikk med havet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,0,500;9..144,0,600;9..144,1,400&family=Caveat:wght@500;600;700&family=Quicksand:wght@500;600;700&family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      /* Lofoten-strand-palett (premium-justert: varm off-white base, near-black blekk, disiplinert aksent) */
+      --turkis:#3a86d6;        /* logo-blå, lesbar aksent */
+      --turkis-lys:#a0cff9;    /* EKSAKT logo-blå */
+      --turkis-dyp:#163e66;    /* dyp blå */
+      --hav-dyp:#0a2747;       /* nesten svart blå */
+      --sand:#f4ede2;          /* varm off-white sand (ikke #fff) */
+      --sand-mork:#e7dcc8;
+      --leire:#c08457;         /* varm leire-aksent */
+      --leire-mork:#a96d36;
+      --skum:#fbf8f1;          /* varm off-white for kort/skjema */
+      --tekst:#26211b;         /* varm near-black (ikke #000) */
+      --myk:#6b5e50;           /* dempet brun-grå sekundærtekst */
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html{scroll-behavior:smooth;}
+    body{font-family:'Inter',-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--tekst);background:var(--sand);line-height:1.75;overflow-x:hidden;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+    /* Subtilt filmkorn for et taktilt, eksklusivt preg */
+    body::after{content:"";position:fixed;inset:0;z-index:9998;pointer-events:none;opacity:.035;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+    h1,h2,h3{font-family:'Fraunces',Georgia,serif;font-weight:400;font-optical-sizing:auto;letter-spacing:-0.018em;}
+    .logo{font-family:'Baloo 2','Quicksand',sans-serif;text-transform:uppercase;}
+    /* Håndskrevet "signatur"-preg på de personlige tekstene */
+    .skrift{font-family:'Caveat',cursive;}
+    img{max-width:100%;display:block;}
+    a{color:var(--turkis-dyp);}
+
+    /* ---------- Header ---------- */
+    header{position:sticky;top:0;z-index:60;background:rgba(31,135,162,.97);border-bottom:1px solid rgba(255,255,255,.18);}
+    nav{max-width:1180px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 24px;gap:12px;}
+    .logo{font-size:1.5rem;font-weight:800;color:var(--hav-dyp);letter-spacing:.02em;white-space:nowrap;}
+    .logo span{color:var(--turkis);}
+    .logo-img{height:46px;width:auto;display:block;}
+    .logo-wordmark{height:30px;width:auto;display:block;filter:drop-shadow(0 1px 4px rgba(0,40,60,.35));}
+    .footer-wordmark{height:38px;width:auto;display:inline-block;margin-bottom:10px;}
+    .meny{display:flex;align-items:center;gap:22px;}
+    .meny a{text-decoration:none;color:#fff;font-weight:600;font-size:.8rem;text-transform:uppercase;letter-spacing:.11em;position:relative;text-shadow:0 1px 6px rgba(0,40,60,.4);}
+    .meny a:not(.knapp-liten)::after{content:"";position:absolute;left:0;bottom:-5px;width:0;height:2px;background:var(--turkis);transition:width .3s;}
+    .meny a:not(.knapp-liten):hover::after{width:100%;}
+    .meny .knapp-liten{background:var(--leire);color:#fff !important;padding:9px 20px;border-radius:999px;font-weight:600;transition:.2s;}
+    .meny .knapp-liten:hover{background:var(--leire-mork);transform:translateY(-1px);}
+    .sprak{display:flex;border:1px solid var(--turkis);border-radius:999px;overflow:hidden;}
+    .sprak button{background:#fff;color:var(--turkis-dyp);border:none;padding:7px 13px;font-weight:700;cursor:pointer;font-size:.82rem;font-family:'Inter',sans-serif;transition:.2s;}
+    .sprak button.aktiv{background:var(--turkis);color:#fff;}
+    .meny-toggle{display:none;background:none;border:none;font-size:1.7rem;line-height:1;color:#fff;cursor:pointer;padding:4px 8px;}
+
+    /* ---------- Hero ---------- */
+    .hero{position:relative;min-height:92vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;padding:60px 22px 120px;overflow:hidden;
+      background:#225781;}
+    @keyframes havpust{0%,100%{background-position:0% 0%;}50%{background-position:0% 30%;}}
+    /* lys-glimt i vannet */
+    .hero::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;background:radial-gradient(120% 110% at 50% 38%,transparent 45%,rgba(4,34,43,.28));}
+    /* Levende nordlys */
+    .hero-aurora{position:absolute;inset:0;z-index:1;overflow:hidden;pointer-events:none;}
+    .hero-aurora span{position:absolute;top:-25%;height:95%;width:42%;filter:blur(45px);mix-blend-mode:screen;will-change:transform,opacity;}
+    .hero-aurora .a1{left:2%;background:linear-gradient(to bottom,rgba(46,255,176,.65),transparent 74%);animation:nordlys1 16s ease-in-out infinite alternate;}
+    .hero-aurora .a2{left:33%;background:linear-gradient(to bottom,rgba(25,227,196,.55),transparent 78%);animation:nordlys2 21s ease-in-out infinite alternate;}
+    .hero-aurora .a3{left:60%;background:linear-gradient(to bottom,rgba(120,255,210,.5),transparent 72%);animation:nordlys3 26s ease-in-out infinite alternate;}
+    @keyframes nordlys1{0%{transform:skewX(-12deg) translateX(-18%);opacity:.25;}100%{transform:skewX(-6deg) translateX(16%);opacity:.6;}}
+    @keyframes nordlys2{0%{transform:skewX(-8deg) translateX(14%);opacity:.5;}100%{transform:skewX(-14deg) translateX(-14%);opacity:.2;}}
+    @keyframes nordlys3{0%{transform:skewX(-10deg) translateX(-10%);opacity:.35;}100%{transform:skewX(-4deg) translateX(22%);opacity:.55;}}
+    /* Ballstad-fjell i silhuett */
+    .hero-fjell{position:absolute;left:0;right:0;bottom:0;z-index:3;line-height:0;pointer-events:none;}
+    .hero-fjell svg{width:100%;height:auto;display:block;}
+    @media(prefers-reduced-motion:reduce){.hero-aurora span{animation:none;}}
+    @media(max-width:820px){.hero-aurora span{filter:blur(30px);animation-duration:34s;}}
+    /* EKTE Ballstad-bilder: nordlys subtilt i himmelen, fjell svakt i skyggen */
+    .hero-bg{position:absolute;inset:0;z-index:0;background:url('bilder/hero-bg.jpg') center/cover no-repeat;animation:kenburns 46s ease-in-out infinite alternate;}
+    @keyframes kenburns{from{transform:scale(1.02) translateY(0);}to{transform:scale(1.12) translateY(-2%);}}
+    @media(prefers-reduced-motion:reduce){.hero-bg{animation:none;}}
+    .hero-inner{position:relative;z-index:4;max-width:760px;}
+    .hero .liten{text-transform:uppercase;letter-spacing:5px;font-size:.76rem;opacity:.8;margin-bottom:26px;}
+    .hero h1{margin-bottom:20px;line-height:1;}
+    .hero-wordmark{width:min(84%,560px);height:auto;display:inline-block;filter:drop-shadow(0 6px 28px rgba(0,0,0,.35));}
+    .hero .tagline{font-family:'Inter',sans-serif;font-size:clamp(1.15rem,2.6vw,1.6rem);opacity:.92;margin-bottom:20px;font-weight:300;letter-spacing:.05em;}
+    .hero p{font-size:1.1rem;max-width:540px;margin:0 auto 34px;opacity:.94;}
+    .knapp{display:inline-block;background:var(--leire);color:#fff;padding:18px 42px;border-radius:999px;font-weight:600;text-decoration:none;font-size:.86rem;text-transform:uppercase;letter-spacing:.14em;box-shadow:0 14px 38px rgba(168,109,54,.3);transition:.3s cubic-bezier(.2,.8,.2,1);font-family:'Inter',sans-serif;}
+    .knapp:hover{background:var(--leire-mork);transform:translateY(-3px);box-shadow:0 16px 40px rgba(0,0,0,.28);}
+    .knapp.lys{background:#fff;color:var(--turkis-dyp);}
+    .knapp.lys:hover{background:var(--sand);}
+    /* scroll-hint */
+    .scroll-hint{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);z-index:5;color:#fff;opacity:.8;font-size:1.6rem;animation:nikke 2s ease-in-out infinite;}
+    @keyframes nikke{0%,100%{transform:translate(-50%,0);}50%{transform:translate(-50%,10px);}}
+
+    /* bølge-divider */
+    .bolge{display:block;width:100%;height:90px;margin-top:-1px;}
+    .bolge.opp{transform:rotate(180deg);}
+
+    /* ---------- Seksjoner ---------- */
+    section{max-width:1180px;margin:0 auto;padding:clamp(90px,12vw,165px) 24px;}
+    .full{max-width:none;}
+    .seksjon-tittel{text-align:center;color:var(--hav-dyp);font-size:clamp(2.3rem,5.5vw,3.2rem);letter-spacing:-0.02em;margin-bottom:16px;}
+    .seksjon-undertekst{text-align:center;color:var(--myk);max-width:640px;margin:0 auto 52px;font-size:1.05rem;}
+
+    /* ---------- Karusell (opplevelser) ---------- */
+    .kar-wrap{position:relative;}
+    .kar{display:flex;gap:26px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 4px 24px;scrollbar-width:none;counter-reset:kort;}
+    .kar::-webkit-scrollbar{display:none;}
+    .kar .kort{position:relative;scroll-snap-align:center;flex:0 0 320px;background:var(--skum);border-radius:20px;padding:42px 34px 36px;box-shadow:0 10px 36px rgba(10,79,94,.07);border:1px solid var(--sand-mork);transition:.35s cubic-bezier(.2,.8,.2,1);}
+    .kar .kort::before{counter-increment:kort;content:counter(kort,decimal-leading-zero);display:block;font-family:'Fraunces',serif;font-size:.9rem;color:var(--leire);letter-spacing:.18em;margin-bottom:16px;}
+    .kar .kort:hover{transform:translateY(-8px);box-shadow:0 20px 44px rgba(10,79,94,.16);}
+    .kort .ikon{font-size:2.3rem;margin-bottom:14px;}
+    .kort h3{color:var(--hav-dyp);margin-bottom:10px;font-size:1.3rem;}
+    .kort p{color:var(--myk);font-size:.97rem;}
+    .kort .pris{display:inline-block;margin-top:16px;color:var(--leire-mork);font-weight:700;font-size:1.05rem;}
+    .kar-knapp{position:absolute;top:42%;width:48px;height:48px;border-radius:50%;border:none;background:#fff;color:var(--turkis-dyp);font-size:1.4rem;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.15);z-index:5;transition:.2s;display:flex;align-items:center;justify-content:center;}
+    .kar-knapp:hover{background:var(--turkis);color:#fff;}
+    .kar-knapp.prev{left:-8px;}
+    .kar-knapp.next{right:-8px;}
+
+    /* ---------- Barneklubb ---------- */
+    .barn{position:relative;background:#0a2238;color:#fff;overflow:hidden;}
+    /* Grønt-turkis nordlys over natthimmel */
+    .barn::before{content:"";position:absolute;inset:0;pointer-events:none;background:
+      radial-gradient(55% 50% at 22% -5%, rgba(46,255,176,.40), transparent 62%),
+      radial-gradient(50% 55% at 70% 0%, rgba(25,227,196,.34), transparent 60%),
+      radial-gradient(45% 70% at 48% 108%, rgba(10,255,208,.20), transparent 60%),
+      linear-gradient(160deg,#0c2b48,#0a2238);
+      animation:nordlys 12s ease-in-out infinite;}
+    @keyframes nordlys{0%,100%{opacity:.85;transform:translateY(0);}50%{opacity:1;transform:translateY(-6px);}}
+    .barn > div{position:relative;z-index:1;}
+    .barn .seksjon-tittel,.barn .seksjon-undertekst{color:#fff;}
+    .barn .seksjon-undertekst{opacity:.92;}
+    .barn-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:24px;margin-bottom:38px;}
+    .barn-punkt{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:28px;backdrop-filter:blur(4px);transition:.3s;}
+    .barn-punkt:hover{background:rgba(255,255,255,.12);transform:translateY(-5px);}
+    .barn-punkt h3{margin-bottom:10px;font-size:1.15rem;}
+    .barn-punkt p{opacity:.9;font-size:.96rem;}
+    .gratis-merke{display:inline-block;background:var(--leire);color:#fff;padding:7px 18px;border-radius:999px;font-weight:700;font-size:.82rem;letter-spacing:1px;margin-bottom:20px;font-family:'Inter',sans-serif;}
+    .partnere{text-align:center;opacity:.85;font-size:.95rem;margin-top:12px;}
+
+    /* ---------- Havveggen (mosaikk) ---------- */
+    .signatur{background:var(--skum);}
+    .signatur-flex{display:grid;grid-template-columns:1.05fr 1fr;gap:50px;align-items:center;}
+    .signatur-flex .tekst h2{color:var(--hav-dyp);font-size:clamp(2.5rem,6vw,3.6rem);letter-spacing:-0.02em;margin-bottom:6px;}
+    .kollektiv-undertittel{font-family:'Caveat',cursive !important;color:var(--turkis-dyp);font-size:clamp(1.6rem,3.5vw,2.1rem);margin-bottom:22px !important;}
+    .seksjon-eyebrow{display:block;font-family:'Inter',sans-serif;text-transform:uppercase;letter-spacing:.2em;font-size:.74rem;color:var(--leire-mork);margin-bottom:14px;font-weight:600;}
+    .signatur-flex .tekst p{color:var(--myk);margin-bottom:16px;}
+    .mosaikk{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr;gap:8px;border-radius:20px;overflow:hidden;box-shadow:0 18px 50px rgba(10,79,94,.18);}
+    .mosaikk::before{content:"";display:block;grid-column:1;grid-row:1;padding-top:100%;}
+    .flis{aspect-ratio:1;border-radius:6px;position:relative;overflow:hidden;transition:.35s;cursor:pointer;}
+    .flis:hover{transform:scale(1.08);z-index:3;border-radius:10px;box-shadow:0 8px 22px rgba(0,0,0,.25);}
+    /* "malte" fliser — hver unik, inspirert av havet */
+    .f1{background:radial-gradient(circle at 30% 30%,#7fe6e3,#17c3c9);}
+    .f2{background:linear-gradient(135deg,#0e7e88,#17c3c9);}
+    .f3{background:radial-gradient(circle at 70% 60%,#fff,#79e6e3 70%);}
+    .f4{background:linear-gradient(160deg,#c98a52,#a96d36);}
+    .f5{background:conic-gradient(from 200deg at 40% 40%,#17c3c9,#0a4f5e,#17c3c9);}
+    .f6{background:linear-gradient(120deg,#f5efe2,#e9e0cd);}
+    .f7{background:radial-gradient(circle at 50% 20%,#79e6e3,#0e7e88);}
+    .f8{background:linear-gradient(135deg,#062d38,#0a4f5e);}
+    .f9{background:radial-gradient(circle at 60% 60%,#c98a52,#79e6e3);}
+    .mosaikk-bildetekst{font-family:'Caveat',cursive;text-align:center;color:var(--myk);font-size:1.25rem;margin-top:14px;}
+    .pris-boks{background:var(--sand);border:1px solid var(--sand-mork);border-radius:16px;padding:24px 26px;margin-top:26px;}
+    .pris-boks .pris-stor{font-family:'Fraunces',serif;font-size:1.5rem;color:var(--leire-mork);margin-bottom:14px;}
+    .pris-liste{list-style:none;margin:0 0 14px;padding:0;}
+    .pris-liste li{padding:8px 0;border-bottom:1px solid var(--sand-mork);color:var(--tekst);font-size:.97rem;}
+    .pris-liste li:last-child{border-bottom:none;}
+    .pris-note{font-size:.86rem !important;color:var(--myk);line-height:1.6;}
+    .havvegg-foto{border-radius:20px;overflow:hidden;box-shadow:0 18px 50px rgba(10,79,94,.22);transition:.4s;}
+    .havvegg-foto img{width:100%;height:auto;display:block;transition:.6s;}
+    .havvegg-foto:hover{box-shadow:0 26px 64px rgba(10,79,94,.3);}
+    .havvegg-foto:hover img{transform:scale(1.04);}
+    /* Galleri «Fra studioet» */
+    .galleri{background:var(--sand);}
+    .galleri-grid{display:grid;grid-template-columns:1.5fr 1fr;grid-template-rows:1fr 1fr;gap:14px;height:min(82vh,660px);}
+    .galleri-item:first-child{grid-row:1 / span 2;}
+    @media(max-width:700px){.galleri-grid{grid-template-columns:1fr;grid-template-rows:none;height:auto;}.galleri-item{aspect-ratio:1;}.galleri-item:first-child{grid-row:auto;}}
+    .galleri-item{position:relative;border-radius:18px;overflow:hidden;box-shadow:0 12px 36px rgba(10,79,94,.14);cursor:pointer;}
+    .galleri-item img{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(1.1) contrast(1.05);transition:.55s;}
+    .galleri-item:hover img{transform:scale(1.08);}
+    .galleri-item .overlegg{position:absolute;inset:0;display:flex;align-items:flex-end;padding:20px;background:linear-gradient(to top,rgba(4,34,43,.82),transparent 55%);opacity:0;transition:.4s;}
+    .galleri-item:hover .overlegg{opacity:1;}
+    .galleri-item .overlegg span{color:#fff;font-family:'Caveat',cursive;font-size:1.5rem;line-height:1.2;}
+    /* Lightbox */
+    #lightboks{border:none;padding:0;background:transparent;max-width:96vw;max-height:96vh;}
+    #lightboks::backdrop{background:rgba(6,45,56,.93);backdrop-filter:blur(5px);}
+    #lightboks img{max-width:92vw;max-height:88vh;object-fit:contain;border-radius:12px;display:block;box-shadow:0 24px 70px rgba(0,0,0,.55);}
+    #lightboks .lukk{position:fixed;top:18px;right:24px;background:#fff;color:var(--hav-dyp);border:none;width:46px;height:46px;border-radius:50%;font-size:1.7rem;line-height:1;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.3);}
+    /* Respekter redusert bevegelse */
+    @media(prefers-reduced-motion:reduce){
+      *{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;}
+      .reveal{opacity:1!important;transform:none!important;}
+      .hero,.barn::before{animation:none!important;}
+    }
+
+    /* ---------- Om oss ---------- */
+    .om{background:var(--sand);text-align:center;}
+    .om p{max-width:700px;margin:0 auto 18px;color:var(--myk);font-size:1.08rem;}
+    .om .sitat{font-family:'Caveat',cursive;color:var(--turkis-dyp);font-size:clamp(1.7rem,4vw,2.3rem);font-weight:600;line-height:1.3;}
+
+    /* ---------- Nyheter ---------- */
+    .nyheter{background:var(--skum);}
+    .nyhet{border-left:4px solid var(--leire);background:var(--sand);padding:24px 26px;border-radius:0 14px 14px 0;margin-bottom:18px;transition:.3s;}
+    .nyhet:hover{transform:translateX(6px);}
+    .nyhet .dato{color:var(--leire-mork);font-weight:700;font-size:.8rem;text-transform:uppercase;letter-spacing:1px;}
+    .nyhet h3{margin:8px 0;color:var(--hav-dyp);}
+    .nyhet p{color:var(--myk);}
+
+    /* ---------- Booking ---------- */
+    .booking{background:linear-gradient(140deg,var(--hav-dyp),var(--turkis-dyp));color:#fff;}
+    .booking .seksjon-tittel,.booking .seksjon-undertekst{color:#fff;}
+    .skjema{max-width:600px;margin:0 auto;background:#fff;color:var(--tekst);padding:40px;border-radius:24px;box-shadow:0 24px 60px rgba(0,0,0,.3);}
+    .felt{margin-bottom:18px;}
+    .felt label{display:block;font-weight:600;margin-bottom:7px;font-size:.93rem;}
+    .felt input,.felt select,.felt textarea{width:100%;padding:13px 15px;border:1px solid #d4dddf;border-radius:12px;font-size:1rem;font-family:inherit;transition:.2s;}
+    .felt input:focus,.felt select:focus,.felt textarea:focus{outline:none;border-color:var(--turkis);box-shadow:0 0 0 3px rgba(23,195,201,.18);}
+    .rad-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+    .send-knapp{width:100%;background:var(--leire);color:#fff;border:none;padding:16px;border-radius:12px;font-size:1.05rem;font-weight:700;cursor:pointer;transition:.2s;font-family:'Inter',sans-serif;}
+    .send-knapp:hover{background:var(--leire-mork);}
+    .takk{display:none;text-align:center;padding:22px;background:#e6f7f1;border-radius:14px;color:#0a6b4a;font-weight:600;margin-top:16px;}
+
+    footer{background:var(--hav-dyp);color:#bfe3e6;text-align:center;padding:50px 22px;}
+    footer .logo{color:#fff;margin-bottom:10px;}
+
+    /* ---------- Scroll-reveal animasjoner ---------- */
+    .reveal{opacity:0;transform:translateY(40px);transition:opacity .9s cubic-bezier(.2,.75,.25,1),transform .9s cubic-bezier(.2,.75,.25,1);}
+    .reveal.v-venstre{transform:translateX(-70px);}
+    .reveal.v-hoyre{transform:translateX(70px);}
+    .reveal.synlig{opacity:1;transform:none;}
+    .delay-1{transition-delay:.12s;}.delay-2{transition-delay:.24s;}.delay-3{transition-delay:.36s;}
+
+    @media(max-width:820px){
+      .meny-toggle{display:block;}
+      .meny{position:fixed;top:60px;left:0;right:0;background:#0d2c4d;flex-direction:column;align-items:stretch;gap:0;padding:8px 24px 22px;transform:translateY(-135%);transition:transform .35s cubic-bezier(.2,.8,.2,1);box-shadow:0 24px 44px rgba(0,0,0,.3);border-bottom:1px solid rgba(255,255,255,.12);}
+      .meny.apen{transform:translateY(0);}
+      .meny a:not(.knapp-liten){display:block;padding:15px 2px;border-bottom:1px solid rgba(255,255,255,.12);font-size:1.05rem;}
+      .meny a:not(.knapp-liten)::after{display:none;}
+      .meny .knapp-liten{display:inline-block;margin-top:18px;text-align:center;}
+      .sprak{margin-top:18px;align-self:flex-start;}
+      header{backdrop-filter:none;background:rgba(33,140,168,.96);}
+      .barn::before{animation:none;}
+      .rad-2{grid-template-columns:1fr;}
+      .signatur-flex{grid-template-columns:1fr;gap:36px;}
+      .kar .kort{flex-basis:80vw;}
+      .kar-knapp{display:none;}
+    }
+    /* ---------- Rullende tekst-stripe (marquee) ---------- */
+    .marquee{background:var(--hav-dyp);color:var(--sand);overflow:hidden;white-space:nowrap;}
+    .marquee__spor{display:inline-block;animation:rulle 36s linear infinite;}
+    .marquee__spor span{font-family:'Fraunces',serif;font-size:clamp(1.4rem,3vw,2.3rem);line-height:1;padding:22px 0;display:inline-block;}
+    .marquee__spor b{color:var(--turkis);font-weight:400;margin:0 30px;}
+    .marquee:hover .marquee__spor{animation-play-state:paused;}
+    @keyframes rulle{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+    .magnetisk{will-change:transform;transition:transform .25s cubic-bezier(.2,.8,.2,1);}
+    @media(prefers-reduced-motion:reduce){.marquee__spor{animation:none;}}
+    /* ---------- 2025: markør, tall, ord-avsløring ---------- */
+    .cursor-dot,.cursor-ring{position:fixed;top:0;left:0;border-radius:50%;pointer-events:none;z-index:10000;transform:translate(-50%,-50%);will-change:left,top;}
+    .cursor-dot{width:7px;height:7px;background:var(--leire);}
+    .cursor-ring{width:34px;height:34px;border:1.5px solid var(--turkis-dyp);transition:width .25s,height .25s,background .25s;}
+    .cursor-ring.hover{width:58px;height:58px;background:rgba(21,179,187,.12);}
+    @media(hover:none),(pointer:coarse){.cursor-dot,.cursor-ring{display:none;}}
+    .stats{background:var(--skum);}
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:34px;text-align:center;}
+    .stat .tall{font-family:'Fraunces',serif;font-size:clamp(2.8rem,6vw,4.2rem);color:var(--turkis-dyp);line-height:1;letter-spacing:-0.02em;}
+    .stat .etikett{color:var(--myk);margin-top:12px;font-size:.96rem;}
+    .ord{display:inline-block;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .55s cubic-bezier(.2,.8,.2,1);}
+    .ord.vis{opacity:1;transform:none;}
+  </style>
 </head>
 <body>
 
-<!-- ===================== NAV ===================== -->
-<header class="nav">
-  <div class="nav-inner">
-    <a class="logo" href="#hjem">Hav<span>stund</span><small>Ballstad · Lofoten</small></a>
-    <button class="nav-toggle" id="navToggle" aria-label="Meny">☰</button>
-    <nav class="nav-links" id="navLinks">
-      <a href="/aktiviteter">Aktiviteter</a>
-      <a href="#etthav">Ett hav</a>
-      <a href="#grupper">Grupper & servise</a>
-      <a href="#butikk">Butikk</a>
-      <a href="#kontakt">Kontakt</a>
-      <a href="/konto">Logg inn</a>
-      <a href="/aktiviteter" class="btn btn-primary" style="padding:9px 18px">Book</a>
-    </nav>
-  </div>
-</header>
+  <div class="cursor-dot"></div>
+  <div class="cursor-ring"></div>
 
-<!-- ===================== HERO ===================== -->
-<section class="hero" id="hjem">
-  <div class="hero-bg" style="background-image:url('bilder/5-midnatt.jpg')"></div>
-  <div class="wrap">
-    <h1>Lag noe ekte av Lofoten — med dine egne hender</h1>
-    <p class="tagline">Et øyeblikk med havet · <em>A moment with the sea</em></p>
-    <p class="sub">Havstund er et keramikk- og kunststudio på Ballstad. Du senker skuldrene, gjør noe med hendene mens lyset står inn over havet — og drar hjem med noe som varer.</p>
-    <div class="hero-cta">
-      <a href="/aktiviteter" class="btn btn-primary">Book en opplevelse</a>
-      <a href="#etthav" class="btn btn-light">Oppdag «Ett hav»</a>
-    </div>
-  </div>
-  <div class="scroll-hint">↓ bla ned</div>
-</section>
-
-<!-- ===================== INTRO ===================== -->
-<section class="section">
-  <div class="wrap center reveal" style="max-width:760px">
-    <div class="eyebrow">Den røde tråden</div>
-    <h2>Du betaler ikke for leira — du betaler for følelsen og minnet</h2>
-    <p class="lead center" style="margin-top:14px">
-      Barn, turister, lokale og gjester fra hele verden får lage noe ekte av Lofoten med sine egne hender.
-      Hver glasur er laget av dette havet — sjø, aske, stein og sand fra navngitte strender. Ingen dag på havet er lik,
-      så ingen to verk kan være like.
-    </p>
-  </div>
-</section>
-
-<!-- ===================== OPPLEVELSER ===================== -->
-<section class="section alt" id="opplevelser">
-  <div class="wrap">
-    <div class="center reveal" style="max-width:720px;margin-bottom:38px">
-      <div class="eyebrow">Opplevelser</div>
-      <h2>Kom innom og skap noe selv</h2>
-      <p class="lead center" style="margin-top:12px">Fra en rolig time ved hjulet til en hel retreat. Priser i NOK, inkl. materialer og brenning.</p>
-    </div>
-    <div class="grid g4">
-      <div class="price reveal">
-        <div class="top"><h3>Drop-in</h3><div class="meta">1,5 time · ingen erfaring nødvendig</div><div class="amount">650 <small>/ person</small></div></div>
-        <ul><li>Håndbygging eller maling</li><li>Velg din glasur «fra dette havet»</li><li>Verket brennes og sendes/hentes</li></ul>
-        <div class="foot"><button class="btn btn-primary" data-book="Drop-in (1,5 t) — 650 kr">Book</button></div>
-      </div>
-      <div class="price featured reveal">
-        <div class="top"><span class="badge">Populær</span><h3>Håndbygging</h3><div class="meta">2 timer · litt mer tid</div><div class="amount">850 <small>/ person</small></div></div>
-        <ul><li>Skål, kopp eller fat</li><li>Tekstur, stempel og dagstempel</li><li>Dato + koordinat under bunnen</li></ul>
-        <div class="foot"><button class="btn btn-primary" data-book="Håndbygging (2 t) — 850 kr">Book</button></div>
-      </div>
-      <div class="price reveal">
-        <div class="top"><h3>Halvdag</h3><div class="meta">fordypning · dreiing på hjul</div><div class="amount">1 450 <small>/ person</small></div></div>
-        <ul><li>Dreiing med keramiker</li><li>Flere verk</li><li>Kaffe og ro</li></ul>
-        <div class="foot"><button class="btn btn-primary" data-book="Halvdag — 1 450 kr">Book</button></div>
-      </div>
-      <div class="price reveal">
-        <div class="top"><h3>Heldag</h3><div class="meta">den fulle opplevelsen</div><div class="amount">2 650 <small>/ person</small></div></div>
-        <ul><li>Dreiing + håndbygging</li><li>Glasering og «the reveal»</li><li>Lunsj inkludert</li></ul>
-        <div class="foot"><button class="btn btn-primary" data-book="Heldag — 2 650 kr">Book</button></div>
-      </div>
-    </div>
-
-    <div class="grid g3" style="margin-top:22px">
-      <div class="price reveal">
-        <div class="top"><h3>Kurs</h3><div class="meta">5–6 uker · for lokale</div><div class="amount">2 950 <small>/ kohort-plass</small></div></div>
-        <ul><li>Ukentlig samling</li><li>Fra leire til ferdig glasert verk</li><li>Lite, fast fellesskap</li></ul>
-        <div class="foot"><button class="btn btn-ghost" data-book="Kurs (5–6 uker) — 2 950 kr">Meld interesse</button></div>
-      </div>
-      <div class="price reveal">
-        <div class="top"><h3>Retreat</h3><div class="meta">3 eller 5 dager</div><div class="amount">8 900 – 14 900</div></div>
-        <ul><li>Fordypning i ro og lys</li><li>Glasur fra lokale materialer</li><li>Mer med overnatting</li></ul>
-        <div class="foot"><button class="btn btn-ghost" data-book="Retreat (3/5 dager)">Forespør</button></div>
-      </div>
-      <div class="price reveal">
-        <div class="top"><h3>Mitt Nordlys</h3><div class="meta">vinterens hovedopplevelse</div><div class="amount">Sesong</div></div>
-        <ul><li>Jakt nordlyset, gjør det tydelig</li><li>Mal din egen natt</li><li>Glødende nordlys-keramikk</li></ul>
-        <div class="foot"><button class="btn btn-ghost" data-book="Mitt Nordlys (vinter)">Forespør</button></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===================== ETT HAV (signaturen) ===================== -->
-<section class="section" id="etthav">
-  <div class="wrap split">
-    <div class="reveal">
-      <div class="eyebrow">Ett hav — det unike</div>
-      <h2>Glasur fra dette havet</h2>
-      <p class="lead" style="margin:14px 0 20px">En konkurrent kan kjøpe samme ovn, men ikke den samme kysten. Tre ting gjør hvert verk til et brent fragment av én bestemt Lofoten-dag:</p>
-      <ul class="feature-list">
-        <li><span class="fi">🌊</span><div><b>Havveggen.</b> Hver gjest maler én flis = sitt øyeblikk med havet. Veggen vokser for hvert år — kom tilbake og finn flisa di.</div></li>
-        <li><span class="fi">📍</span><div><b>Dagstemplet.</b> Hvert verk stemples med dato, koordinat og kilde: «Ballstad · 14. nov · sjøaske og granitt».</div></li>
-        <li><span class="fi">🪨</span><div><b>Materialbiblioteket.</b> Egne glasurer av tang-aske, granitt, strandsand og skrei-aske — navngitt fra stedet: Mørketid, Kveldssol, Hjell, Dypvann.</div></li>
-      </ul>
-    </div>
-    <img src="bilder/4-hjell.jpg" alt="Materialer fra Lofoten" class="reveal">
-  </div>
-</section>
-
-<!-- ===================== GALLERI ===================== -->
-<section class="section alt">
-  <div class="wrap">
-    <div class="center reveal" style="margin-bottom:26px">
-      <div class="eyebrow">Stedet</div>
-      <h2>Ballstad — et arbeidende fiskevær i tusen år</h2>
-    </div>
-    <div class="gallery reveal">
-      <img src="bilder/1a-havn.jpg" alt="Ballstad havn">
-      <img src="bilder/1b-rorbuer.jpg" alt="Rorbuer">
-      <img src="bilder/3-havfiske.jpg" alt="Havfiske">
-    </div>
-    <p class="center" style="font-size:12px;color:var(--muted);margin-top:12px">Bildene er foreløpig eksempelfoto fra Lofoten (Wikimedia Commons) — byttes ut med Havstunds egne bilder.</p>
-  </div>
-</section>
-
-<!-- ===================== GRUPPER & SERVISE ===================== -->
-<section class="section" id="grupper">
-  <div class="wrap">
-    <div class="center reveal" style="max-width:720px;margin-bottom:36px">
-      <div class="eyebrow">For grupper, restauranter & hoteller</div>
-      <h2>Opplevelser som funker uansett vær — og servise laget 4 km unna</h2>
-    </div>
-    <div class="grid g3">
-      <div class="card reveal">
-        <div class="ic">👥</div><h3>Gruppe-event</h3>
-        <p>Teambuilding, bursdag eller bryllupsfølge. Fra <b>950 kr/person</b> (min. 12 000).</p>
-      </div>
-      <div class="card reveal">
-        <div class="ic">🎨</div><h3>Felles-kunst-event</h3>
-        <p>Hele gruppa maler én felles Havvegg. Fra <b>1 200 kr/person</b> (min. 18 000).</p>
-      </div>
-      <div class="card reveal">
-        <div class="ic">🍽️</div><h3>Havstund Signatur</h3>
-        <p>Håndlaget servise til restauranter og hoteller — «tallerkenen er laget i Lofoten, der maten kommer fra». Faste gjenbestillinger.</p>
-      </div>
-    </div>
-    <div class="banner reveal" style="margin-top:30px">
-      <div>
-        <h3>Partner med oss</h3>
-        <p>Hotell og rorbu-utleiere: gi gjestene en opplevelse som er bedre i dårlig vær — og servise med en arktisk opprinnelseshistorie. Inkludert i oppholdet, butikk i resepsjonen, eller eget servise med deres navn.</p>
-      </div>
-      <button class="btn btn-light" data-book="Partnerskap (hotell/restaurant)">Ta kontakt</button>
-    </div>
-  </div>
-</section>
-
-<!-- ===================== BUTIKK ===================== -->
-<section class="section alt" id="butikk">
-  <div class="wrap split">
-    <img src="bilder/2-kai.jpg" alt="Keramikk" class="reveal">
-    <div class="reveal">
-      <div class="eyebrow">Butikk</div>
-      <h2>Et stykke Lofoten i ditt hjem</h2>
-      <p class="lead" style="margin:14px 0 18px">Håndlaget keramikk og kunsttrykk — sendes trygt i hele verden. Hver gang du drikker av koppen er du tilbake i Lofoten et øyeblikk.</p>
-      <ul class="feature-list">
-        <li><span class="fi">☕</span><div><b>Krus</b> · 450–650 kr</div></li>
-        <li><span class="fi">🥣</span><div><b>Skål</b> · 550–850 kr</div></li>
-        <li><span class="fi">🏺</span><div><b>Vase</b> · 700–1 500 kr</div></li>
-        <li><span class="fi">🖼️</span><div><b>Kunsttrykk</b> av Havveggen og landskapet — uknuselig, lett å sende</div></li>
-      </ul>
-      <div style="margin-top:20px"><button class="btn btn-primary" data-book="Nettbutikk">Nettbutikk kommer — gi meg beskjed</button></div>
-    </div>
-  </div>
-</section>
-
-<!-- ===================== BALLSTADDAGAN ===================== -->
-<section class="section">
-  <div class="wrap banner reveal" style="background:linear-gradient(120deg,var(--clay),var(--clay-d))">
-    <div>
-      <h3>Vi er med på Ballstaddagan 2026</h3>
-      <p>4.–12. juli maler bygda fem bilder av sitt eget sted sammen — som gis i gave til kommunen. Kom innom, sett ditt avtrykk.</p>
-    </div>
-    <a href="#kontakt" class="btn btn-light">Les mer / bli med</a>
-  </div>
-</section>
-
-<!-- ===================== OM OSS ===================== -->
-<section class="section alt" id="om">
-  <div class="wrap center reveal" style="max-width:760px">
-    <div class="eyebrow">Om oss</div>
-    <h2>Et sted barna vokser opp med, turister reiser for, og lokale er stolte av</h2>
-    <p class="lead center" style="margin-top:14px">
-      Havstund ligger på Ballstad i Lofoten. Vi tror på at gode ting tar tid, at kunnskap sitter best i hendene,
-      og at et barn som holder sin egen ferdige krukke står litt rakere. Studioet er sesong; følelsen er det ikke.
-    </p>
-  </div>
-</section>
-
-<!-- ===================== KONTAKT ===================== -->
-<section class="section" id="kontakt">
-  <div class="wrap">
-    <div class="center reveal" style="margin-bottom:34px">
-      <div class="eyebrow">Kontakt</div>
-      <h2>Ta kontakt</h2>
-    </div>
-    <div class="contact-grid">
-      <form class="reveal" id="kontaktForm" onsubmit="return false">
-        <div class="field"><label for="navn">Navn</label><input id="navn" required></div>
-        <div class="field"><label for="epost">E-post</label><input id="epost" type="email" required></div>
-        <div class="field"><label for="emne">Hva gjelder det?</label>
-          <select id="emne">
-            <option>Book en opplevelse</option>
-            <option>Gruppe / event</option>
-            <option>Restaurant / hotell (servise)</option>
-            <option>Nettbutikk</option>
-            <option>Annet</option>
-          </select>
+  <header>
+    <nav>
+      <a href="#" class="logo" style="text-decoration:none;display:flex;align-items:center;">
+        <img src="bilder/wordmark.png" alt="Havstund" class="logo-wordmark" />
+      </a>
+      <div class="meny">
+        <a href="#opplevelser" data-no="Opplevelser" data-en="Experiences">Opplevelser</a>
+        <a href="#barneklubb" data-no="Barneklubb" data-en="Kids' Club">Barneklubb</a>
+        <a href="#signatur" data-no="Kollektivt maleri" data-en="Collective painting">Kollektivt maleri</a>
+        <a href="#galleri" data-no="Galleri" data-en="Gallery">Galleri</a>
+        <a href="#om" data-no="Om oss" data-en="About">Om oss</a>
+        <a href="#booking" class="knapp-liten" data-no="Book" data-en="Book">Book</a>
+        <div class="sprak">
+          <button id="btnNo" class="aktiv" onclick="setLang('no')">NO</button>
+          <button id="btnEn" onclick="setLang('en')">EN</button>
         </div>
-        <div class="field"><label for="melding">Melding</label><textarea id="melding"></textarea></div>
-        <button class="btn btn-primary" id="sendBtn">Send melding</button>
-        <p style="font-size:12px;color:var(--muted);margin-top:10px">Åpner e-postprogrammet ditt. (Senere: ekte skjema/booking via Acuity + Vipps.)</p>
-      </form>
-      <div class="reveal">
-        <div class="info-row"><span class="fi">📍</span><div><b>Havstund</b><br>Ballstad, Vestvågøy<br>Lofoten, Nordland</div></div>
-        <div class="info-row"><span class="fi">✉️</span><div>post@havstund.no</div></div>
-        <div class="info-row"><span class="fi">📱</span><div>Følg oss: @havstund · #etøyeblikkmedhavet</div></div>
-        <div class="info-row"><span class="fi">🕑</span><div>Online booking åpent døgnet rundt (kommer)</div></div>
-        <img src="bilder/1a-havn.jpg" alt="Ballstad" style="border-radius:var(--r);margin-top:10px">
       </div>
+      <button class="meny-toggle" aria-label="Meny" onclick="document.querySelector('.meny').classList.toggle('apen')">☰</button>
+    </nav>
+  </header>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-bg" aria-hidden="true"></div>
+    <div class="hero-inner">
+      <div class="liten reveal" data-no="Keramikk- og kunststudio · Ballstad, Lofoten" data-en="Ceramics & art studio · Ballstad, Lofoten">Keramikk- og kunststudio · Ballstad, Lofoten</div>
+      <h1 class="reveal delay-1"><img src="bilder/wordmark.png" alt="Havstund" class="hero-wordmark"></h1>
+      <div class="tagline reveal delay-1" data-no="Et øyeblikk med havet" data-en="A moment with the sea">Et øyeblikk med havet</div>
+      <p class="reveal delay-2" data-no="Lag noe ekte av Lofoten med dine egne hender — og ta med deg hjem noe som varer, og en følelse du aldri glemmer." data-en="Create something real from Lofoten with your own hands — and bring home something that lasts, and a feeling you'll never forget.">Lag noe ekte av Lofoten med dine egne hender — og ta med deg hjem noe som varer, og en følelse du aldri glemmer.</p>
+      <a href="#booking" class="knapp magnetisk reveal delay-3" data-no="Book en opplevelse" data-en="Book an experience">Book en opplevelse</a>
+    </div>
+    <div class="scroll-hint">⌄</div>
+  </div>
+  <svg class="bolge" viewBox="0 0 1440 90" preserveAspectRatio="none"><path fill="#f4ede2" d="M0,40 C240,90 480,0 720,40 C960,80 1200,10 1440,45 L1440,90 L0,90 Z"></path></svg>
+
+  <!-- RULLENDE TEKST-STRIPE -->
+  <div class="marquee" aria-hidden="true">
+    <div class="marquee__spor">
+      <span>Et øyeblikk med havet <b>·</b> Kollektivt maleri <b>·</b> Keramikk fra Lofoten <b>·</b> Glasur fra dette havet <b>·</b> Håndlaget på Ballstad <b>·</b> Et øyeblikk med havet <b>·</b> Kollektivt maleri <b>·</b> Keramikk fra Lofoten <b>·</b> Glasur fra dette havet <b>·</b> Håndlaget på Ballstad <b>·</b> </span>
     </div>
   </div>
-</section>
 
-<!-- ===================== FOOTER ===================== -->
-<footer>
-  <div class="wrap">
-    <div class="cols">
-      <div>
-        <div class="logo" style="color:#fff;font-size:24px">Hav<span style="color:var(--sand)">stund</span></div>
-        <p style="margin-top:10px;max-width:42ch;color:#a9c6cd">Keramikk- og kunststudio på Ballstad, Lofoten. Et øyeblikk med havet.</p>
+  <!-- OPPLEVELSER -->
+  <section id="opplevelser">
+    <h2 class="seksjon-tittel reveal" data-no="Opplevelser" data-en="Experiences">Opplevelser</h2>
+    <p class="seksjon-undertekst reveal delay-1" data-no="Senk skuldrene, glem klokka, og skap noe med hendene mens lyset står inn over havet." data-en="Drop your shoulders, forget the clock, and make something by hand while the light pours in over the sea.">Senk skuldrene, glem klokka, og skap noe med hendene mens lyset står inn over havet.</p>
+    <div class="kar-wrap reveal delay-1">
+      <button class="kar-knapp prev" onclick="karRull(-1)" aria-label="forrige">‹</button>
+      <div class="kar" id="kar">
+        <div class="kort">
+          <div class="ikon">🌊</div>
+          <h3 data-no="Drop-in (1,5 t)" data-en="Drop-in (1.5 h)">Drop-in (1,5 t)</h3>
+          <p data-no="Kom som du er og lag din egen flis til Havveggen, eller en liten skål." data-en="Come as you are and make your own tile for the Sea Wall, or a small bowl.">Kom som du er og lag din egen flis til Havveggen, eller en liten skål.</p>
+          <span class="pris" data-no="Hva vil DU lage?" data-en="What will YOU make?">Hva vil DU lage?</span>
+        </div>
+        <div class="kort">
+          <div class="ikon">🏺</div>
+          <h3 data-no="Håndbygging (2 t)" data-en="Hand-building (2 h)">Håndbygging (2 t)</h3>
+          <p data-no="Form leire med hendene og lag noe du kan drikke av eller stille fram hjemme." data-en="Shape clay with your hands and make something you can drink from or display at home.">Form leire med hendene og lag noe du kan drikke av eller stille fram hjemme.</p>
+          <span class="pris" data-no="Noe som varer livet ut" data-en="Something that lasts a lifetime">Noe som varer livet ut</span>
+        </div>
+        <div class="kort">
+          <div class="ikon">🎨</div>
+          <h3 data-no="Kurs (5–6 uker)" data-en="Course (5–6 weeks)">Kurs (5–6 uker)</h3>
+          <p data-no="Gå dypere — fra leire til ferdig glasert verk, sammen med en profesjonell keramiker." data-en="Go deeper — from clay to finished glazed piece, alongside a professional ceramicist.">Gå dypere — fra leire til ferdig glasert verk, sammen med en profesjonell keramiker.</p>
+          <span class="pris" data-no="Fra leire til ferdig verk" data-en="From clay to finished piece">Fra leire til ferdig verk</span>
+        </div>
+        <div class="kort">
+          <div class="ikon">👥</div>
+          <h3 data-no="For grupper" data-en="For groups">For grupper</h3>
+          <p data-no="Bedrifter, bursdager og kollektivt maleri. Bedre i dårlig vær — nordlys-forsikring." data-en="Companies, birthdays and collective painting. Better in bad weather — your northern-lights insurance.">Bedrifter, bursdager og kollektivt maleri. Bedre i dårlig vær — nordlys-forsikring.</p>
+          <span class="pris" data-no="Bedre i dårlig vær 🌌" data-en="Better in bad weather 🌌">Bedre i dårlig vær 🌌</span>
+        </div>
+        <div class="kort">
+          <div class="ikon">✨</div>
+          <h3 data-no="Mitt Nordlys" data-en="My Aurora">Mitt Nordlys</h3>
+          <p data-no="Vinterens opplevelse: fang nordlyset, gjør det tydelig, mal din egen natt og ta den med hjem." data-en="The winter experience: capture the aurora, make it clear, paint your own night and take it home.">Vinterens opplevelse: fang nordlyset, gjør det tydelig, mal din egen natt og ta den med hjem.</p>
+          <span class="pris" data-no="Fang din egen natt" data-en="Capture your own night">Fang din egen natt</span>
+        </div>
       </div>
-      <div>
-        <h4>Utforsk</h4>
-        <a href="#opplevelser">Opplevelser</a>
-        <a href="#etthav">Ett hav</a>
-        <a href="#grupper">Grupper & servise</a>
-        <a href="#butikk">Butikk</a>
+      <button class="kar-knapp next" onclick="karRull(1)" aria-label="neste">›</button>
+    </div>
+  </section>
+
+  <svg class="bolge opp" viewBox="0 0 1440 90" preserveAspectRatio="none">
+    <defs><linearGradient id="aurora" x1="0" y1="0" x2="1" y2="0.3">
+      <stop offset="0%" stop-color="#2effb0"/><stop offset="45%" stop-color="#15e6c6"/><stop offset="100%" stop-color="#06b89a"/>
+    </linearGradient></defs>
+    <path fill="url(#aurora)" d="M0,40 C240,90 480,0 720,40 C960,80 1200,10 1440,45 L1440,90 L0,90 Z"></path>
+  </svg>
+
+  <!-- BARNEKLUBB -->
+  <section id="barneklubb" class="barn full">
+    <div style="max-width:1180px;margin:0 auto;">
+      <div style="text-align:center;"><span class="gratis-merke reveal" data-no="GRATIS FOR BARNA" data-en="FREE FOR THE CHILDREN">GRATIS FOR BARNA</span></div>
+      <h2 class="seksjon-tittel reveal" data-no="Havstund Barneklubb" data-en="Havstund Kids' Club">Havstund Barneklubb</h2>
+      <p class="seksjon-undertekst reveal delay-1" data-no="Et fast keramikktilbud én gang i uka gjennom skoleåret, gratis for alle barn — betalt av fellesskapet, ikke av familiene. Her får barna dreie på ekte hjul, brenne sine egne verk, og ta med hjem noe som varer livet ut." data-en="A regular ceramics offering once a week through the school year, free for every child — paid for by the community, not the families. Children throw on a real wheel, fire their own pieces, and take home something that lasts a lifetime.">Et fast keramikktilbud én gang i uka gjennom skoleåret, gratis for alle barn — betalt av fellesskapet, ikke av familiene. Her får barna dreie på ekte hjul, brenne sine egne verk, og ta med hjem noe som varer livet ut.</p>
+      <div class="barn-grid">
+        <div class="barn-punkt reveal v-venstre">
+          <h3 data-no="🤲 De lærer med hendene" data-en="🤲 They learn with their hands">🤲 De lærer med hendene</h3>
+          <p data-no="Kunnskap som sitter i kroppen og blir værende — ikke fra en skjerm." data-en="Knowledge that settles in the body and stays — not from a screen.">Kunnskap som sitter i kroppen og blir værende — ikke fra en skjerm.</p>
+        </div>
+        <div class="barn-punkt reveal v-venstre delay-1">
+          <h3 data-no="⏳ Gode ting tar tid" data-en="⏳ Good things take time">⏳ Gode ting tar tid</h3>
+          <p data-no="Krukka må tørke, brennes, glaseres og brennes igjen. Tålmodighet de bærer med seg." data-en="The pot must dry, be fired, glazed and fired again. Patience they carry with them.">Krukka må tørke, brennes, glaseres og brennes igjen. Tålmodighet de bærer med seg.</p>
+        </div>
+        <div class="barn-punkt reveal v-hoyre delay-1">
+          <h3 data-no="✨ «Jeg lagde dette»" data-en="✨ “I made this”">✨ «Jeg lagde dette»</h3>
+          <p data-no="En ekte ting som finnes om ti år. En selvtillit et ark aldri kan gi." data-en="A real thing that will still exist in ten years. A confidence a sheet of paper can never give.">En ekte ting som finnes om ti år. En selvtillit et ark aldri kan gi.</p>
+        </div>
+        <div class="barn-punkt reveal v-hoyre">
+          <h3 data-no="🧭 Røtter og stolthet" data-en="🧭 Roots and pride">🧭 Røtter og stolthet</h3>
+          <p data-no="Leira fra øya, havet, fisket, vikingene på Borg. Barn i nord får kjenne hvor de er fra." data-en="Clay from the island, the sea, the fishing, the Vikings at Borg. Children of the north feel where they come from.">Leira fra øya, havet, fisket, vikingene på Borg. Barn i nord får kjenne hvor de er fra.</p>
+        </div>
       </div>
-      <div>
-        <h4>Havstund</h4>
-        <a href="#om">Om oss</a>
-        <a href="#kontakt">Kontakt</a>
-        <a href="okonomi.html">Internt: økonomi-modell</a>
+      <p class="partnere reveal" data-no="Forankret i læreplanen (LK20) · i samarbeid med Vestvågøy kommune og Samfunnsløftet" data-en="Anchored in the national curriculum (LK20) · in partnership with Vestvågøy municipality and Samfunnsløftet">Forankret i læreplanen (LK20) · i samarbeid med Vestvågøy kommune og Samfunnsløftet</p>
+      <div style="text-align:center;margin-top:26px;" class="reveal delay-1">
+        <a href="#booking" class="knapp lys" data-no="Meld interesse for barneklubben" data-en="Register interest in the Kids' Club">Meld interesse for barneklubben</a>
       </div>
     </div>
-    <div class="footer-bottom">
-      <span>© <span id="aar"></span> Havstund · Ballstad, Lofoten</span>
-      <span>Et øyeblikk med havet · A moment with the sea</span>
+  </section>
+
+  <svg class="bolge" viewBox="0 0 1440 90" preserveAspectRatio="none">
+    <defs><linearGradient id="aurora2" x1="0" y1="0" x2="1" y2="0.3">
+      <stop offset="0%" stop-color="#06b89a"/><stop offset="55%" stop-color="#15e6c6"/><stop offset="100%" stop-color="#2effb0"/>
+    </linearGradient></defs>
+    <path fill="url(#aurora2)" d="M0,40 C240,90 480,0 720,40 C960,80 1200,10 1440,45 L1440,0 L0,0 Z"></path>
+  </svg>
+
+  <!-- SIGNATUR / HAVVEGGEN -->
+  <section id="signatur" class="signatur">
+    <div class="signatur-flex">
+      <div class="tekst">
+        <div class="seksjon-eyebrow reveal v-venstre" data-no="LOFOTENS FØRSTE" data-en="LOFOTEN'S FIRST">LOFOTENS FØRSTE</div>
+        <h2 class="reveal v-venstre" data-no="Kollektivt maleri" data-en="Collective painting">Kollektivt maleri</h2>
+        <p class="kollektiv-undertittel reveal v-venstre" data-no="Ett bilde, mange hender." data-en="One picture, many hands.">Ett bilde, mange hender.</p>
+        <p class="reveal v-venstre delay-1" data-no="Vi deler ett bilde - et portrett, et Lofoten-motiv, eller deres eget foto - i 4 til 20 fliser. Hver av dere maler sin egen flis, og sammen setter vi dem til ett helt kunstverk." data-en="We split one picture - a portrait, a Lofoten motif, or your own photo - into 4 to 20 tiles. Each of you paints your own tile, and together we assemble them into one complete artwork.">Vi deler ett bilde - et portrett, et Lofoten-motiv, eller deres eget foto - i 4 til 20 fliser. Hver av dere maler sin egen flis, og sammen setter vi dem til ett helt kunstverk.</p>
+        <p class="reveal v-venstre delay-2" data-no="Ta med hele verket hjem sammen, eller ta hver deres flis og bygg bildet hjemme. En unik felles aktivitet for familier, venner, bedrifter og feiringer." data-en="Take the whole piece home together, or each take your own tile and build the picture at home. A unique shared activity for families, friends, companies and celebrations.">Ta med hele verket hjem sammen, eller ta hver deres flis og bygg bildet hjemme. En unik felles aktivitet for familier, venner, bedrifter og feiringer.</p>
+        <div class="pris-boks reveal v-venstre delay-2">
+          <div class="pris-stor" data-no="Hvor stort vil DERE gjøre det?" data-en="How big will YOU make it?">Hvor stort vil DERE gjøre det?</div>
+          <ul class="pris-liste">
+            <li data-no="4 hender og ett intimt portrett - eller 20 hender og et veggstort verk" data-en="4 hands and one intimate portrait - or 20 hands and a wall-sized piece">4 hender og ett intimt portrett - eller 20 hender og et veggstort verk</li>
+            <li data-no="Deres eget foto, et Lofoten-motiv, eller en overraskelse fra oss" data-en="Your own photo, a Lofoten motif, or a surprise from us">Deres eget foto, et Lofoten-motiv, eller en overraskelse fra oss</li>
+            <li data-no="Ingen kan lage det samme to ganger" data-en="No one can ever make the same one twice">Ingen kan lage det samme to ganger</li>
+          </ul>
+          <p class="pris-note" data-no="Fortell oss hvor mange dere er, så skreddersyr vi opplevelsen og verket for dere." data-en="Tell us how many you are, and we'll tailor the experience and the artwork for you.">Fortell oss hvor mange dere er, så skreddersyr vi opplevelsen og verket for dere.</p>
+          <a href="#booking" class="knapp magnetisk" style="margin-top:18px;" data-no="Be om et tilbud" data-en="Request a quote">Be om et tilbud</a>
+        </div>
+      </div>
+      <div class="reveal v-hoyre delay-1">
+        <div class="havvegg-foto">
+          <img src="bilder/havvegg.jpg" alt="Havstund Havveggen — håndmalte fliser satt sammen til ett motiv" loading="lazy" />
+        </div>
+        <p class="mosaikk-bildetekst" data-no="Et ekte kollektivt maleri - ett bilde delt i fliser, malt av mange hender." data-en="A real collective painting - one picture split into tiles, painted by many hands.">Et ekte kollektivt maleri - ett bilde delt i fliser, malt av mange hender.</p>
+      </div>
     </div>
-  </div>
-</footer>
+  </section>
 
-<!-- ===================== BOOKING-MODAL ===================== -->
-<div class="modal" id="bookModal">
-  <div class="modal-box">
-    <button class="modal-close" id="modalClose">×</button>
-    <h3 id="modalTitle">Book</h3>
-    <p id="modalText">Online booking kommer (Acuity + Vipps). Send oss en forespørsel i mellomtiden, så svarer vi raskt.</p>
-    <a class="btn btn-primary" id="modalMail" href="#">Send forespørsel på e-post</a>
-  </div>
-</div>
+  <!-- GALLERI / FRA STUDIOET -->
+  <section id="galleri" class="galleri full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
+    <h2 class="seksjon-tittel reveal" data-no="Fra studioet" data-en="From the studio">Fra studioet</h2>
+    <p class="seksjon-undertekst reveal delay-1" data-no="Smakebiter på det som skapes hos Havstund — glasur fra dette havet, i hver eneste form." data-en="A glimpse of what's created at Havstund — glaze from this sea, in every single piece.">Smakebiter på det som skapes hos Havstund — glasur fra dette havet, i hver eneste form.</p>
+    <div class="galleri-grid">
+      <div class="galleri-item reveal"><img src="bilder/keramikk1.jpg" alt="Keramikk-kopp med galakse-glasur" loading="lazy" /><div class="overlegg"><span data-no="Galakse-koppen" data-en="The galaxy cup">Galakse-koppen</span></div></div>
+      <div class="galleri-item reveal delay-1"><img src="bilder/keramikk2.jpg" alt="Turkise keramikk-tallerkener" loading="lazy" /><div class="overlegg"><span data-no="Havturkis servise" data-en="Sea-turquoise tableware">Havturkis servise</span></div></div>
+      <div class="galleri-item reveal delay-2"><img src="bilder/havvegg.jpg" alt="Havveggen — håndmalte fliser" loading="lazy" /><div class="overlegg"><span data-no="Havveggen" data-en="The Sea Wall">Havveggen</span></div></div>
+    </div>
+  </div></section>
 
-<script src="js/track.js" defer></script>
-<script src="js/chat-widget.js" defer></script>
-<script src="js/site.js"></script>
+  <!-- STATS / TELLENDE TALL -->
+  <section id="stats" class="stats full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
+    <h2 class="seksjon-tittel ordvis" data-no="Havstund i tall" data-en="Havstund in numbers">Havstund i tall</h2>
+    <div class="seksjon-undertekst reveal delay-1" style="margin-bottom:48px;">&nbsp;</div>
+    <div class="stats-grid">
+      <div class="stat reveal"><div class="tall" data-tall="100">0</div><div class="etikett" data-no="% glasur laget av Lofoten selv" data-en="% glaze made from Lofoten itself">% glasur laget av Lofoten selv</div></div>
+      <div class="stat reveal delay-1"><div class="tall" data-tall="4">0</div><div class="etikett" data-no="årstider, fire signaturglasurer" data-en="seasons, four signature glazes">årstider, fire signaturglasurer</div></div>
+      <div class="stat reveal delay-2"><div class="tall" data-tall="12">0</div><div class="etikett" data-no="barn i hver klubb-gruppe" data-en="children in each club group">barn i hver klubb-gruppe</div></div>
+      <div class="stat reveal delay-3"><div class="tall" data-tall="1">0</div><div class="etikett" data-no="først i Lofoten med helårs keramikk" data-en="first in Lofoten with year-round ceramics">først i Lofoten med helårs keramikk</div></div>
+    </div>
+  </div></section>
+
+  <!-- OM OSS -->
+  <section id="om" class="om full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
+    <h2 class="seksjon-tittel reveal" data-no="Om oss" data-en="About us">Om oss</h2>
+    <p class="reveal delay-1" data-no="Havstund drives av to unge gründere — begge jordmødre i Lofoten. Den ene jobber med keramikk, den andre med kunst og maling." data-en="Havstund is run by two young founders — both midwives in Lofoten. One works with ceramics, the other with art and painting.">Havstund drives av to unge gründere — begge jordmødre i Lofoten. Den ene jobber med keramikk, den andre med kunst og maling.</p>
+    <p class="reveal delay-1" data-no="At det nettopp er to jordmødre som står bak er ikke tilfeldig: til daglig tar de imot nytt liv her i Lofoten, og nå vil de gi barna og gjestene her en annen type omsorg — gleden og mestringen ved å skape noe ekte med egne hender." data-en="That two midwives are behind it is no coincidence: every day they welcome new life here in Lofoten, and now they want to give the children and guests here a different kind of care — the joy and mastery of making something real with your own hands.">At det nettopp er to jordmødre som står bak er ikke tilfeldig: til daglig tar de imot nytt liv her i Lofoten, og nå vil de gi barna og gjestene her en annen type omsorg — gleden og mestringen ved å skape noe ekte med egne hender.</p>
+    <p class="sitat reveal delay-2" data-no="«Vi er det første stedet i Lofoten med et helårs keramikk- og kunsttilbud — og vi er her for å bli.»" data-en="“We are the first place in Lofoten with a year-round ceramics and art offering — and we are here to stay.”">«Vi er det første stedet i Lofoten med et helårs keramikk- og kunsttilbud — og vi er her for å bli.»</p>
+  </div></section>
+
+  <!-- NYHETER -->
+  <section id="nyheter" class="nyheter full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
+    <h2 class="seksjon-tittel reveal" data-no="Nyheter" data-en="News">Nyheter</h2>
+    <p class="seksjon-undertekst reveal delay-1" data-no="Her legger vi ut alt nytt til dere — nyeste øverst. Send meg teksten, så legger jeg den inn." data-en="Here we post everything new — newest on top. Send me the text and I'll add it.">Her legger vi ut alt nytt til dere — nyeste øverst. Send meg teksten, så legger jeg den inn.</p>
+    <div style="max-width:780px;margin:0 auto;">
+      <div class="nyhet reveal">
+        <div class="dato" data-no="Eksempel" data-en="Example">Eksempel</div>
+        <h3 data-no="Barneklubben starter til høsten" data-en="The Kids' Club starts this autumn">Barneklubben starter til høsten</h3>
+        <p data-no="Skriv den ekte nyheten her når dere er klare." data-en="Write the real news here when you're ready.">Skriv den ekte nyheten her når dere er klare.</p>
+      </div>
+    </div>
+  </div></section>
+
+  <!-- BOOKING -->
+  <section id="booking" class="booking full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
+    <h2 class="seksjon-tittel reveal" data-no="Book en opplevelse" data-en="Book an experience">Book en opplevelse</h2>
+    <p class="seksjon-undertekst reveal delay-1" data-no="Fyll ut, så tar vi kontakt for å bekrefte tid og plass." data-en="Fill in the form and we'll get in touch to confirm time and place.">Fyll ut, så tar vi kontakt for å bekrefte tid og plass.</p>
+    <form class="skjema reveal delay-1" id="bookingSkjema" onsubmit="sendBooking(event)">
+      <div class="rad-2">
+        <div class="felt"><label data-no="Navn" data-en="Name">Navn</label><input type="text" id="navn" required /></div>
+        <div class="felt"><label data-no="Telefon" data-en="Phone">Telefon</label><input type="tel" id="telefon" required /></div>
+      </div>
+      <div class="felt"><label data-no="E-post" data-en="Email">E-post</label><input type="email" id="epost" required /></div>
+      <div class="felt">
+        <label data-no="Hva vil du booke?" data-en="What would you like to book?">Hva vil du booke?</label>
+        <select id="type">
+          <option value="">Laster aktiviteter…</option>
+        </select>
+      </div>
+      <div class="rad-2">
+        <div class="felt"><label data-no="Ønsket dato" data-en="Preferred date">Ønsket dato</label><input type="date" id="dato" /></div>
+        <div class="felt"><label data-no="Antall personer" data-en="Number of people">Antall personer</label><input type="number" id="antall" min="1" value="1" /></div>
+      </div>
+      <div class="felt"><label data-no="Melding (valgfritt)" data-en="Message (optional)">Melding (valgfritt)</label><textarea id="melding" rows="3" data-no-ph="Noe vi bør vite?" data-en-ph="Anything we should know?" placeholder="Noe vi bør vite?"></textarea></div>
+      <button type="submit" class="send-knapp" data-no="Send forespørsel" data-en="Send request">Send forespørsel</button>
+      <div class="takk" id="takk" data-no="Takk! Vi har mottatt forespørselen din og tar kontakt snart. 🌊" data-en="Thank you! We've received your request and will be in touch soon. 🌊">Takk! Vi har mottatt forespørselen din og tar kontakt snart. 🌊</div>
+    </form>
+  </div></section>
+
+  <!-- FØLG OSS / INSTAGRAM -->
+  <section id="instagram" class="full" style="background:var(--sand);text-align:center;">
+    <div style="max-width:760px;margin:0 auto;padding:0 24px;">
+      <h2 class="seksjon-tittel reveal" data-no="Følg øyeblikkene våre" data-en="Follow our moments">Følg øyeblikkene våre</h2>
+      <p class="seksjon-undertekst reveal delay-1" data-no="Se hverdagen i studioet — hender i leire, ovnsåpninger og Lofoten-lyset — på Instagram." data-en="See everyday life in the studio — hands in clay, kiln openings and the Lofoten light — on Instagram.">Se hverdagen i studioet — hender i leire, ovnsåpninger og Lofoten-lyset — på Instagram.</p>
+      <a href="https://www.instagram.com/havstund/" target="_blank" rel="noopener" class="knapp reveal delay-1" style="background:linear-gradient(135deg,#f58529,#dd2a7b 55%,#8134af);display:inline-flex;align-items:center;gap:10px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+        <span>@havstund</span>
+      </a>
+      <!-- LEVENDE FEED: når du har laget en feed (f.eks. SnapWidget/LightWidget),
+           lim widget-koden inn her i stedet for linjen under, så vises bildene automatisk. -->
+      <p class="reveal delay-2" style="margin-top:22px;color:var(--myk);font-style:italic;font-size:.92rem;" data-no="(Her kan vi senere vise de nyeste bildene dine automatisk.)" data-en="(We can later show your latest photos here automatically.)">(Her kan vi senere vise de nyeste bildene dine automatisk.)</p>
+    </div>
+  </section>
+
+  <footer>
+    <img src="bilder/wordmark.png" alt="Havstund" class="footer-wordmark" />
+    <p data-no="Et øyeblikk med havet · Ballstad, Lofoten" data-en="A moment with the sea · Ballstad, Lofoten">Et øyeblikk med havet · Ballstad, Lofoten</p>
+    <p style="margin-top:6px;">post@havstund.no · 000 00 000</p>
+    <p style="margin-top:10px;">
+      <a href="https://www.instagram.com/havstund/" target="_blank" rel="noopener" style="color:#9fd2e4;text-decoration:none;font-weight:600;">📷 @havstund</a>
+    </p>
+    <p style="margin-top:12px;font-size:.85rem;opacity:.6;">© 2026 Havstund</p>
+  </footer>
+
+  <!-- Lightbox-vindu for bilder -->
+  <dialog id="lightboks">
+    <button class="lukk" onclick="document.getElementById('lightboks').close()" aria-label="Lukk">×</button>
+    <img alt="" id="lightboksImg" />
+  </dialog>
+
+  <script>
+    /* ---- Språk ---- */
+    function setLang(lang){
+      document.documentElement.lang = lang;
+      document.querySelectorAll('[data-'+lang+']').forEach(function(el){ el.textContent = el.getAttribute('data-'+lang); });
+      document.querySelectorAll('[data-'+lang+'-ph]').forEach(function(el){ el.setAttribute('placeholder', el.getAttribute('data-'+lang+'-ph')); });
+      var t=document.querySelector('title'); if(t) document.title=t.getAttribute('data-'+lang)||document.title;
+      document.getElementById('btnNo').classList.toggle('aktiv',lang==='no');
+      document.getElementById('btnEn').classList.toggle('aktiv',lang==='en');
+      try{ localStorage.setItem('havstund-lang',lang); }catch(e){}
+      if(typeof aktiverOrdvis==='function') aktiverOrdvis();
+    }
+    (function(){ var s=null; try{s=localStorage.getItem('havstund-lang');}catch(e){} if(s==='en') setLang('en'); })();
+
+    /* ---- Scroll-reveal (ting glir inn) ---- */
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('synlig'); io.unobserve(en.target); } });
+    },{threshold:.15});
+    document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+
+    /* ---- Karusell (slide til siden) ---- */
+    function karRull(dir){
+      var k=document.getElementById('kar');
+      k.scrollBy({left: dir * Math.min(340, k.clientWidth*0.85), behavior:'smooth'});
+    }
+
+    /* ---- Booking ---- */
+    // Booking-skjema -> plattformens database (/api/bookings). Backend varsler Discord automatisk.
+    function sendBooking(e){
+      e.preventDefault();
+      var f = e.target;
+      var g = function(id){ var el=f.querySelector('#'+id); return el ? el.value : ''; };
+      var data = {
+        activity_id: g('type'),
+        navn: g('navn'),
+        epost: g('epost'),
+        tlf: g('telefon'),
+        dato: g('dato'),
+        antall: g('antall') || 1,
+        melding: g('melding')
+      };
+      var knapp = f.querySelector('.send-knapp');
+      if(!data.activity_id){ alert('Velg hva du vil booke.'); return; }
+      if(!data.dato){ alert('Velg en ønsket dato.'); return; }
+      knapp.disabled = true; knapp.textContent = 'Sender...';
+      fetch('/api/bookings', {
+        method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(data)
+      })
+        .then(function(r){ if(r.ok){ knapp.style.display='none'; document.getElementById('takk').style.display='block'; } else { throw new Error(r.status); } })
+        .catch(function(){ knapp.disabled=false; knapp.textContent='Send forespørsel'; alert('Beklager - noe gikk galt. Prøv igjen.'); });
+    }
+
+    /* Fyll booking-dropdown med ekte aktiviteter fra databasen */
+    (function(){
+      var sel = document.getElementById('type');
+      if(!sel) return;
+      fetch('/api/activities').then(function(r){ return r.json(); }).then(function(akt){
+        if(!Array.isArray(akt) || !akt.length) return;
+        sel.innerHTML = '';
+        akt.forEach(function(a){
+          var o = document.createElement('option');
+          o.value = a.id;
+          o.textContent = a.navn + (a.pris ? ' (fra ' + a.pris + ' kr)' : '');
+          sel.appendChild(o);
+        });
+      }).catch(function(){});
+    })();
+
+    /* Lightbox for galleri + havvegg-foto */
+    (function(){
+      var lb=document.getElementById('lightboks');
+      if(!lb) return;
+      var lbImg=document.getElementById('lightboksImg');
+      document.querySelectorAll('.galleri-item img, .havvegg-foto img').forEach(function(im){
+        im.style.cursor='zoom-in';
+        im.addEventListener('click',function(){ lbImg.src=im.src; lb.showModal(); });
+      });
+      lb.addEventListener('click',function(e){ if(e.target===lb) lb.close(); });
+    })();
+
+    /* Magnetiske knapper (følger musa lett) */
+    if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+      document.querySelectorAll('.magnetisk').forEach(function(b){
+        b.addEventListener('mousemove',function(e){
+          var r=b.getBoundingClientRect();
+          b.style.transform='translate('+((e.clientX-r.left-r.width/2)*0.25)+'px,'+((e.clientY-r.top-r.height/2)*0.4)+'px)';
+        });
+        b.addEventListener('mouseleave',function(){ b.style.transform=''; });
+      });
+    }
+
+    /* (Lenis myk-scroll fjernet - bruker naturlig, rask scrolling) */
+
+    /* ===== 2025-effekter ===== */
+    var redusert = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* Egendefinert markør (myk ring som følger musa) */
+    (function(){
+      if(redusert || window.matchMedia('(pointer:coarse)').matches) return;
+      var dot=document.querySelector('.cursor-dot'), ring=document.querySelector('.cursor-ring');
+      if(!dot||!ring) return;
+      var mx=0,my=0,rx=0,ry=0;
+      window.addEventListener('mousemove',function(e){mx=e.clientX;my=e.clientY;dot.style.left=mx+'px';dot.style.top=my+'px';});
+      (function loop(){rx+=(mx-rx)*0.18;ry+=(my-ry)*0.18;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(loop);})();
+      document.querySelectorAll('a,button,.kort,.galleri-item').forEach(function(el){
+        el.addEventListener('mouseenter',function(){ring.classList.add('hover');});
+        el.addEventListener('mouseleave',function(){ring.classList.remove('hover');});
+      });
+    })();
+
+    /* (Parallax fjernet for jevn scrolling) */
+
+    /* Tellende tall */
+    (function(){
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){
+        if(!e.isIntersecting) return; io.unobserve(e.target);
+        var el=e.target, mal=parseInt(el.getAttribute('data-tall'),10)||0;
+        if(redusert){ el.textContent=mal; return; }
+        var start=null, dur=1500;
+        (function tikk(ts){ if(!start)start=ts; var p=Math.min(1,(ts-start)/dur);
+          el.textContent=Math.round(mal*(0.5-Math.cos(p*Math.PI)/2));
+          if(p<1)requestAnimationFrame(tikk); })(performance.now());
+      });},{threshold:.4});
+      document.querySelectorAll('.tall[data-tall]').forEach(function(el){io.observe(el);});
+    })();
+
+    /* Ord-for-ord avsløring (i18n-trygg) */
+    var ordIO;
+    function aktiverOrdvis(){
+      document.querySelectorAll('.ordvis').forEach(function(el){
+        var txt=el.textContent;
+        el.innerHTML=txt.split(' ').map(function(w){return '<span class="ord">'+w+'</span>';}).join(' ');
+      });
+      if(redusert){ document.querySelectorAll('.ord').forEach(function(o){o.classList.add('vis');}); return; }
+      if(ordIO) ordIO.disconnect();
+      ordIO=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){
+        e.target.querySelectorAll('.ord').forEach(function(o,i){o.style.transitionDelay=(i*55)+'ms';o.classList.add('vis');});
+        ordIO.unobserve(e.target);
+      }});},{threshold:.25});
+      document.querySelectorAll('.ordvis').forEach(function(el){ordIO.observe(el);});
+    }
+    aktiverOrdvis();
+
+    /* Lukk mobilmenyen når man trykker en lenke */
+    document.querySelectorAll('.meny a').forEach(function(a){
+      a.addEventListener('click',function(){ document.querySelector('.meny').classList.remove('apen'); });
+    });
+  </script>
+
+  <!-- Live chat + realtime (fra plattformen) -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/chat-widget.js" defer></script>
 </body>
 </html>
