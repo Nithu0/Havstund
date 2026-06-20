@@ -5,6 +5,7 @@
 const express = require('express');
 const db = require('../db');
 const { requireRole } = require('../lib/auth');
+const discord = require('../lib/discord');
 
 const router = express.Router();
 
@@ -33,7 +34,7 @@ router.post('/', async (req, res) => {
   try {
     // Hent aktivitetens pris
     const akt = await db.one(
-      'SELECT id, pris FROM activities WHERE id = $1 AND aktiv = true',
+      'SELECT id, pris, navn FROM activities WHERE id = $1 AND aktiv = true',
       [aktId]
     );
     if (!akt) return res.status(404).json({ error: 'Aktivitet ikke funnet' });
@@ -48,6 +49,9 @@ router.post('/', async (req, res) => {
        RETURNING *`,
       [aktId, brukerId, navn, epost, tlf || null, dato, tid || null, antallN, belop, melding || null]
     );
+
+    // Varsle Discord (#general) — fire-and-forget, stopper aldri bookingen
+    discord.bookingVarsel(booking, akt.navn);
 
     res.status(201).json({ booking });
   } catch (e) {

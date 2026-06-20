@@ -8,6 +8,7 @@ const express = require('express');
 const db = require('../db');
 const ai = require('../lib/ai');
 const { requireRole } = require('../lib/auth');
+const discord = require('../lib/discord');
 
 const router = express.Router();
 
@@ -87,7 +88,7 @@ router.post('/thread/:id/message', async (req, res) => {
   if (tekst.length > 4000) return res.status(400).json({ error: 'Meldingen er for lang' });
 
   try {
-    const traad = await db.one('SELECT id, status FROM chat_threads WHERE id = $1', [id]);
+    const traad = await db.one('SELECT id, status, navn FROM chat_threads WHERE id = $1', [id]);
     if (!traad) return res.status(404).json({ error: 'Tråd ikke funnet' });
 
     // Lagre kundens melding
@@ -99,6 +100,8 @@ router.post('/thread/:id/message', async (req, res) => {
     );
     await db.query('UPDATE chat_threads SET sist = now() WHERE id = $1', [id]);
     emitMelding(req, id, kundeMelding);
+    // Varsle Discord (#meldinger) om kundemeldingen — fire-and-forget
+    discord.chatVarsel(id, tekst, traad.navn);
 
     // AI svarer kun når tråden fortsatt er i AI-modus ('apen')
     let aiSvar = null;
