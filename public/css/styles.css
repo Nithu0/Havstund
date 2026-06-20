@@ -2,13 +2,16 @@
    HAVSTUND — felles stilark (nettside + økonomi)
    Merkevare: dypt havblått + turkis + varm leire/sand
    ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap');
 :root{
-  --sea-deep:#082a36; --sea:#0e4a63; --teal:#159aa8; --turq:#2bb6c2; --turq-l:#63d6dd;
-  --clay:#d2823f; --clay-d:#a9602f; --sand:#e8c49a; --cream:#f6efe3; --ink:#12303a;
-  --muted:#5d7681; --line:#e3d8c6;
-  --maxw:1180px; --r:16px; --shadow:0 14px 40px rgba(8,42,54,.12);
-  --font:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+  /* Blå-palett — matcher forsiden (Lofoten-blå + varm leire/sand) */
+  --sea-deep:#0a2747; --sea:#163e66; --teal:#2a6f9e; --turq:#3a86d6; --turq-l:#a0cff9;
+  --clay:#c08457; --clay-d:#a96d36; --sand:#e7dcc8; --cream:#f4ede2; --ink:#26211b;
+  --muted:#6b5e50; --line:#e7dcc8;
+  --maxw:1180px; --r:16px; --shadow:0 14px 40px rgba(10,39,71,.14);
+  --font:"Inter","Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
 }
+h1,h2,h3{font-family:"Fraunces",Georgia,serif;font-weight:500;letter-spacing:-0.01em;}
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{font-family:var(--font);color:var(--ink);background:var(--cream);line-height:1.6;-webkit-font-smoothing:antialiased}
