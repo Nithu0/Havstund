@@ -680,6 +680,15 @@
     });
   </script>
 
+  <!-- Sikkerhetsnett: garanterer at alt innhold vises (om scroll-effekten svikter) -->
+  <script>
+    (function(){
+      function visAlt(){ try{ document.querySelectorAll('.reveal').forEach(function(e){ e.classList.add('synlig'); }); }catch(_){} }
+      window.addEventListener('load', function(){ setTimeout(visAlt, 900); });
+      setTimeout(visAlt, 2500);
+    })();
+  </script>
+
   <!-- Live chat + realtime (fra plattformen) -->
   <script src="/socket.io/socket.io.js"></script>
   <script src="js/chat-widget.js" defer></script>
