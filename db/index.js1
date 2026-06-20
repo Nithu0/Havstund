@@ -1,0 +1,38 @@
+const { Pool } = require('pg');
+
+let pool = null;
+
+function isConfigured() {
+  return !!process.env.DATABASE_URL;
+}
+
+function getPool() {
+  if (!pool && isConfigured()) {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false }
+    });
+  }
+  return pool;
+}
+
+async function query(sql, params = []) {
+  const p = getPool();
+  if (!p) throw new Error('Database not configured');
+  return p.query(sql, params);
+}
+
+async function one(sql, params = []) {
+  const res = await query(sql, params);
+  return res.rows[0] || null;
+}
+
+async function init() {
+  if (!isConfigured()) return;
+  const schema = require('fs').readFileSync(__dirname + '/schema.sql', 'utf8');
+  const p = getPool();
+  await p.query(schema);
+  await require('./seed')();
+}
+
+module.exports = { query, one, init, isConfigured, getPool };
