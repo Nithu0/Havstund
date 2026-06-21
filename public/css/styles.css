@@ -4,10 +4,11 @@
    ============================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap');
 :root{
-  /* Blå-palett — matcher forsiden (Lofoten-blå + varm leire/sand) */
+  /* Lys hav-blå palett (admin/dashbord) — matcher forsidens Lofoten-blå.
+     Aksent = turkis/havblå (ikke leire). Bakgrunn = lys havdis. */
   --sea-deep:#0a2747; --sea:#163e66; --teal:#2a6f9e; --turq:#3a86d6; --turq-l:#a0cff9;
-  --clay:#c08457; --clay-d:#a96d36; --sand:#e7dcc8; --cream:#f4ede2; --ink:#26211b;
-  --muted:#6b5e50; --line:#e7dcc8;
+  --clay:#3a86d6; --clay-d:#2a6f9e; --sand:#dbe7f3; --cream:#eef5fc; --ink:#1b2733;
+  --muted:#5a6b7d; --line:#d6e3f0;
   --maxw:1180px; --r:16px; --shadow:0 14px 40px rgba(10,39,71,.14);
   --font:"Inter","Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
 }
@@ -22,7 +23,7 @@ h2{font-size:clamp(26px,3.6vw,40px);color:var(--sea-deep)}
 h3{font-size:20px;color:var(--sea-deep)}
 .wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
 .section{padding:78px 0}
-.section.alt{background:#fffaf1}
+.section.alt{background:#e4eef9}
 .eyebrow{text-transform:uppercase;letter-spacing:3px;font-size:13px;color:var(--clay);font-weight:700;margin-bottom:10px}
 .lead{font-size:clamp(16px,2vw,20px);color:var(--muted);max-width:60ch}
 .center{text-align:center;margin:0 auto}
@@ -37,17 +38,19 @@ h3{font-size:20px;color:var(--sea-deep)}
 .btn-light{background:rgba(255,255,255,.16);color:#fff;border:1.5px solid rgba(255,255,255,.6);backdrop-filter:blur(4px)}
 .btn-light:hover{background:#fff;color:var(--sea-deep)}
 
-/* ---- nav ---- */
-header.nav{position:sticky;top:0;z-index:60;background:rgba(246,239,227,.92);backdrop-filter:blur(10px);
-  border-bottom:1px solid var(--line)}
+/* ---- nav (dyp havblå topp-stripe, hvitt ordmerke — likt forsiden) ---- */
+header.nav{position:sticky;top:0;z-index:60;
+  background:linear-gradient(100deg,var(--sea-deep),var(--sea));
+  border-bottom:1px solid rgba(255,255,255,.10);box-shadow:0 4px 20px rgba(10,39,71,.18)}
 .nav-inner{max-width:var(--maxw);margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:18px}
-.logo{font-weight:800;font-size:22px;color:var(--sea-deep);letter-spacing:.5px}
-.logo span{color:var(--clay)}
-.logo small{display:block;font-size:10px;font-weight:600;letter-spacing:3px;color:var(--muted);text-transform:uppercase}
+.logo{font-weight:800;font-size:22px;color:#fff;letter-spacing:.5px;display:flex;align-items:center}
+.logo span{color:var(--turq-l)}
+.logo small{display:block;font-size:10px;font-weight:600;letter-spacing:3px;color:rgba(255,255,255,.6);text-transform:uppercase}
+.logo .logo-wordmark{height:30px;width:auto;display:block;filter:drop-shadow(0 1px 4px rgba(0,0,0,.35))}
 .nav-links{margin-left:auto;display:flex;gap:22px;align-items:center}
-.nav-links a{font-size:15px;font-weight:600;color:var(--ink);opacity:.85}
-.nav-links a:hover{opacity:1;color:var(--clay)}
-.nav-toggle{display:none;margin-left:auto;background:none;border:none;font-size:26px;color:var(--sea-deep);cursor:pointer}
+.nav-links a{font-size:15px;font-weight:600;color:#fff;opacity:.85}
+.nav-links a:hover{opacity:1;color:var(--turq-l)}
+.nav-toggle{display:none;margin-left:auto;background:none;border:none;font-size:26px;color:#fff;cursor:pointer}
 
 /* ---- hero ---- */
 .hero{position:relative;min-height:88vh;display:flex;align-items:center;color:#fff;overflow:hidden}
