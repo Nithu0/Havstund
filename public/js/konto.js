@@ -45,6 +45,14 @@
   }
 
   /* ---------- Visninger ---------- */
+  function gaaTilRiktigSide(user) {
+    if (user.rolle === 'ansatt' || user.rolle === 'admin') {
+      window.location = '/intranett';
+    } else {
+      window.location = '/min-side';
+    }
+  }
+
   function visInnlogget(user) {
     elUtlogget.style.display = 'none';
     elInnlogget.style.display = 'block';
@@ -158,7 +166,7 @@
             visMelding(hent('feil-login'), feilTekst(res.data, 'Feil e-post eller passord.'), 'feil');
             return;
           }
-          visInnlogget(res.data.user);
+          gaaTilRiktigSide(res.data.user);
         })
         .catch(function () {
           visMelding(hent('feil-login'), 'Klarte ikke å logge inn. Prøv igjen.', 'feil');
@@ -190,7 +198,7 @@
             visMelding(hent('feil-register'), feilTekst(res.data, 'Klarte ikke å opprette konto.'), 'feil');
             return;
           }
-          visInnlogget(res.data.user);
+          gaaTilRiktigSide(res.data.user);
         })
         .catch(function () {
           visMelding(hent('feil-register'), 'Klarte ikke å opprette konto. Prøv igjen.', 'feil');

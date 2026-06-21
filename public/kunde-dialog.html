@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Havstund — Kundedialog (admin)</title>
+<link rel="stylesheet" href="css/styles.css">
+<style>
+  /* ---- topbar / admin header ---- */
+  .adm-top{background:var(--sea-deep);color:#fff;position:sticky;top:0;z-index:60}
+  .adm-top .inner{max-width:1320px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+  .adm-top .logo{font-weight:800;font-size:22px;color:#fff;letter-spacing:.5px;display:flex;flex-direction:column}
+  .adm-top .logo small{font-size:10px;font-weight:600;letter-spacing:3px;color:var(--turq-l);text-transform:uppercase}
+  .adm-top nav{margin-left:auto;display:flex;gap:22px;align-items:center}
+  .adm-top nav a{font-size:14px;font-weight:600;color:#cfe2f4;opacity:.9}
+  .adm-top nav a:hover{opacity:1;color:#fff}
+  .adm-top nav a.logout{color:var(--turq-l)}
+
+  /* ---- shell ---- */
+  .shell{max-width:1320px;margin:0 auto;padding:20px 24px 40px}
+  .layout{display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start;
+    height:calc(100vh - 130px);min-height:520px}
+
+  /* ---- panels ---- */
+  .panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
+    display:flex;flex-direction:column;height:100%;overflow:hidden}
+  .panel .phead{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+  .panel .phead h2{font-size:18px;color:var(--sea-deep)}
+
+  /* ---- venstre: kundeliste ---- */
+  .search-box{padding:12px 16px;border-bottom:1px solid var(--line)}
+  .search-box input{width:100%;font-size:14px;padding:10px 12px}
+  #kunde-liste{flex:1;overflow-y:auto}
+  .kunde-rad{padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:.15s;
+    display:flex;gap:12px;align-items:flex-start}
+  .kunde-rad:hover{background:#f4f9fe}
+  .kunde-rad.active{background:#eef5fc;border-left:3px solid var(--turq);padding-left:13px}
+  .kunde-rad .avatar{width:40px;height:40px;border-radius:50%;flex:0 0 40px;background:linear-gradient(135deg,var(--teal),var(--turq));
+    color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
+  .kunde-rad .info{flex:1;min-width:0}
+  .kunde-rad .navn{font-weight:700;font-size:14px;color:var(--sea-deep);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .kunde-rad .utdrag{font-size:13px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .kunde-rad .badge-ulest{flex:0 0 auto;background:var(--clay);color:#fff;font-size:11px;font-weight:700;
+    min-width:20px;height:20px;padding:0 6px;border-radius:20px;display:flex;align-items:center;justify-content:center}
+  .liste-tom{padding:24px 18px;color:var(--muted);font-size:14px;text-align:center}
+
+  /* ---- høyre: dialog-panel ---- */
+  #dialog-panel{display:flex;flex-direction:column;height:100%}
+  #valgt-kunde{display:flex;flex-direction:column}
+  #valgt-kunde .vk-navn{font-weight:800;font-size:18px;color:var(--sea-deep);font-family:"Fraunces",Georgia,serif}
+  #valgt-kunde .vk-epost{font-size:13px;color:var(--muted)}
+
+  .tabs{display:flex;gap:4px;padding:0 16px;border-bottom:1px solid var(--line);background:#fbfcfe}
+  .tab{padding:13px 16px;font-size:14px;font-weight:600;color:var(--muted);border:none;background:none;cursor:pointer;
+    border-bottom:3px solid transparent;transition:.15s}
+  .tab:hover{color:var(--sea-deep)}
+  .tab.active{color:var(--sea-deep);border-bottom-color:var(--turq)}
+
+  .tab-pane{flex:1;display:none;flex-direction:column;overflow:hidden}
+  .tab-pane.active{display:flex}
+
+  /* ---- dialog-tråd ---- */
+  #dialog-traad{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px;background:#fbfcfe}
+  .melding{max-width:74%;padding:11px 15px;border-radius:14px;font-size:14px;line-height:1.5;
+    white-space:pre-wrap;word-wrap:break-word}
+  .melding .meta{font-size:10px;text-transform:uppercase;letter-spacing:1px;opacity:.7;margin-bottom:4px}
+  .melding.fra-kunde{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px}
+  .melding.fra-oss{align-self:flex-end;background:var(--sea);color:#fff;border-bottom-right-radius:4px}
+  .melding.fra-oss .meta{color:var(--turq-l)}
+
+  /* ---- pristilbud-kort ---- */
+  .tilbud-kort{align-self:flex-end;max-width:74%;background:#fff;border:2px solid var(--clay);border-radius:14px;
+    padding:14px 16px;box-shadow:var(--shadow)}
+  .tilbud-kort .tk-tag{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--clay-d);font-weight:700}
+  .tilbud-kort .tk-belop{font-size:26px;font-weight:800;color:var(--sea-deep);font-family:"Fraunces",Georgia,serif;margin:4px 0}
+  .tilbud-kort .tk-tekst{font-size:14px;color:var(--ink);line-height:1.5}
+
+  /* ---- svarskjema ---- */
+  #svar-skjema{border-top:1px solid var(--line);padding:14px;background:#fff;display:flex;flex-direction:column;gap:10px}
+  #svar-skjema textarea{min-height:64px}
+  #svar-skjema .svar-rad{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+  #svar-skjema .pris-felt{flex:0 0 200px;min-width:160px}
+  #svar-skjema .pris-felt label{font-size:12px}
+  #svar-skjema .send-wrap{margin-left:auto}
+
+  /* ---- prosjekter & kvitteringer felles ---- */
+  .scroll-pane{flex:1;overflow-y:auto;padding:20px;background:#fbfcfe}
+  .blokk{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  .blokk h3{font-size:16px;margin-bottom:4px}
+  .blokk .type-tag{display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:700;
+    color:var(--teal);background:#e8f2fb;padding:3px 10px;border-radius:20px;margin-bottom:8px}
+  .blokk p.beskr{font-size:14px;color:var(--muted);margin-bottom:10px}
+
+  .skjema-kort{background:#fff;border:1px dashed var(--turq);border-radius:12px;padding:16px;margin-bottom:18px}
+  .skjema-kort h3{font-size:15px;margin-bottom:12px;color:var(--sea-deep)}
+  .skjema-kort .felt-rad{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+  .skjema-kort .felt-full{margin-bottom:12px}
+  .skjema-kort label{font-size:13px}
+  .skjema-kort input,.skjema-kort textarea,.skjema-kort select{font-size:14px;padding:10px 12px}
+  .skjema-kort textarea{min-height:70px}
+  .chk-rad{display:flex;align-items:center;gap:8px}
+  .chk-rad input{width:auto;margin:0}
+  .chk-rad label{margin:0}
+
+  /* bilder i prosjekt */
+  .bilde-rute{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin:10px 0}
+  .bilde-rute figure{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#f4f9fe}
+  .bilde-rute img{height:90px;width:100%;object-fit:cover}
+  .bilde-rute figcaption{font-size:11px;color:var(--muted);padding:5px 8px;text-align:center}
+  .bilde-skjema{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;border-top:1px solid var(--line);padding-top:12px}
+  .bilde-skjema input{font-size:13px;padding:9px 11px}
+  .bilde-skjema .f-url{flex:2;min-width:160px}
+  .bilde-skjema .f-tit{flex:1;min-width:120px}
+
+  /* kvitteringer */
+  .kvit-rad{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--line);border-radius:12px;
+    padding:14px 16px;margin-bottom:10px}
+  .kvit-rad .kv-belop{font-weight:800;font-size:18px;color:var(--sea-deep);font-family:"Fraunces",Georgia,serif;flex:0 0 auto}
+  .kvit-rad .kv-info{flex:1;min-width:0}
+  .kvit-rad .kv-beskr{font-size:14px;color:var(--ink)}
+  .kvit-rad .kv-dato{font-size:12px;color:var(--muted)}
+  .status-pill{font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;padding:4px 12px;border-radius:20px}
+  .status-pill.betalt{background:#e3f4ea;color:#2e7d4f}
+  .status-pill.ubetalt{background:#fbe9d8;color:var(--clay-d)}
+
+  .pane-tom{padding:20px;color:var(--muted);font-size:14px;text-align:center}
+
+  /* tom-tilstand når ingen kunde valgt */
+  #ingen-valgt{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    color:var(--muted);text-align:center;padding:40px}
+  #ingen-valgt .ic{font-size:48px;margin-bottom:14px;opacity:.5}
+  #ingen-valgt p{font-size:16px;max-width:34ch}
+
+  .btn-sm{padding:10px 18px;font-size:14px}
+
+  /* ---- responsiv ---- */
+  @media(max-width:860px){
+    .layout{grid-template-columns:1fr;height:auto}
+    .panel.venstre{height:340px}
+    .panel.hoyre{min-height:70vh}
+    .skjema-kort .felt-rad{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ ADMIN HEADER ============ -->
+<header class="adm-top">
+  <div class="inner">
+    <a href="/" class="logo">Havstund<small>Kundedialog · Admin</small></a>
+    <nav>
+      <a href="/intranett">Intranett</a>
+      <a href="/">Hjem</a>
+      <a href="#" id="logg-ut" class="logout">Logg ut</a>
+    </nav>
+  </div>
+</header>
+
+<div class="shell">
+  <div class="layout">
+
+    <!-- ============ VENSTRE: KUNDER ============ -->
+    <aside class="panel venstre">
+      <div class="phead">
+        <h2>Kunder</h2>
+      </div>
+      <div class="search-box">
+        <input type="search" id="kunde-sok" placeholder="Søk etter navn eller e-post…" autocomplete="off">
+      </div>
+      <div id="kunde-liste">
+        <div class="liste-tom">Laster kunder…</div>
+      </div>
+    </aside>
+
+    <!-- ============ HØYRE: DIALOG / PROSJEKTER / KVITTERINGER ============ -->
+    <section class="panel hoyre">
+
+      <!-- Tom-tilstand -->
+      <div id="ingen-valgt">
+        <div class="ic">💬</div>
+        <p>Velg en kunde til venstre for å se dialog, prosjekter og kvitteringer.</p>
+      </div>
+
+      <!-- Dialog-panel (skjult til en kunde velges) -->
+      <div id="dialog-panel" style="display:none">
+
+        <div class="phead">
+          <div id="valgt-kunde">
+            <span class="vk-navn">—</span>
+            <span class="vk-epost"></span>
+          </div>
+        </div>
+
+        <!-- Faner -->
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="dialog" role="tab">Dialog</button>
+          <button class="tab" data-tab="prosjekter" role="tab">Prosjekter</button>
+          <button class="tab" data-tab="kvitteringer" role="tab">Kvitteringer</button>
+        </div>
+
+        <!-- ===== DIALOG ===== -->
+        <div class="tab-pane active" id="pane-dialog">
+          <div id="dialog-traad">
+            <div class="pane-tom">Ingen meldinger ennå.</div>
+          </div>
+
+          <form id="svar-skjema" autocomplete="off">
+            <div class="felt-full">
+              <textarea id="svar-tekst" placeholder="Skriv et svar til kunden…" required></textarea>
+            </div>
+            <div class="svar-rad">
+              <div class="pris-felt">
+                <label for="svar-pris">Pristilbud (valgfritt)</label>
+                <input type="number" id="svar-pris" min="0" step="1" placeholder="kr">
+              </div>
+              <div class="send-wrap">
+                <button type="submit" class="btn btn-primary btn-sm">Send svar</button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- ===== PROSJEKTER ===== -->
+        <div class="tab-pane" id="pane-prosjekter">
+          <div class="scroll-pane">
+
+            <!-- Nytt prosjekt -->
+            <form class="skjema-kort" id="nytt-prosjekt" autocomplete="off">
+              <h3>Opprett nytt prosjekt</h3>
+              <div class="felt-rad">
+                <div>
+                  <label for="np-tittel">Tittel</label>
+                  <input type="text" id="np-tittel" placeholder="F.eks. Kystkrukke i steingods" required>
+                </div>
+                <div>
+                  <label for="np-type">Type</label>
+                  <select id="np-type">
+                    <option value="maleri">Maleri</option>
+                    <option value="keramikk">Keramikk</option>
+                    <option value="kollektivt">Kollektivt</option>
+                    <option value="annet">Annet</option>
+                  </select>
+                </div>
+              </div>
+              <div class="felt-full">
+                <label for="np-beskrivelse">Beskrivelse</label>
+                <textarea id="np-beskrivelse" placeholder="Kort beskrivelse av prosjektet…"></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm">Opprett prosjekt</button>
+            </form>
+
+            <!-- Liste over prosjekter -->
+            <div id="prosjekter-liste">
+              <div class="pane-tom">Ingen prosjekter registrert.</div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ===== KVITTERINGER ===== -->
+        <div class="tab-pane" id="pane-kvitteringer">
+          <div class="scroll-pane">
+
+            <!-- Ny kvittering -->
+            <form class="skjema-kort" id="ny-kvittering" autocomplete="off">
+              <h3>Registrer ny kvittering</h3>
+              <div class="felt-rad">
+                <div>
+                  <label for="nk-belop">Beløp (kr)</label>
+                  <input type="number" id="nk-belop" min="0" step="1" placeholder="0" required>
+                </div>
+                <div>
+                  <label for="nk-dato">Dato</label>
+                  <input type="date" id="nk-dato">
+                </div>
+              </div>
+              <div class="felt-full">
+                <label for="nk-beskrivelse">Beskrivelse</label>
+                <input type="text" id="nk-beskrivelse" placeholder="F.eks. Forskudd på keramikk-kurs" required>
+              </div>
+              <div class="chk-rad" style="margin-bottom:12px">
+                <input type="checkbox" id="nk-betalt">
+                <label for="nk-betalt">Markert som betalt</label>
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm">Legg til kvittering</button>
+            </form>
+
+            <!-- Liste over kvitteringer -->
+            <div id="kvitteringer-liste">
+              <div class="pane-tom">Ingen kvitteringer registrert.</div>
+            </div>
+
+          </div>
+        </div>
+
+      </div><!-- /#dialog-panel -->
+
+    </section>
+
+  </div>
+</div>
+
+<script src="js/kunde-dialog.js" defer></script>
+</body>
+</html>

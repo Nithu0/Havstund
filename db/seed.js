@@ -46,4 +46,91 @@ module.exports = async function seed({ query, one }) {
       [nokkel, verdi]
     );
   }
+
+  // --- Demo-kunde + portaldata (idempotent) ---
+  try {
+    let kundeId;
+    let nyKunde = false;
+
+    const eksisterende = await one(
+      'SELECT id FROM users WHERE epost = $1',
+      ['kunde@havstund.no']
+    );
+
+    if (eksisterende) {
+      kundeId = eksisterende.id;
+    } else {
+      const pw = await hashPassword('kunde123');
+      const opprettet = await one(
+        "INSERT INTO users (navn, epost, passord_hash, rolle) VALUES ($1,$2,$3,'kunde') RETURNING id",
+        ['Demo Kunde', 'kunde@havstund.no', pw]
+      );
+      kundeId = opprettet.id;
+      nyKunde = true;
+    }
+
+    const prosjektTelling = await one(
+      'SELECT COUNT(*)::int AS n FROM projects WHERE bruker_id = $1',
+      [kundeId]
+    );
+    let opprettetPortaldata = false;
+
+    if (nyKunde || prosjektTelling.n === 0) {
+      const prosjekt = await one(
+        `INSERT INTO projects (bruker_id, tittel, type, status, beskrivelse)
+         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+        [kundeId, 'Galakse-krus', 'keramikk', 'under_arbeid',
+         'Et håndbygd krus med dyp blå glasur inspirert av nattehimmelen over havet.']
+      );
+      const media = [
+        ['bilder/keramikk1.jpg', 'Råform — før første brenning'],
+        ['bilder/havvegg.jpg', 'Glasurprøve mot havveggen'],
+      ];
+      for (const [url, tittel] of media) {
+        await query(
+          `INSERT INTO project_media (project_id, bruker_id, url, type, tittel)
+           VALUES ($1, $2, $3, 'bilde', $4)`,
+          [prosjekt.id, kundeId, url, tittel]
+        );
+      }
+      opprettetPortaldata = true;
+    }
+
+    const kvitteringTelling = await one(
+      'SELECT COUNT(*)::int AS n FROM receipts WHERE bruker_id = $1',
+      [kundeId]
+    );
+    if (kvitteringTelling.n === 0) {
+      await query(
+        `INSERT INTO receipts (bruker_id, belop, beskrivelse, betalt, dato, opprettet)
+         VALUES ($1, $2, $3, true, now(), now())`,
+        [kundeId, 850, 'Håndbygging — depositum']
+      );
+      opprettetPortaldata = true;
+    }
+
+    const meldingTelling = await one(
+      'SELECT COUNT(*)::int AS n FROM customer_messages WHERE bruker_id = $1',
+      [kundeId]
+    );
+    if (meldingTelling.n === 0) {
+      await query(
+        `INSERT INTO customer_messages (bruker_id, avsender, tekst, pris, lest)
+         VALUES ($1, 'kunde', $2, NULL, true)`,
+        [kundeId, 'Hei! Kan jeg få et pristilbud på et kollektivt maleri for 8 personer?']
+      );
+      await query(
+        `INSERT INTO customer_messages (bruker_id, avsender, tekst, pris, lest)
+         VALUES ($1, 'admin', $2, $3, false)`,
+        [kundeId, 'Så hyggelig! Her er et tilbud — 8 fliser, ett felles verk.', 6000]
+      );
+      opprettetPortaldata = true;
+    }
+
+    if (nyKunde || opprettetPortaldata) {
+      console.log('  seed: demo-kunde + portaldata');
+    }
+  } catch (e) {
+    console.error('  seed: demo-kunde feilet:', e.message);
+  }
 };

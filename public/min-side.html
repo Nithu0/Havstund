@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Min side — Havstund</title>
+  <meta name="description" content="Din side hos Havstund — timer, prosjekter, kvitteringer og meldinger.">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    /* ---- Min side: sidespesifikk styling (bygger på felles stilark) ---- */
+    .ms-main{max-width:var(--maxw);margin:0 auto;padding:34px 22px 80px}
+
+    .ms-welcome{margin-bottom:34px}
+    .ms-welcome .eyebrow{margin-bottom:6px}
+    .ms-welcome h1{font-size:clamp(32px,5vw,52px);color:var(--sea-deep);line-height:1.1}
+    .ms-welcome h1 #kunde-navn{color:var(--clay)}
+    .ms-welcome p{color:var(--muted);margin-top:8px;font-size:17px}
+
+    .ms-section{margin-bottom:46px}
+    .ms-section > h2{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+    .ms-section > h2 .h2-ic{font-size:26px;line-height:1}
+
+    /* Tom-tilstand */
+    .empty{background:#fffaf1;border:1px dashed var(--line);border-radius:var(--r);
+      padding:30px;text-align:center;color:var(--muted);font-size:15px}
+    .empty .e-ic{font-size:30px;display:block;margin-bottom:8px;opacity:.7}
+
+    /* ---- Bookinger ---- */
+    .booking-list{display:grid;gap:14px}
+    .booking{display:flex;align-items:center;gap:18px;background:#fff;border:1px solid var(--line);
+      border-radius:var(--r);padding:18px 22px;box-shadow:var(--shadow);flex-wrap:wrap}
+    .booking .b-date{display:flex;flex-direction:column;align-items:center;justify-content:center;
+      min-width:62px;background:linear-gradient(135deg,var(--sea),var(--teal));color:#fff;
+      border-radius:12px;padding:10px 6px}
+    .booking .b-date .d-day{font-size:24px;font-weight:800;font-family:"Fraunces",serif;line-height:1}
+    .booking .b-date .d-mon{font-size:11px;text-transform:uppercase;letter-spacing:2px;opacity:.9;margin-top:3px}
+    .booking .b-body{flex:1;min-width:180px}
+    .booking .b-body h3{font-size:18px;margin-bottom:4px}
+    .booking .b-meta{color:var(--muted);font-size:14px;display:flex;gap:14px;flex-wrap:wrap}
+    .booking .b-meta span{display:inline-flex;align-items:center;gap:5px}
+
+    /* ---- Prosjekter ---- */
+    .project-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}
+    .project{background:#fff;border:1px solid var(--line);border-radius:var(--r);
+      padding:24px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px}
+    .project .p-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .project h3{font-size:20px}
+    .project .p-type{font-size:13px;color:var(--clay);font-weight:700;text-transform:uppercase;
+      letter-spacing:2px;margin-top:2px}
+    .project .p-desc{color:var(--muted);font-size:15px}
+    .project .p-gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+    .project .p-gallery img{height:96px;width:100%;object-fit:cover;border-radius:10px}
+    .project .p-empty-media{color:var(--muted);font-size:14px;font-style:italic}
+
+    /* ---- Kvitteringer ---- */
+    .receipt-list{background:#fff;border:1px solid var(--line);border-radius:var(--r);
+      box-shadow:var(--shadow);overflow:hidden}
+    .receipt{display:flex;align-items:center;gap:16px;padding:16px 22px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+    .receipt:last-child{border-bottom:none}
+    .receipt .r-date{color:var(--muted);font-size:14px;min-width:96px}
+    .receipt .r-desc{flex:1;min-width:160px;color:var(--ink);font-weight:500}
+    .receipt .r-amount{font-weight:800;color:var(--sea-deep);font-size:16px}
+
+    /* ---- Status-merker (fargekodet) ---- */
+    .status{display:inline-block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+      padding:5px 12px;border-radius:20px;white-space:nowrap}
+    .status-bekreftet{background:#dff3e6;color:#1f7a45}
+    .status-venter{background:#fff1d9;color:#9a6512}
+    .status-avlyst{background:#fbe0e0;color:#a32a2a}
+    .status-pagaar{background:#dcecfb;color:#1c5a99}
+    .status-fullfort{background:#e3e8ef;color:#3a4a5e}
+    .status-betalt{background:#dff3e6;color:#1f7a45}
+    .status-ikke-betalt{background:#fbe0e0;color:#a32a2a}
+
+    /* ---- Meldinger / chat ---- */
+    .chat-box{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
+      display:flex;flex-direction:column;overflow:hidden}
+    .chat-thread{display:flex;flex-direction:column;gap:14px;padding:24px;max-height:460px;overflow-y:auto}
+    .msg{max-width:74%;display:flex;flex-direction:column;gap:4px}
+    .msg .bubble{padding:12px 16px;border-radius:16px;font-size:15px;line-height:1.5}
+    .msg .meta{font-size:11px;color:var(--muted);letter-spacing:.3px}
+    /* admin = venstre */
+    .msg.admin{align-self:flex-start;align-items:flex-start}
+    .msg.admin .bubble{background:#eef3f8;color:var(--ink);border-bottom-left-radius:4px}
+    /* kunde = høyre */
+    .msg.kunde{align-self:flex-end;align-items:flex-end}
+    .msg.kunde .bubble{background:linear-gradient(135deg,var(--sea),var(--teal));color:#fff;border-bottom-right-radius:4px}
+    .msg.kunde .meta{text-align:right}
+    /* pristilbud */
+    .msg .offer{margin-top:8px;background:#fffaf1;border:1.5px solid var(--clay);border-radius:12px;
+      padding:12px 14px;color:var(--ink)}
+    .msg .offer .o-label{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--clay);font-weight:700}
+    .msg .offer .o-price{font-size:24px;font-weight:800;color:var(--sea-deep);font-family:"Fraunces",serif;margin:2px 0 4px}
+    .msg .offer .o-desc{font-size:13px;color:var(--muted)}
+
+    .chat-form{border-top:1px solid var(--line);padding:16px 20px;display:flex;gap:12px;align-items:flex-end;background:#fffaf1}
+    .chat-form textarea{min-height:54px;max-height:140px}
+    .chat-form .btn{flex-shrink:0}
+
+    /* ---- Topp-header (egen for innlogget side) ---- */
+    .ms-logout{background:transparent;border:1.5px solid var(--line);color:var(--muted);
+      padding:9px 16px;border-radius:40px;font-weight:600;font-size:14px;cursor:pointer;transition:.18s}
+    .ms-logout:hover{border-color:var(--clay);color:var(--clay)}
+
+    /* ---- responsivt ---- */
+    @media(max-width:760px){
+      .project-grid{grid-template-columns:1fr}
+      .msg{max-width:88%}
+      .booking .b-date{min-width:54px}
+      .chat-form{flex-direction:column;align-items:stretch}
+      .chat-form .btn{width:100%;justify-content:center}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== Header ===== -->
+  <header class="nav">
+    <div class="nav-inner">
+      <a href="/" class="logo">Hav<span>stund</span><small>Lofoten · keramikk &amp; kunst</small></a>
+      <div class="nav-links">
+        <a href="/" class="btn btn-ghost">Hjem</a>
+        <button type="button" id="logg-ut" class="ms-logout">Logg ut</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="ms-main">
+
+    <!-- ===== Velkomst ===== -->
+    <section class="ms-welcome">
+      <p class="eyebrow">Min side</p>
+      <h1>Velkommen, <span id="kunde-navn">…</span></h1>
+      <p>Her finner du timene dine, prosjektene vi jobber med sammen, kvitteringer og dialogen med studioet.</p>
+    </section>
+
+    <!-- ===== 1. Mine timer / bookinger ===== -->
+    <section class="ms-section">
+      <h2><span class="h2-ic">📅</span> Mine timer</h2>
+      <div id="mine-bookinger" class="booking-list"><!-- JS fyller bookinger her --></div>
+      <div id="tom-bookinger" class="empty" hidden>
+        <span class="e-ic">🗓️</span>
+        Du har ingen avtalte timer ennå. <a href="/#kurs" style="color:var(--clay);font-weight:600">Se kurs og verksted →</a>
+      </div>
+    </section>
+
+    <!-- ===== 2. Mine prosjekter ===== -->
+    <section class="ms-section">
+      <h2><span class="h2-ic">🎨</span> Mine prosjekter</h2>
+      <div id="mine-prosjekter" class="project-grid"><!-- JS fyller prosjekter her --></div>
+      <div id="tom-prosjekter" class="empty" hidden>
+        <span class="e-ic">🪴</span>
+        Du har ingen prosjekter ennå. Ta kontakt med studioet for å sette i gang noe sammen.
+      </div>
+    </section>
+
+    <!-- ===== 3. Kvitteringer ===== -->
+    <section class="ms-section">
+      <h2><span class="h2-ic">🧾</span> Kvitteringer</h2>
+      <div id="mine-kvitteringer" class="receipt-list"><!-- JS fyller kvitteringer her --></div>
+      <div id="tom-kvitteringer" class="empty" hidden>
+        <span class="e-ic">📄</span>
+        Ingen kvitteringer å vise ennå.
+      </div>
+    </section>
+
+    <!-- ===== 4. Meldinger med studioet ===== -->
+    <section class="ms-section">
+      <h2><span class="h2-ic">💬</span> Meldinger med studioet</h2>
+      <div class="chat-box">
+        <div id="meldinger-traad" class="chat-thread"><!-- JS fyller meldinger her --></div>
+        <div id="tom-meldinger" class="empty" hidden style="margin:0;border:none;border-radius:0">
+          <span class="e-ic">✉️</span>
+          Ingen meldinger ennå. Skriv noen ord nedenfor for å starte en samtale.
+        </div>
+        <form id="melding-skjema" class="chat-form" autocomplete="off">
+          <textarea id="melding-tekst" placeholder="Skriv en melding til studioet…" aria-label="Skriv en melding"></textarea>
+          <button type="submit" class="btn btn-primary">Send →</button>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p style="font-size:13px;color:#9fb6bd">© <span id="ms-year"></span> Havstund · Lofoten — keramikk- &amp; kunststudio</p>
+    </div>
+  </footer>
+
+  <script>document.getElementById('ms-year').textContent=new Date().getFullYear();</script>
+  <script src="js/min-side.js" defer></script>
+</body>
+</html>

@@ -89,3 +89,47 @@ CREATE TABLE IF NOT EXISTS finance_scenarios (
 CREATE INDEX IF NOT EXISTS idx_bookings_dato ON bookings(dato);
 CREATE INDEX IF NOT EXISTS idx_pageviews_tid ON pageviews(opprettet);
 CREATE INDEX IF NOT EXISTS idx_msg_thread ON chat_messages(thread_id);
+
+-- ===== Kundeportal: prosjekter, media, kvitteringer, kunde-meldinger =====
+CREATE TABLE IF NOT EXISTS projects (
+    id          SERIAL PRIMARY KEY,
+    bruker_id   INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    tittel      TEXT NOT NULL,
+    type        TEXT,
+    status      TEXT NOT NULL DEFAULT 'pabegynt',
+    beskrivelse TEXT,
+    opprettet   TIMESTAMPTZ DEFAULT now(),
+    oppdatert   TIMESTAMPTZ DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS project_media (
+    id         SERIAL PRIMARY KEY,
+    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
+    bruker_id  INTEGER,
+    url        TEXT NOT NULL,
+    type       TEXT DEFAULT 'bilde',
+    tittel     TEXT,
+    opprettet  TIMESTAMPTZ DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS receipts (
+    id          SERIAL PRIMARY KEY,
+    bruker_id   INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    booking_id  INTEGER,
+    belop       INTEGER NOT NULL DEFAULT 0,
+    beskrivelse TEXT,
+    betalt      BOOLEAN DEFAULT false,
+    dato        DATE,
+    opprettet   TIMESTAMPTZ DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS customer_messages (
+    id        SERIAL PRIMARY KEY,
+    bruker_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    avsender  TEXT NOT NULL,
+    tekst     TEXT NOT NULL,
+    pris      INTEGER,
+    lest      BOOLEAN DEFAULT false,
+    opprettet TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_project_media_project_id ON project_media(project_id);
+CREATE INDEX IF NOT EXISTS idx_receipts_bruker_id ON receipts(bruker_id);
+CREATE INDEX IF NOT EXISTS idx_customer_messages_bruker_id ON customer_messages(bruker_id);
+CREATE INDEX IF NOT EXISTS idx_projects_bruker_id ON projects(bruker_id);
