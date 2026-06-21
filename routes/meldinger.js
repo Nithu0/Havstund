@@ -8,6 +8,7 @@
 const express = require('express');
 const db = require('../db');
 const { requireRole } = require('../lib/auth');
+const discord = require('../lib/discord');
 
 const router = express.Router();
 
@@ -150,6 +151,13 @@ router.post('/', async (req, res) => {
        RETURNING id, bruker_id, avsender, tekst, pris, lest, opprettet`,
       [req.user.id, tekst]
     );
+
+    // Varsle ansatte i Discord (#meldinger) — fire-and-forget
+    discord.kundeMeldingVarsel(
+      { navn: req.user.navn, epost: req.user.epost },
+      tekst
+    );
+
     res.status(201).json({ melding });
   } catch (e) {
     console.error('meldinger POST / feilet:', e.message);
