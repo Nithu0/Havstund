@@ -104,8 +104,8 @@
       if (!d || d.error) { el.textContent = ''; return; }
       var n = Number(d.antall_usendt) || 0;
       el.textContent = d.konfigurert
-        ? n + ' poster klare til å sendes til Fiken.'
-        : 'Fiken er ikke koblet til ennå — ' + n + ' poster venter.';
+        ? n + ' poster klare til eksport.'
+        : 'Regnskapsprogram er ikke koblet til ennå — ' + n + ' poster venter.';
     }).catch(function () { el.textContent = ''; });
   }
 
@@ -254,7 +254,7 @@
         '<tr><td>+ Arbeidsgiveravgift (' + agaSats + '%)</td><td class="num">' + kr(aga) + '</td></tr>' +
         '<tr class="sum-rad"><td>= Total arbeidsgiverkostnad</td><td class="num">' + kr(total) + '</td></tr>' +
         '</table>' +
-        '<div class="fiken-note" style="margin-top:14px"><b>Lønnskjøring i Fiken:</b> brutto lønn bokføres på konto 5000, arbeidsgiveravgift på 5400, og feriepenger avsettes automatisk. Hver ansatt får lønnsslipp ut fra timene over.</div>';
+        '<div class="fiken-note" style="margin-top:14px"><b>Lønnskjøring:</b> brutto lønn bokføres på konto 5000, arbeidsgiveravgift på 5400, og feriepenger avsettes automatisk i regnskapet. Hver ansatt får lønnsslipp ut fra timene over.</div>';
     }).catch(function () {});
   }
 
@@ -348,11 +348,11 @@
         .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
         .then(function (res) {
           var d = res.d || {};
-          if (!res.ok) { alert(d.error || 'Kunne ikke sende til Fiken.'); return; }
+          if (!res.ok) { alert(d.error || 'Kunne ikke eksportere.'); return; }
           if (!d.konfigurert) {
-            alert('Fiken er ikke koblet til ennå. Legg inn Fiken-nøkkelen først, så sendes postene automatisk. (' + (Number(d.simulert) || 0) + ' poster ble simulert.)');
+            alert('Regnskapsprogram er ikke koblet til ennå. Legg inn nøkkelen til regnskapsprogrammet først, så eksporteres postene automatisk. (' + (Number(d.simulert) || 0) + ' poster ble simulert.)');
           } else {
-            alert('Sendt: ' + (Number(d.sendt) || 0) + ', simulert: ' + (Number(d.simulert) || 0) + ', feilet: ' + (Number(d.feilet) || 0));
+            alert('Eksportert: ' + (Number(d.sendt) || 0) + ', simulert: ' + (Number(d.simulert) || 0) + ', feilet: ' + (Number(d.feilet) || 0));
           }
           lastFikenStatus(); lastOversikt();
         })

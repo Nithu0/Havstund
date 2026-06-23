@@ -3,31 +3,61 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Intranett — Havstund</title>
+  <title>Administrasjon — Havstund</title>
   <link rel="stylesheet" href="css/styles.css">
   <style>
     body{background:var(--cream)}
-    .intra-top{background:var(--sea-deep);color:#fff;padding:18px 0}
-    .intra-top .wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-    .intra-top .logo{color:#fff}
-    .intra-top .logo span{color:var(--turq)}
-    .intra-top .who{margin-left:auto;font-size:14px;color:#cfe2e7;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-    .intra-top .who b{color:#fff}
-    .intra-top .btn{padding:9px 16px;font-size:14px}
+    .admin-shell{display:flex;min-height:100vh;align-items:stretch}
 
-    .dash{padding:34px 0 70px}
-    .dash h2{margin-bottom:4px}
-    .dash .lead{margin-bottom:26px}
+    /* ---- Sidemeny ---- */
+    .sidebar{width:236px;flex:0 0 236px;background:linear-gradient(180deg,var(--sea-deep),var(--sea));
+      color:#fff;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+    .sidebar .logo{padding:22px 22px 14px;display:block}
+    .sidebar .logo img{height:28px;width:auto;filter:drop-shadow(0 1px 4px rgba(0,0,0,.35))}
+    .side-label{font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:var(--turq-l);
+      padding:6px 22px 10px;font-weight:700;opacity:.85}
+    .side-nav{display:flex;flex-direction:column;gap:2px;padding:4px 12px}
+    .side-nav a{display:flex;align-items:center;gap:10px;color:#cfe2f4;font-weight:600;font-size:14.5px;
+      padding:11px 14px;border-radius:10px;transition:.15s}
+    .side-nav a:hover{background:rgba(255,255,255,.10);color:#fff}
+    .side-nav a.active{background:rgba(255,255,255,.16);color:#fff}
+    .side-foot{margin-top:auto;padding:16px 22px;border-top:1px solid rgba(255,255,255,.12)}
+    .side-foot a{color:#9fc6cf;font-size:13px;font-weight:600}
+    .side-foot a:hover{color:#fff}
 
+    /* ---- Hovedflate ---- */
+    .main{flex:1;min-width:0;display:flex;flex-direction:column}
+    .main-head{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;
+      padding:22px 34px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+    .main-head h1{font-size:26px;color:var(--sea-deep);line-height:1.1}
+    .main-head .eyebrow{margin-bottom:2px}
+    .head-right{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+    .head-right .who{font-size:13px;color:var(--muted)}
+    .head-right .who b{color:var(--sea-deep)}
+    .head-right .btn{padding:9px 16px;font-size:14px}
+    .main-body{padding:30px 34px 70px;max-width:1180px}
+
+    /* ---- KPI ---- */
     .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:30px}
     .kpi{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:20px 22px;box-shadow:var(--shadow)}
-    .kpi .label{font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);font-weight:700}
-    .kpi .val{font-size:32px;font-weight:800;color:var(--sea-deep);margin-top:8px;line-height:1}
-    .kpi .val small{font-size:15px;font-weight:600;color:var(--muted)}
+    .kpi .label{font-size:12px;text-transform:uppercase;letter-spacing:1.3px;color:var(--muted);font-weight:700}
+    .kpi .val{font-size:30px;font-weight:800;color:var(--sea-deep);margin-top:8px;line-height:1}
 
-    .panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:24px 26px;box-shadow:var(--shadow);margin-bottom:24px}
-    .panel h3{margin-bottom:16px}
-    .panel .sub{color:var(--muted);font-size:14px;margin:-10px 0 16px}
+    /* ---- Modul-snarveier ---- */
+    .seksjon-tit{font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);
+      font-weight:700;margin:6px 0 14px}
+    .moduler{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:34px}
+    .modul{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:20px;box-shadow:var(--shadow);
+      transition:.18s;display:flex;flex-direction:column;gap:6px}
+    .modul:hover{transform:translateY(-3px);box-shadow:0 18px 40px rgba(10,39,71,.16);border-color:var(--turq-l)}
+    .modul h3{font-size:16px;color:var(--sea-deep)}
+    .modul p{font-size:13px;color:var(--muted);line-height:1.45}
+    .modul .pil{margin-top:auto;color:var(--turq);font-weight:700;font-size:13px}
+
+    /* ---- Paneler ---- */
+    .panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:24px 26px;box-shadow:var(--shadow);margin-bottom:24px;scroll-margin-top:90px}
+    .panel h3{margin-bottom:4px}
+    .panel .sub{color:var(--muted);font-size:14px;margin:0 0 16px}
 
     /* Søylediagram */
     .chart{display:flex;align-items:flex-end;gap:14px;height:200px;padding:8px 4px 0}
@@ -45,12 +75,6 @@
     .tbl tr:last-child td{border-bottom:none}
     .tbl .belop{font-weight:700;color:var(--sea-deep);white-space:nowrap}
     .tbl select{padding:7px 10px;font-size:13px;border-radius:8px;width:auto;min-width:130px}
-    .pill{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
-      padding:3px 10px;border-radius:20px}
-    .pill.forespurt{background:#fff0dd;color:var(--clay-d)}
-    .pill.bekreftet{background:#d8f3f6;color:#0a6f7a}
-    .pill.fullfort{background:#dfeede;color:#2c6b35}
-    .pill.avlyst{background:#f3ddd8;color:#9a3b2c}
 
     /* Innhold-editor */
     .content-row{display:grid;grid-template-columns:200px 1fr auto;gap:14px;align-items:start;
@@ -62,78 +86,115 @@
     .content-row .btn{padding:9px 16px;font-size:13px}
     .saved-tag{font-size:12px;color:#2c6b35;font-weight:700;margin-left:8px}
 
-    .links-row{display:flex;gap:14px;flex-wrap:wrap}
     .muted-note{color:var(--muted);font-size:14px}
     .loading{color:var(--muted);font-size:15px;padding:18px 0}
 
-    @media(max-width:900px){
-      .kpis{grid-template-columns:repeat(2,1fr)}
-      .content-row{grid-template-columns:1fr}
+    @media(max-width:1000px){.kpis,.moduler{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:760px){
+      .admin-shell{flex-direction:column}
+      .sidebar{width:auto;flex:none;height:auto;position:static;flex-direction:row;align-items:center;overflow-x:auto}
+      .sidebar .logo{padding:14px 16px}
+      .side-label{display:none}
+      .side-nav{flex-direction:row;padding:0 10px 0 0;gap:2px}
+      .side-nav a{white-space:nowrap;padding:10px 12px;font-size:13px}
+      .side-foot{display:none}
+      .main-head,.main-body{padding-left:18px;padding-right:18px}
     }
-    @media(max-width:640px){
-      .kpis{grid-template-columns:1fr}
-      .chart{gap:6px}
-    }
+    @media(max-width:560px){.kpis,.moduler{grid-template-columns:1fr}.content-row{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
-  <header class="intra-top">
-    <div class="wrap">
-      <a href="/" class="logo" style="display:flex;flex-direction:column;gap:3px"><img src="bilder/wordmark.png" alt="Havstund" style="height:30px;width:auto;display:block;filter:drop-shadow(0 1px 4px rgba(0,0,0,.35))"><small style="font-size:10px;letter-spacing:3px;color:#9fc6cf;text-transform:uppercase">Intranett</small></a>
-      <div class="who" id="who">
-        <span id="whoNavn"></span>
-        <a href="/" class="btn btn-light">Til nettsiden</a>
-        <button class="btn btn-light" id="logoutBtn">Logg ut</button>
+  <div class="admin-shell">
+
+    <!-- ===== Sidemeny ===== -->
+    <aside class="sidebar">
+      <a href="/" class="logo"><img src="bilder/wordmark.png" alt="Havstund"></a>
+      <div class="side-label">Administrasjon</div>
+      <nav class="side-nav">
+        <a href="#oversikt" class="active">Oversikt</a>
+        <a href="#bookinger">Bookinger</a>
+        <a href="/kunde-dialog">Meldinger &amp; kunder</a>
+        <a href="/chat-innboks">Live chat</a>
+        <a href="/regnskap">Regnskap &amp; lønn</a>
+        <a href="/okonomi" id="okonomiLink" style="display:none">Økonomi-modell</a>
+        <a href="#innhold">Nettside-innhold</a>
+      </nav>
+      <div class="side-foot">
+        <a href="/">← Se nettsiden</a>
       </div>
-    </div>
-  </header>
+    </aside>
 
-  <main class="dash">
-    <div class="wrap">
-      <div class="eyebrow">Internt dashbord</div>
-      <h2>Oversikt</h2>
-      <p class="lead">Besøk, bookinger og innhold for Havstund.</p>
-
-      <!-- KPI-kort -->
-      <section class="kpis" id="kpis">
-        <div class="kpi"><div class="label">Besøk i dag</div><div class="val" id="kpiIdag">–</div></div>
-        <div class="kpi"><div class="label">Besøk 7 dager</div><div class="val" id="kpi7d">–</div></div>
-        <div class="kpi"><div class="label">Nye bookinger</div><div class="val" id="kpiNye">–</div></div>
-        <div class="kpi"><div class="label">Omsetning 30 dager</div><div class="val" id="kpiOms">–</div></div>
-      </section>
-
-      <!-- Søylediagram -->
-      <section class="panel">
-        <h3>Besøk siste 7 dager</h3>
-        <div class="chart" id="chart"><div class="loading">Laster …</div></div>
-      </section>
-
-      <!-- Bookinger -->
-      <section class="panel">
-        <h3>Bookinger</h3>
-        <p class="sub">Endre status direkte i listen.</p>
-        <div id="bookingWrap"><div class="loading">Laster bookinger …</div></div>
-      </section>
-
-      <!-- Innhold -->
-      <section class="panel">
-        <h3>Innhold</h3>
-        <p class="sub">Rediger tekster som vises på nettsiden.</p>
-        <div id="contentWrap"><div class="loading">Laster innhold …</div></div>
-      </section>
-
-      <!-- Lenker -->
-      <section class="panel">
-        <h3>Verktøy</h3>
-        <div class="links-row" id="linksRow">
-          <a href="/kunde-dialog" class="btn btn-primary">Kundedialog &amp; prosjekter</a>
-          <a href="/regnskap" class="btn btn-primary">Regnskap &amp; timelister</a>
-          <a href="/chat-innboks" class="btn btn-ghost">Chat-innboks</a>
-          <a href="/okonomi" class="btn btn-primary" id="okonomiLink" style="display:none">Økonomi-modell</a>
+    <!-- ===== Hovedflate ===== -->
+    <main class="main">
+      <header class="main-head">
+        <div>
+          <div class="eyebrow">Internt dashbord</div>
+          <h1 id="oversikt">Oversikt</h1>
         </div>
-      </section>
-    </div>
-  </main>
+        <div class="head-right">
+          <span class="who" id="whoNavn"></span>
+          <button class="btn btn-ghost" id="logoutBtn">Logg ut</button>
+        </div>
+      </header>
+
+      <div class="main-body">
+
+        <!-- KPI-kort -->
+        <section class="kpis">
+          <div class="kpi"><div class="label">Besøk i dag</div><div class="val" id="kpiIdag">–</div></div>
+          <div class="kpi"><div class="label">Besøk 7 dager</div><div class="val" id="kpi7d">–</div></div>
+          <div class="kpi"><div class="label">Nye bookinger</div><div class="val" id="kpiNye">–</div></div>
+          <div class="kpi"><div class="label">Omsetning 30 dager</div><div class="val" id="kpiOms">–</div></div>
+        </section>
+
+        <!-- Modul-snarveier -->
+        <div class="seksjon-tit">Verktøy</div>
+        <section class="moduler">
+          <a href="/kunde-dialog" class="modul">
+            <h3>Meldinger &amp; kunder</h3>
+            <p>Svar kunder, send pristilbud, og følg prosjekter og kvitteringer.</p>
+            <span class="pil">Åpne →</span>
+          </a>
+          <a href="#bookinger" class="modul">
+            <h3>Bookinger</h3>
+            <p>Se forespørsler og bekreft eller avlys direkte.</p>
+            <span class="pil">Åpne →</span>
+          </a>
+          <a href="/regnskap" class="modul">
+            <h3>Regnskap &amp; lønn</h3>
+            <p>Inntekter, utgifter, timelister og lønnsoversikt.</p>
+            <span class="pil">Åpne →</span>
+          </a>
+          <a href="/chat-innboks" class="modul">
+            <h3>Live chat</h3>
+            <p>Svar på chat-meldinger fra nettsiden i sanntid.</p>
+            <span class="pil">Åpne →</span>
+          </a>
+        </section>
+
+        <!-- Bookinger -->
+        <section class="panel" id="bookinger">
+          <h3>Bookinger</h3>
+          <p class="sub">Endre status direkte i listen.</p>
+          <div id="bookingWrap"><div class="loading">Laster bookinger …</div></div>
+        </section>
+
+        <!-- Besøk -->
+        <section class="panel">
+          <h3>Besøk siste 7 dager</h3>
+          <div class="chart" id="chart"><div class="loading">Laster …</div></div>
+        </section>
+
+        <!-- Innhold -->
+        <section class="panel" id="innhold">
+          <h3>Nettside-innhold</h3>
+          <p class="sub">Rediger tekster som vises på forsiden.</p>
+          <div id="contentWrap"><div class="loading">Laster innhold …</div></div>
+        </section>
+
+      </div>
+    </main>
+  </div>
 
   <script src="js/intranett.js"></script>
 </body>
