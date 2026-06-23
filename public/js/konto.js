@@ -229,7 +229,8 @@
         return r.json();
       })
       .then(function (data) {
-        if (data && data.user) visInnlogget(data.user);
+        // Allerede innlogget? Send rett til riktig dashbord — ingen mellomside.
+        if (data && data.user) gaaTilRiktigSide(data.user);
       })
       .catch(function () { visUtlogget(); });
   }

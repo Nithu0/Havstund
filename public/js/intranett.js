@@ -80,7 +80,42 @@
 
     lastStats();
     lastBookinger();
+    lastMeldinger();
     lastInnhold();
+  }
+
+  // ---- Kundemeldinger (oversikt rett på startsiden) ----
+  function lastMeldinger() {
+    api('/api/meldinger/kunder')
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+      .then(function (rader) {
+        rader = Array.isArray(rader) ? rader : [];
+        var wrap = document.getElementById('meldingerWrap');
+        if (!wrap) return;
+        var uleste = rader.reduce(function (s, k) { return s + (Number(k.uleste) || 0); }, 0);
+        var badge = document.getElementById('meldUleste');
+        if (badge) badge.innerHTML = uleste
+          ? '<span style="background:var(--clay);color:#fff;font-size:12px;font-weight:700;padding:2px 9px;border-radius:12px;vertical-align:middle">' + uleste + ' nye</span>'
+          : '';
+        if (!rader.length) { wrap.innerHTML = '<p class="muted-note">Ingen kundemeldinger ennå.</p>'; return; }
+        var html = '<table class="tbl"><thead><tr><th>Kunde</th><th>Siste melding</th><th>Når</th><th></th></tr></thead><tbody>';
+        rader.slice(0, 8).forEach(function (k) {
+          var ny = Number(k.uleste) || 0;
+          html += '<tr>' +
+            '<td>' + esc(k.navn || '') + (ny ? ' <span style="background:var(--clay);color:#fff;font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px">' + ny + '</span>' : '') +
+              '<br><span class="muted-note">' + esc(k.epost || '') + '</span></td>' +
+            '<td>' + esc(String(k.siste_tekst || '').slice(0, 90)) + '</td>' +
+            '<td class="muted-note">' + formatDato(k.siste_tid) + '</td>' +
+            '<td><a href="/kunde-dialog" style="color:var(--turq);font-weight:700">Svar →</a></td>' +
+            '</tr>';
+        });
+        html += '</tbody></table>';
+        wrap.innerHTML = html;
+      })
+      .catch(function () {
+        var w = document.getElementById('meldingerWrap');
+        if (w) w.innerHTML = '<p class="muted-note">Kunne ikke hente meldinger.</p>';
+      });
   }
 
   // ---- 2. Stats + søylediagram ----
