@@ -188,12 +188,21 @@
     }).catch(function () {});
   }
 
-  // ---- LØNN ----
+  // ---- LØNN (med feriepenger + arbeidsgiveravgift for AS) ----
   function lastLonn() {
     api('/api/regnskap/lonn?maaned=' + maaned()).then(function (r) { return r.json(); }).then(function (d) {
       if (!d || d.error) { $('liste-lonn').innerHTML = '<p class="tom">Kunne ikke hente.</p>'; return; }
       if (!d.ansatte.length) { $('liste-lonn').innerHTML = '<p class="tom">Legg til ansatte og før timer først.</p>'; return; }
-      $('liste-lonn').innerHTML = '<table class="tbl"><thead><tr><th>Ansatt</th><th>Konto</th><th class="num">Timer</th><th class="num">Timelønn</th><th class="num">Brutto lønn</th></tr></thead><tbody>' +
+
+      var ferieSats = parseFloat(($('sats-ferie') || {}).value) || 0;
+      var agaSats = parseFloat(($('sats-aga') || {}).value) || 0;
+      var brutto = Number(d.total_brutto_ore);
+      var ferie = Math.round(brutto * ferieSats / 100);
+      var aga = Math.round((brutto + ferie) * agaSats / 100);
+      var total = brutto + ferie + aga;
+
+      $('liste-lonn').innerHTML =
+        '<table class="tbl"><thead><tr><th>Ansatt</th><th>Konto</th><th class="num">Timer</th><th class="num">Timelønn</th><th class="num">Brutto lønn</th></tr></thead><tbody>' +
         d.ansatte.map(function (a) {
           return '<tr><td>' + esc(a.navn) + (a.stilling ? '<br><span style="color:var(--muted);font-size:12px">' + esc(a.stilling) + '</span>' : '') + '</td>' +
             '<td><span class="konto-tag">' + a.konto + '</span></td>' +
@@ -201,9 +210,14 @@
             '<td class="num">' + kr(a.timelonn_ore) + '</td>' +
             '<td class="num belop">' + kr(a.brutto_ore) + '</td></tr>';
         }).join('') +
-        '<tr class="sum-rad"><td colspan="4">Total brutto lønn</td><td class="num">' + kr(d.total_brutto_ore) + '</td></tr>' +
         '</tbody></table>' +
-        '<div class="fiken-note" style="margin-top:14px"><b>Lønnskjøring:</b> dette beløpet bokføres på konto 5000 (lønn) i Fiken, og hver ansatt får sin lønnsslipp ut fra timene over.</div>';
+        '<table class="tbl" style="margin-top:18px;max-width:520px">' +
+        '<tr><td>Brutto lønn</td><td class="num belop">' + kr(brutto) + '</td></tr>' +
+        '<tr><td>+ Feriepenger (' + ferieSats + '%)</td><td class="num">' + kr(ferie) + '</td></tr>' +
+        '<tr><td>+ Arbeidsgiveravgift (' + agaSats + '%)</td><td class="num">' + kr(aga) + '</td></tr>' +
+        '<tr class="sum-rad"><td>= Total arbeidsgiverkostnad</td><td class="num">' + kr(total) + '</td></tr>' +
+        '</table>' +
+        '<div class="fiken-note" style="margin-top:14px"><b>Lønnskjøring i Fiken:</b> brutto lønn bokføres på konto 5000, arbeidsgiveravgift på 5400, og feriepenger avsettes automatisk. Hver ansatt får lønnsslipp ut fra timene over.</div>';
     }).catch(function () {});
   }
 
@@ -239,6 +253,9 @@
       f.addEventListener('click', function () { byttFane(f.getAttribute('data-pane')); });
     });
     $('maaned').addEventListener('change', function () { lastFane(aktivFane()); });
+    ['sats-ferie', 'sats-aga'].forEach(function (id) {
+      var el = $(id); if (el) el.addEventListener('input', lastLonn);
+    });
 
     $('form-inntekt').addEventListener('submit', function (e) { e.preventDefault(); sendPost('inntekt', e.target, 'feil-inntekt', 'liste-inntekt'); });
     $('form-utgift').addEventListener('submit', function (e) { e.preventDefault(); sendPost('utgift', e.target, 'feil-utgift', 'liste-utgift'); });

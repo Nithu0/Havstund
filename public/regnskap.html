@@ -210,7 +210,11 @@
 
       <div class="panel">
         <h3>Lønnsoversikt — klar for lønnskjøring</h3>
-        <p class="hint">Sum timer × timelønn per ansatt for valgt måned.</p>
+        <p class="hint">Sum timer × timelønn per ansatt, med feriepenger og arbeidsgiveravgift (AS).</p>
+        <div class="skjema" style="max-width:460px;margin-bottom:6px">
+          <div class="felt"><label>Feriepenger %</label><input type="number" id="sats-ferie" step="0.1" min="0" value="10.2"></div>
+          <div class="felt"><label>Arb.giveravgift % (Vestvågøy = sone IV)</label><input type="number" id="sats-aga" step="0.1" min="0" value="5.1"></div>
+        </div>
         <div id="liste-lonn"></div>
       </div>
     </section>
