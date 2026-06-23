@@ -86,7 +86,7 @@ router.get('/kunder', requireRole('ansatt', 'admin'), async (req, res) => {
               m.opprettet AS siste_tid,
               COALESCE(c.uleste, 0) AS uleste
          FROM users u
-         JOIN LATERAL (
+         LEFT JOIN LATERAL (
            SELECT tekst, opprettet
              FROM customer_messages
             WHERE bruker_id = u.id
@@ -98,7 +98,8 @@ router.get('/kunder', requireRole('ansatt', 'admin'), async (req, res) => {
              FROM customer_messages
             WHERE bruker_id = u.id AND avsender = 'kunde' AND lest = false
          ) c ON true
-        ORDER BY m.opprettet DESC`,
+        WHERE u.rolle = 'kunde'
+        ORDER BY (m.opprettet IS NULL), m.opprettet DESC, u.navn ASC`,
       []
     );
     res.json(rows);

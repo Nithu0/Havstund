@@ -1,724 +1,331 @@
 'use strict';
-
-/* Havstund — admin kunde-dialog klient-logikk (vanilla JS) */
-
+/* Havstund — admin kundedialog. Én «mappe» per kunde: dialog, prosjekter/bilder, kvitteringer. */
 (function () {
-  // ---- Tilstand ----
   var valgtKundeId = null;
-  var innloggetBruker = null;
+  var valgtKunde = null;
 
-  // ---- Hjelpere ----
-
-  function $(id) {
-    return document.getElementById(id);
+  function $(id) { return document.getElementById(id); }
+  function esc(v) {
+    if (v === null || v === undefined) return '';
+    return String(v).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function initialer(navn) {
+    var d = String(navn || '?').trim().split(/\s+/);
+    return ((d[0] ? d[0][0] : '?') + (d.length > 1 ? d[d.length - 1][0] : '')).toUpperCase();
+  }
+  function dato(v) {
+    if (!v) return '';
+    var d = new Date(v);
+    if (isNaN(d.getTime())) return esc(v);
+    return d.toLocaleString('no-NO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+  function datoKort(v) {
+    if (!v) return '';
+    var d = new Date(v);
+    if (isNaN(d.getTime())) return esc(v);
+    return d.toLocaleDateString('no-NO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+  function belop(v) {
+    var n = Number(v);
+    if (isNaN(n)) return '';
+    return n.toLocaleString('no-NO', { style: 'currency', currency: 'NOK', maximumFractionDigits: 0 });
+  }
+  function api(url, opt) {
+    opt = opt || {};
+    var cfg = { method: opt.method || 'GET', credentials: 'same-origin', headers: { Accept: 'application/json' } };
+    if (opt.body !== undefined) { cfg.headers['Content-Type'] = 'application/json'; cfg.body = JSON.stringify(opt.body); }
+    return fetch(url, cfg);
+  }
+  function json(res) { return res.json().catch(function () { return null; }); }
+  function laas(skjema, av) {
+    if (!skjema) return;
+    skjema.querySelectorAll('input,textarea,button,select').forEach(function (e) { e.disabled = !!av; });
   }
 
-  function escapeHtml(value) {
-    if (value === null || value === undefined) return '';
-    return String(value)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
+  var STATUS = [['pabegynt', 'Påbegynt'], ['under_arbeid', 'Under arbeid'], ['ferdig', 'Ferdig'], ['levert', 'Levert']];
+  var TYPE_NAVN = { maleri: 'Maleri', keramikk: 'Keramikk', kollektivt: 'Kollektivt', annet: 'Annet' };
 
-  function formaterDato(verdi) {
-    if (!verdi) return '';
-    var d = new Date(verdi);
-    if (isNaN(d.getTime())) return escapeHtml(verdi);
-    try {
-      return d.toLocaleString('no-NO', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch (e) {
-      return d.toISOString();
-    }
-  }
-
-  function formaterDatoKort(verdi) {
-    if (!verdi) return '';
-    var d = new Date(verdi);
-    if (isNaN(d.getTime())) return escapeHtml(verdi);
-    try {
-      return d.toLocaleDateString('no-NO', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-    } catch (e) {
-      return d.toISOString().slice(0, 10);
-    }
-  }
-
-  function formaterBelop(verdi) {
-    var tall = Number(verdi);
-    if (isNaN(tall)) return '';
-    try {
-      return tall.toLocaleString('no-NO', {
-        style: 'currency',
-        currency: 'NOK',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
-    } catch (e) {
-      return tall.toFixed(2) + ' kr';
-    }
-  }
-
-  // Felles fetch-wrapper med JSON + credentials
-  function apiFetch(url, options) {
-    var opts = options || {};
-    var config = {
-      method: opts.method || 'GET',
-      credentials: 'same-origin',
-      headers: { Accept: 'application/json' }
-    };
-    if (opts.body !== undefined) {
-      config.headers['Content-Type'] = 'application/json';
-      config.body = JSON.stringify(opts.body);
-    }
-    return fetch(url, config);
-  }
-
-  function lesJson(res) {
-    return res
-      .json()
-      .catch(function () {
-        return null;
-      });
-  }
-
-  // ---- Auth ----
-
+  // ---------- Auth ----------
   function sjekkInnlogging() {
-    return apiFetch('/api/auth/me')
-      .then(function (res) {
-        if (res.status === 401 || !res.ok) {
-          window.location = '/konto';
-          return null;
-        }
-        return lesJson(res);
-      })
-      .then(function (data) {
-        if (!data || !data.user) {
-          window.location = '/konto';
-          return null;
-        }
-        var rolle = data.user.rolle;
-        if (rolle !== 'ansatt' && rolle !== 'admin') {
-          window.location = '/konto';
-          return null;
-        }
-        innloggetBruker = data.user;
-        return data.user;
-      })
-      .catch(function () {
-        window.location = '/konto';
-        return null;
-      });
+    return api('/api/auth/me').then(function (res) {
+      if (res.status === 401 || !res.ok) { window.location = '/konto'; return null; }
+      return json(res);
+    }).then(function (data) {
+      if (!data || !data.user) { window.location = '/konto'; return null; }
+      if (data.user.rolle !== 'ansatt' && data.user.rolle !== 'admin') { window.location = '/min-side'; return null; }
+      return data.user;
+    }).catch(function () { window.location = '/konto'; return null; });
   }
 
-  function loggUt() {
-    apiFetch('/api/auth/logout', { method: 'POST' })
-      .then(function () {
-        window.location = '/';
-      })
-      .catch(function () {
-        window.location = '/';
-      });
-  }
-
-  // ---- Kundeliste ----
-
+  // ---------- Kundeliste ----------
   function lastKunder() {
     var liste = $('kunde-liste');
     if (!liste) return Promise.resolve();
-    return apiFetch('/api/meldinger/kunder')
-      .then(function (res) {
-        if (!res.ok) throw new Error('Kunne ikke hente kunder');
-        return lesJson(res);
-      })
-      .then(function (kunder) {
-        renderKunder(Array.isArray(kunder) ? kunder : []);
-      })
-      .catch(function () {
-        liste.innerHTML = '<li class="feil">Kunne ikke laste kundeliste.</li>';
-      });
+    return api('/api/meldinger/kunder').then(function (res) { return res.ok ? json(res) : Promise.reject(); })
+      .then(function (kunder) { renderKunder(Array.isArray(kunder) ? kunder : []); })
+      .catch(function () { liste.innerHTML = '<div class="liste-tom">Kunne ikke laste kunder.</div>'; });
   }
 
   function renderKunder(kunder) {
     var liste = $('kunde-liste');
     if (!liste) return;
-    if (!kunder.length) {
-      liste.innerHTML = '<li class="tom">Ingen kunder enda.</li>';
-      return;
-    }
-    var html = kunder
-      .map(function (k) {
-        var uleste = Number(k.uleste) || 0;
-        var aktivKlasse = String(k.bruker_id) === String(valgtKundeId) ? ' aktiv' : '';
-        var ulestMerke =
-          uleste > 0
-            ? '<span class="ulest-merke" aria-label="' +
-              uleste +
-              ' uleste">' +
-              escapeHtml(uleste) +
-              '</span>'
-            : '';
-        return (
-          '<li class="kunde-item' +
-          aktivKlasse +
-          '" data-id="' +
-          escapeHtml(k.bruker_id) +
-          '">' +
-          '<button type="button" class="kunde-knapp" data-id="' +
-          escapeHtml(k.bruker_id) +
-          '">' +
-          '<span class="kunde-navn">' +
-          escapeHtml(k.navn || k.epost || 'Ukjent') +
-          '</span>' +
-          ulestMerke +
-          '<span class="kunde-epost">' +
-          escapeHtml(k.epost || '') +
-          '</span>' +
-          '<span class="kunde-siste">' +
-          escapeHtml(k.siste_tekst || '') +
-          '</span>' +
-          '<span class="kunde-tid">' +
-          formaterDato(k.siste_tid) +
-          '</span>' +
-          '</button>' +
-          '</li>'
-        );
-      })
-      .join('');
-    liste.innerHTML = html;
-
-    var knapper = liste.querySelectorAll('.kunde-knapp');
-    for (var i = 0; i < knapper.length; i++) {
-      knapper[i].addEventListener('click', function () {
-        var id = this.getAttribute('data-id');
-        velgKunde(id);
+    var q = ($('kunde-sok') && $('kunde-sok').value || '').trim().toLowerCase();
+    if (q) {
+      kunder = kunder.filter(function (k) {
+        return ((k.navn || '') + ' ' + (k.epost || '')).toLowerCase().indexOf(q) !== -1;
       });
     }
+    if (!kunder.length) { liste.innerHTML = '<div class="liste-tom">Ingen kunder.</div>'; return; }
+    liste.innerHTML = kunder.map(function (k) {
+      var ulest = Number(k.uleste) || 0;
+      var aktiv = String(k.bruker_id) === String(valgtKundeId) ? ' active' : '';
+      return '<div class="kunde-rad' + aktiv + '" data-id="' + esc(k.bruker_id) + '" data-navn="' + esc(k.navn || '') + '" data-epost="' + esc(k.epost || '') + '">' +
+        '<div class="avatar">' + esc(initialer(k.navn || k.epost)) + '</div>' +
+        '<div class="info"><div class="navn">' + esc(k.navn || k.epost || 'Ukjent') + '</div>' +
+        '<div class="utdrag">' + esc(k.siste_tekst || '') + '</div></div>' +
+        (ulest ? '<div class="badge-ulest">' + ulest + '</div>' : '') +
+        '</div>';
+    }).join('');
+    liste.querySelectorAll('.kunde-rad').forEach(function (rad) {
+      rad.addEventListener('click', function () {
+        velgKunde(rad.getAttribute('data-id'), { navn: rad.getAttribute('data-navn'), epost: rad.getAttribute('data-epost') });
+      });
+    });
   }
 
-  function markerAktivKunde() {
-    var liste = $('kunde-liste');
-    if (!liste) return;
-    var items = liste.querySelectorAll('.kunde-item');
-    for (var i = 0; i < items.length; i++) {
-      var item = items[i];
-      if (String(item.getAttribute('data-id')) === String(valgtKundeId)) {
-        item.classList.add('aktiv');
-      } else {
-        item.classList.remove('aktiv');
-      }
-    }
-  }
-
-  // ---- Velg kunde ----
-
-  function velgKunde(id) {
-    if (id === null || id === undefined) return;
+  // ---------- Velg kunde ----------
+  function velgKunde(id, info) {
+    if (id == null) return;
     valgtKundeId = id;
-
-    var panel = $('dialog-panel');
-    var ingen = $('ingen-valgt');
-    if (panel) panel.style.display = '';
-    if (ingen) ingen.style.display = 'none';
-
-    markerAktivKunde();
+    valgtKunde = info || null;
+    if ($('dialog-panel')) $('dialog-panel').style.display = '';
+    if ($('ingen-valgt')) $('ingen-valgt').style.display = 'none';
     visValgtKunde();
-
-    // Last alt for valgt kunde parallelt
+    byttFane('dialog');
     lastTraad();
     lastProsjekter();
     lastKvitteringer();
-    // Oppdater ulest-merker (meldinger ansees som lest når åpnet)
     lastKunder();
   }
 
-  // ---- Dialog-tråd ----
+  function visValgtKunde() {
+    var n = $('valgt-kunde');
+    if (!n) return;
+    var navnEl = n.querySelector('.vk-navn');
+    var epostEl = n.querySelector('.vk-epost');
+    if (navnEl) navnEl.textContent = (valgtKunde && valgtKunde.navn) || ('Kunde #' + valgtKundeId);
+    if (epostEl) epostEl.textContent = (valgtKunde && valgtKunde.epost) || '';
+  }
 
+  // ---------- Faner ----------
+  function byttFane(navn) {
+    document.querySelectorAll('.tab').forEach(function (t) { t.classList.toggle('active', t.getAttribute('data-tab') === navn); });
+    document.querySelectorAll('.tab-pane').forEach(function (p) { p.classList.toggle('active', p.id === 'pane-' + navn); });
+  }
+
+  // ---------- Dialog ----------
   function lastTraad() {
     var traad = $('dialog-traad');
-    if (!traad || valgtKundeId === null) return Promise.resolve();
-    return apiFetch('/api/meldinger?bruker_id=' + encodeURIComponent(valgtKundeId))
-      .then(function (res) {
-        if (!res.ok) throw new Error('Kunne ikke hente meldinger');
-        return lesJson(res);
+    if (!traad || valgtKundeId == null) return Promise.resolve();
+    return api('/api/meldinger?bruker_id=' + encodeURIComponent(valgtKundeId))
+      .then(function (res) { return res.ok ? json(res) : Promise.reject(); })
+      .then(function (data) {
+        if (data && data.kunde) { valgtKunde = data.kunde; visValgtKunde(); }
+        renderTraad((data && Array.isArray(data.meldinger)) ? data.meldinger : []);
       })
-      .then(function (meldinger) {
-        renderTraad(Array.isArray(meldinger) ? meldinger : []);
-      })
-      .catch(function () {
-        traad.innerHTML = '<p class="feil">Kunne ikke laste samtalen.</p>';
-      });
+      .catch(function () { traad.innerHTML = '<div class="pane-tom">Kunne ikke laste samtalen.</div>'; });
   }
 
   function renderTraad(meldinger) {
     var traad = $('dialog-traad');
     if (!traad) return;
-
-    if (!meldinger.length) {
-      traad.innerHTML = '<p class="tom">Ingen meldinger enda.</p>';
-      return;
-    }
-
-    traad.innerHTML = meldinger
-      .map(function (m) {
-        // Kunde = venstre, admin/ansatt = høyre
-        var fraAdmin = m.avsender === 'admin' || m.avsender === 'ansatt';
-        var sideKlasse = fraAdmin ? 'melding-hoyre' : 'melding-venstre';
-        var prisHtml = '';
-        if (m.pris !== null && m.pris !== undefined && m.pris !== '') {
-          var prisTall = Number(m.pris);
-          if (!isNaN(prisTall)) {
-            prisHtml =
-              '<div class="melding-pris"><strong>Pris: ' +
-              formaterBelop(prisTall) +
-              '</strong></div>';
-          }
-        }
-        return (
-          '<div class="melding ' +
-          sideKlasse +
-          '">' +
-          '<div class="melding-tekst">' +
-          escapeHtml(m.tekst || '') +
-          '</div>' +
-          prisHtml +
-          '<div class="melding-tid">' +
-          formaterDato(m.opprettet) +
-          '</div>' +
-          '</div>'
-        );
-      })
-      .join('');
-
-    // Scroll til bunn
+    if (!meldinger.length) { traad.innerHTML = '<div class="pane-tom">Ingen meldinger ennå.</div>'; return; }
+    traad.innerHTML = meldinger.map(function (m) {
+      var fraOss = m.avsender === 'admin' || m.avsender === 'ansatt';
+      var harPris = m.pris !== null && m.pris !== undefined && m.pris !== '' && !isNaN(Number(m.pris));
+      if (fraOss && harPris) {
+        return '<div class="tilbud-kort">' +
+          '<div class="tk-tag">Pristilbud</div>' +
+          '<div class="tk-belop">' + esc(belop(m.pris)) + '</div>' +
+          '<div class="tk-tekst">' + esc(m.tekst || '') + '</div>' +
+          '<div class="meta" style="margin-top:8px;color:var(--muted)">' + dato(m.opprettet) + '</div></div>';
+      }
+      return '<div class="melding ' + (fraOss ? 'fra-oss' : 'fra-kunde') + '">' +
+        '<div class="meta">' + (fraOss ? 'Havstund' : 'Kunde') + ' · ' + dato(m.opprettet) + '</div>' +
+        esc(m.tekst || '') + '</div>';
+    }).join('');
     traad.scrollTop = traad.scrollHeight;
   }
 
-  function valgtKundeName() {
-    var liste = $('kunde-liste');
-    if (!liste || valgtKundeId === null) return '';
-    var item = liste.querySelector(
-      '.kunde-item[data-id="' + cssEscape(valgtKundeId) + '"] .kunde-navn'
-    );
-    return item ? item.textContent : '';
-  }
-
-  function cssEscape(value) {
-    return String(value).replace(/["\\]/g, '\\$&');
-  }
-
-  function visValgtKunde() {
-    var el = $('valgt-kunde');
-    if (!el) return;
-    var navn = valgtKundeName();
-    el.textContent = navn || ('Kunde #' + (valgtKundeId === null ? '' : valgtKundeId));
-  }
-
-  // ---- Svar-skjema ----
-
   function handterSvar(e) {
     e.preventDefault();
-    if (valgtKundeId === null) return;
-
-    var tekstEl = $('svar-tekst');
-    var prisEl = $('svar-pris');
+    if (valgtKundeId == null) return;
+    var tekstEl = $('svar-tekst'), prisEl = $('svar-pris');
     var tekst = tekstEl ? tekstEl.value.trim() : '';
-
-    if (!tekst) {
-      if (tekstEl) tekstEl.focus();
-      return;
-    }
-
+    if (!tekst) { if (tekstEl) tekstEl.focus(); return; }
     var body = { tekst: tekst };
-    if (prisEl && prisEl.value !== '') {
-      var pris = Number(prisEl.value);
-      if (!isNaN(pris)) body.pris = pris;
-    }
-
+    if (prisEl && prisEl.value !== '' && !isNaN(Number(prisEl.value))) body.pris = Number(prisEl.value);
     var skjema = $('svar-skjema');
-    settDeaktivert(skjema, true);
-
-    apiFetch('/api/meldinger?bruker_id=' + encodeURIComponent(valgtKundeId), {
-      method: 'POST',
-      body: body
-    })
-      .then(function (res) {
-        if (!res.ok) throw new Error('Kunne ikke sende svar');
-        if (tekstEl) tekstEl.value = '';
-        if (prisEl) prisEl.value = '';
-        return lastTraad();
-      })
-      .then(function () {
-        return lastKunder();
-      })
-      .catch(function () {
-        alert('Kunne ikke sende svar. Prøv igjen.');
-      })
-      .then(function () {
-        settDeaktivert(skjema, false);
-        if (tekstEl) tekstEl.focus();
-      });
+    laas(skjema, true);
+    api('/api/meldinger?bruker_id=' + encodeURIComponent(valgtKundeId), { method: 'POST', body: body })
+      .then(function (res) { if (!res.ok) throw new Error(); if (tekstEl) tekstEl.value = ''; if (prisEl) prisEl.value = ''; return lastTraad(); })
+      .then(function () { return lastKunder(); })
+      .catch(function () { alert('Kunne ikke sende svar. Prøv igjen.'); })
+      .then(function () { laas(skjema, false); if (tekstEl) tekstEl.focus(); });
   }
 
-  // ---- Prosjekter ----
-
+  // ---------- Prosjekter & bilder ----------
   function lastProsjekter() {
     var liste = $('prosjekter-liste');
-    if (!liste || valgtKundeId === null) return Promise.resolve();
-    return apiFetch('/api/projects?bruker_id=' + encodeURIComponent(valgtKundeId))
-      .then(function (res) {
-        if (!res.ok) throw new Error('Kunne ikke hente prosjekter');
-        return lesJson(res);
-      })
-      .then(function (prosjekter) {
-        renderProsjekter(Array.isArray(prosjekter) ? prosjekter : []);
-      })
-      .catch(function () {
-        liste.innerHTML = '<p class="feil">Kunne ikke laste prosjekter.</p>';
-      });
+    if (!liste || valgtKundeId == null) return Promise.resolve();
+    return api('/api/projects?bruker_id=' + encodeURIComponent(valgtKundeId))
+      .then(function (res) { return res.ok ? json(res) : Promise.reject(); })
+      .then(function (p) { renderProsjekter(Array.isArray(p) ? p : []); })
+      .catch(function () { liste.innerHTML = '<div class="pane-tom">Kunne ikke laste prosjekter.</div>'; });
   }
-
-  var STATUS_VALG = ['pabegynt', 'under_arbeid', 'ferdig', 'levert'];
 
   function renderProsjekter(prosjekter) {
     var liste = $('prosjekter-liste');
     if (!liste) return;
+    if (!prosjekter.length) { liste.innerHTML = '<div class="pane-tom">Ingen prosjekter ennå.</div>'; return; }
+    liste.innerHTML = prosjekter.map(function (p) {
+      var media = Array.isArray(p.media) ? p.media : [];
+      var bilder = media.map(function (m) {
+        return '<figure><a href="' + esc(m.url) + '" target="_blank" rel="noopener"><img src="' + esc(m.url) + '" alt="' + esc(m.tittel || '') + '" loading="lazy"></a>' +
+          (m.tittel ? '<figcaption>' + esc(m.tittel) + '</figcaption>' : '') + '</figure>';
+      }).join('');
+      var statusOpts = STATUS.map(function (s) {
+        return '<option value="' + s[0] + '"' + (s[0] === p.status ? ' selected' : '') + '>' + s[1] + '</option>';
+      }).join('');
+      var typeNavn = TYPE_NAVN[p.type] || p.type || 'Prosjekt';
+      return '<div class="blokk" data-id="' + esc(p.id) + '">' +
+        '<span class="type-tag">' + esc(typeNavn) + '</span>' +
+        '<h3>' + esc(p.tittel || '') + '</h3>' +
+        (p.beskrivelse ? '<p class="beskr">' + esc(p.beskrivelse) + '</p>' : '') +
+        '<label style="font-size:13px;color:var(--muted)">Status: ' +
+        '<select class="prosjekt-status" data-id="' + esc(p.id) + '" style="margin-left:6px">' + statusOpts + '</select></label>' +
+        (bilder ? '<div class="bilde-rute">' + bilder + '</div>' : '') +
+        '<form class="bilde-skjema" data-id="' + esc(p.id) + '">' +
+        '<input type="file" class="f-fil" accept="image/*">' +
+        '<input type="text" class="f-tit" placeholder="Tittel (valgfritt)">' +
+        '<button type="submit" class="btn btn-primary btn-sm">Last opp kunstverk</button>' +
+        '</form></div>';
+    }).join('');
 
-    if (!prosjekter.length) {
-      liste.innerHTML = '<p class="tom">Ingen prosjekter enda.</p>';
-      return;
-    }
-
-    liste.innerHTML = prosjekter
-      .map(function (p) {
-        var media = Array.isArray(p.media) ? p.media : [];
-        var mediaHtml = media
-          .map(function (m) {
-            return (
-              '<a class="prosjekt-media" href="' +
-              escapeHtml(m.url) +
-              '" target="_blank" rel="noopener">' +
-              escapeHtml(m.tittel || m.url) +
-              '</a>'
-            );
-          })
-          .join('');
-
-        var statusOptions = STATUS_VALG.map(function (s) {
-          var valgt = s === p.status ? ' selected' : '';
-          return '<option value="' + escapeHtml(s) + '"' + valgt + '>' + escapeHtml(s) + '</option>';
-        }).join('');
-        // Behold ukjent status som ekstra valg
-        if (p.status && STATUS_VALG.indexOf(p.status) === -1) {
-          statusOptions =
-            '<option value="' +
-            escapeHtml(p.status) +
-            '" selected>' +
-            escapeHtml(p.status) +
-            '</option>' +
-            statusOptions;
-        }
-
-        return (
-          '<div class="prosjekt-kort" data-id="' +
-          escapeHtml(p.id) +
-          '">' +
-          '<div class="prosjekt-topp">' +
-          '<h4 class="prosjekt-tittel">' +
-          escapeHtml(p.tittel || '') +
-          '</h4>' +
-          '<span class="prosjekt-type">' +
-          escapeHtml(p.type || '') +
-          '</span>' +
-          '</div>' +
-          '<p class="prosjekt-beskrivelse">' +
-          escapeHtml(p.beskrivelse || '') +
-          '</p>' +
-          '<label class="prosjekt-status-label">Status: ' +
-          '<select class="prosjekt-status" data-id="' +
-          escapeHtml(p.id) +
-          '">' +
-          statusOptions +
-          '</select>' +
-          '</label>' +
-          '<div class="prosjekt-media-liste">' +
-          mediaHtml +
-          '</div>' +
-          '<form class="legg-til-bilde" data-id="' +
-          escapeHtml(p.id) +
-          '">' +
-          '<input type="url" class="bilde-url" placeholder="Bilde-URL" required>' +
-          '<input type="text" class="bilde-tittel" placeholder="Tittel (valgfritt)">' +
-          '<button type="submit">Legg til bilde</button>' +
-          '</form>' +
-          '</div>'
-        );
-      })
-      .join('');
-
-    // Status-endring
-    var selects = liste.querySelectorAll('.prosjekt-status');
-    for (var i = 0; i < selects.length; i++) {
-      selects[i].addEventListener('change', function () {
-        endreStatus(this.getAttribute('data-id'), this.value);
-      });
-    }
-
-    // Legg-til-bilde
-    var skjemaer = liste.querySelectorAll('.legg-til-bilde');
-    for (var j = 0; j < skjemaer.length; j++) {
-      skjemaer[j].addEventListener('submit', function (e) {
-        e.preventDefault();
-        var pid = this.getAttribute('data-id');
-        var urlEl = this.querySelector('.bilde-url');
-        var titEl = this.querySelector('.bilde-tittel');
-        var url = urlEl ? urlEl.value.trim() : '';
-        var tittel = titEl ? titEl.value.trim() : '';
-        if (!url) {
-          if (urlEl) urlEl.focus();
-          return;
-        }
-        leggTilBilde(pid, url, tittel, this);
-      });
-    }
+    liste.querySelectorAll('.prosjekt-status').forEach(function (sel) {
+      sel.addEventListener('change', function () { endreStatus(sel.getAttribute('data-id'), sel.value); });
+    });
+    liste.querySelectorAll('.bilde-skjema').forEach(function (sk) {
+      sk.addEventListener('submit', function (e) { e.preventDefault(); lastOppBilde(sk); });
+    });
   }
 
-  function endreStatus(prosjektId, status) {
-    if (!prosjektId) return;
-    apiFetch('/api/projects/' + encodeURIComponent(prosjektId), {
-      method: 'PATCH',
-      body: { status: status }
-    })
-      .then(function (res) {
-        if (!res.ok) throw new Error('Kunne ikke endre status');
-        return lastProsjekter();
-      })
-      .catch(function () {
-        alert('Kunne ikke endre status. Prøv igjen.');
-        lastProsjekter();
-      });
+  function endreStatus(pid, status) {
+    if (!pid) return;
+    api('/api/projects/' + encodeURIComponent(pid), { method: 'PATCH', body: { status: status } })
+      .then(function (res) { if (!res.ok) throw new Error(); return lastProsjekter(); })
+      .catch(function () { alert('Kunne ikke endre status.'); lastProsjekter(); });
   }
 
-  function leggTilBilde(prosjektId, url, tittel, skjema) {
-    if (!prosjektId) return;
-    settDeaktivert(skjema, true);
-    apiFetch('/api/projects/' + encodeURIComponent(prosjektId) + '/media', {
-      method: 'POST',
-      body: { url: url, tittel: tittel }
-    })
-      .then(function (res) {
-        if (!res.ok) throw new Error('Kunne ikke legge til bilde');
-        return lastProsjekter();
-      })
-      .catch(function () {
-        alert('Kunne ikke legge til bilde. Prøv igjen.');
-        settDeaktivert(skjema, false);
-      });
+  function lastOppBilde(skjema) {
+    var pid = skjema.getAttribute('data-id');
+    var filEl = skjema.querySelector('.f-fil');
+    var titEl = skjema.querySelector('.f-tit');
+    var fil = filEl && filEl.files ? filEl.files[0] : null;
+    if (!fil) { if (filEl) filEl.focus(); return; }
+    if (fil.size > 2.5 * 1024 * 1024) { alert('Bildet er for stort — velg et mindre bilde (maks ~2,5 MB).'); return; }
+    var reader = new FileReader();
+    laas(skjema, true);
+    reader.onload = function () {
+      api('/api/projects/' + encodeURIComponent(pid) + '/media', { method: 'POST', body: { fil: reader.result, tittel: titEl ? titEl.value.trim() : '' } })
+        .then(function (res) { if (!res.ok) throw new Error(); return lastProsjekter(); })
+        .catch(function () { alert('Kunne ikke laste opp bildet. Prøv igjen.'); laas(skjema, false); });
+    };
+    reader.onerror = function () { alert('Kunne ikke lese bildet.'); laas(skjema, false); };
+    reader.readAsDataURL(fil);
   }
 
   function handterNyttProsjekt(e) {
     e.preventDefault();
-    if (valgtKundeId === null) return;
-
+    if (valgtKundeId == null) return;
     var skjema = $('nytt-prosjekt');
-    if (!skjema) return;
-
-    var tittelEl = skjema.querySelector('[name="tittel"]');
-    var typeEl = skjema.querySelector('[name="type"]');
-    var beskrivelseEl = skjema.querySelector('[name="beskrivelse"]');
-
-    var tittel = tittelEl ? tittelEl.value.trim() : '';
-    var type = typeEl ? typeEl.value.trim() : '';
-    var beskrivelse = beskrivelseEl ? beskrivelseEl.value.trim() : '';
-
-    if (!tittel) {
-      if (tittelEl) tittelEl.focus();
-      return;
-    }
-
-    settDeaktivert(skjema, true);
-
-    apiFetch('/api/projects', {
-      method: 'POST',
-      body: {
-        bruker_id: valgtKundeId,
-        tittel: tittel,
-        type: type,
-        beskrivelse: beskrivelse
-      }
-    })
-      .then(function (res) {
-        if (!res.ok) throw new Error('Kunne ikke opprette prosjekt');
-        if (typeof skjema.reset === 'function') skjema.reset();
-        return lastProsjekter();
-      })
-      .catch(function () {
-        alert('Kunne ikke opprette prosjekt. Prøv igjen.');
-      })
-      .then(function () {
-        settDeaktivert(skjema, false);
-      });
+    var tittel = ($('np-tittel') && $('np-tittel').value || '').trim();
+    var type = ($('np-type') && $('np-type').value) || '';
+    var beskrivelse = ($('np-beskrivelse') && $('np-beskrivelse').value || '').trim();
+    if (!tittel) { if ($('np-tittel')) $('np-tittel').focus(); return; }
+    laas(skjema, true);
+    api('/api/projects', { method: 'POST', body: { bruker_id: valgtKundeId, tittel: tittel, type: type, beskrivelse: beskrivelse } })
+      .then(function (res) { if (!res.ok) throw new Error(); if (skjema.reset) skjema.reset(); return lastProsjekter(); })
+      .catch(function () { alert('Kunne ikke opprette prosjekt.'); })
+      .then(function () { laas(skjema, false); });
   }
 
-  // ---- Kvitteringer ----
-
+  // ---------- Kvitteringer ----------
   function lastKvitteringer() {
     var liste = $('kvitteringer-liste');
-    if (!liste || valgtKundeId === null) return Promise.resolve();
-    return apiFetch('/api/receipts?bruker_id=' + encodeURIComponent(valgtKundeId))
-      .then(function (res) {
-        if (!res.ok) throw new Error('Kunne ikke hente kvitteringer');
-        return lesJson(res);
+    if (!liste || valgtKundeId == null) return Promise.resolve();
+    return api('/api/receipts?bruker_id=' + encodeURIComponent(valgtKundeId))
+      .then(function (res) { return res.ok ? json(res) : Promise.reject(); })
+      .then(function (data) {
+        var rader = Array.isArray(data) ? data : (data && data.receipts) || [];
+        renderKvitteringer(rader);
       })
-      .then(function (kvitteringer) {
-        renderKvitteringer(Array.isArray(kvitteringer) ? kvitteringer : []);
-      })
-      .catch(function () {
-        liste.innerHTML = '<p class="feil">Kunne ikke laste kvitteringer.</p>';
-      });
+      .catch(function () { liste.innerHTML = '<div class="pane-tom">Kunne ikke laste kvitteringer.</div>'; });
   }
 
-  function renderKvitteringer(kvitteringer) {
+  function renderKvitteringer(kvit) {
     var liste = $('kvitteringer-liste');
     if (!liste) return;
-
-    if (!kvitteringer.length) {
-      liste.innerHTML = '<p class="tom">Ingen kvitteringer enda.</p>';
-      return;
-    }
-
-    liste.innerHTML = kvitteringer
-      .map(function (k) {
-        var betalt = k.betalt === true || k.betalt === 'true' || k.betalt === 1;
-        var betaltKlasse = betalt ? 'betalt' : 'ubetalt';
-        var betaltTekst = betalt ? 'Betalt' : 'Ubetalt';
-        return (
-          '<div class="kvittering-rad ' +
-          betaltKlasse +
-          '">' +
-          '<span class="kvittering-dato">' +
-          formaterDatoKort(k.dato) +
-          '</span>' +
-          '<span class="kvittering-beskrivelse">' +
-          escapeHtml(k.beskrivelse || '') +
-          '</span>' +
-          '<span class="kvittering-belop">' +
-          formaterBelop(k.belop) +
-          '</span>' +
-          '<span class="kvittering-status">' +
-          escapeHtml(betaltTekst) +
-          '</span>' +
-          '</div>'
-        );
-      })
-      .join('');
+    if (!kvit.length) { liste.innerHTML = '<div class="pane-tom">Ingen kvitteringer ennå.</div>'; return; }
+    liste.innerHTML = kvit.map(function (k) {
+      var betalt = k.betalt === true || k.betalt === 'true' || k.betalt === 1;
+      return '<div class="kvit-rad">' +
+        '<div class="kv-belop">' + esc(belop(k.belop)) + '</div>' +
+        '<div class="kv-info"><div class="kv-beskr">' + esc(k.beskrivelse || '') + '</div>' +
+        '<div class="kv-dato">' + datoKort(k.dato) + '</div></div>' +
+        '<span class="status-pill ' + (betalt ? 'betalt' : 'ubetalt') + '">' + (betalt ? 'Betalt' : 'Ubetalt') + '</span>' +
+        '</div>';
+    }).join('');
   }
 
   function handterNyKvittering(e) {
     e.preventDefault();
-    if (valgtKundeId === null) return;
-
+    if (valgtKundeId == null) return;
     var skjema = $('ny-kvittering');
-    if (!skjema) return;
-
-    var belopEl = skjema.querySelector('[name="belop"]');
-    var beskrivelseEl = skjema.querySelector('[name="beskrivelse"]');
-    var betaltEl = skjema.querySelector('[name="betalt"]');
-    var datoEl = skjema.querySelector('[name="dato"]');
-
-    var belop = belopEl ? Number(belopEl.value) : NaN;
-    var beskrivelse = beskrivelseEl ? beskrivelseEl.value.trim() : '';
-    var betalt = betaltEl ? (betaltEl.type === 'checkbox' ? betaltEl.checked : betaltEl.value === 'true') : false;
-    var dato = datoEl ? datoEl.value : '';
-
-    if (isNaN(belop)) {
-      if (belopEl) belopEl.focus();
-      return;
-    }
-
-    settDeaktivert(skjema, true);
-
-    apiFetch('/api/receipts', {
-      method: 'POST',
-      body: {
-        bruker_id: valgtKundeId,
-        belop: belop,
-        beskrivelse: beskrivelse,
-        betalt: betalt,
-        dato: dato
-      }
-    })
-      .then(function (res) {
-        if (!res.ok) throw new Error('Kunne ikke opprette kvittering');
-        if (typeof skjema.reset === 'function') skjema.reset();
-        return lastKvitteringer();
-      })
-      .catch(function () {
-        alert('Kunne ikke opprette kvittering. Prøv igjen.');
-      })
-      .then(function () {
-        settDeaktivert(skjema, false);
-      });
+    var belopV = $('nk-belop') ? Number($('nk-belop').value) : NaN;
+    var beskrivelse = ($('nk-beskrivelse') && $('nk-beskrivelse').value || '').trim();
+    var betalt = $('nk-betalt') ? $('nk-betalt').checked : false;
+    var datoV = $('nk-dato') ? $('nk-dato').value : '';
+    if (isNaN(belopV)) { if ($('nk-belop')) $('nk-belop').focus(); return; }
+    laas(skjema, true);
+    api('/api/receipts', { method: 'POST', body: { bruker_id: valgtKundeId, belop: belopV, beskrivelse: beskrivelse, betalt: betalt, dato: datoV } })
+      .then(function (res) { if (!res.ok) throw new Error(); if (skjema.reset) skjema.reset(); return lastKvitteringer(); })
+      .catch(function () { alert('Kunne ikke opprette kvittering.'); })
+      .then(function () { laas(skjema, false); });
   }
 
-  // ---- Felles UI ----
-
-  function settDeaktivert(skjema, deaktivert) {
-    if (!skjema) return;
-    var felter = skjema.querySelectorAll('input, textarea, button, select');
-    for (var i = 0; i < felter.length; i++) {
-      felter[i].disabled = !!deaktivert;
-    }
-  }
-
-  function visIngenValgt() {
-    var panel = $('dialog-panel');
-    var ingen = $('ingen-valgt');
-    if (panel) panel.style.display = 'none';
-    if (ingen) ingen.style.display = '';
-  }
-
-  // ---- Init ----
-
+  // ---------- Init ----------
   function init() {
-    // Skjul dialog-panel til en kunde er valgt
-    visIngenValgt();
+    if ($('dialog-panel')) $('dialog-panel').style.display = 'none';
+    if ($('ingen-valgt')) $('ingen-valgt').style.display = '';
 
-    // Skjemaer
-    var svarSkjema = $('svar-skjema');
-    if (svarSkjema) svarSkjema.addEventListener('submit', handterSvar);
-
-    var nyttProsjekt = $('nytt-prosjekt');
-    if (nyttProsjekt) nyttProsjekt.addEventListener('submit', handterNyttProsjekt);
-
-    var nyKvittering = $('ny-kvittering');
-    if (nyKvittering) nyKvittering.addEventListener('submit', handterNyKvittering);
-
-    var loggUtKnapp = $('logg-ut');
-    if (loggUtKnapp) loggUtKnapp.addEventListener('click', loggUt);
-
-    // Auth-sjekk -> deretter last kunder
-    sjekkInnlogging().then(function (bruker) {
-      if (!bruker) return;
-      lastKunder();
+    document.querySelectorAll('.tab').forEach(function (t) {
+      t.addEventListener('click', function () { byttFane(t.getAttribute('data-tab')); });
     });
+    if ($('kunde-sok')) $('kunde-sok').addEventListener('input', lastKunder);
+    if ($('svar-skjema')) $('svar-skjema').addEventListener('submit', handterSvar);
+    if ($('nytt-prosjekt')) $('nytt-prosjekt').addEventListener('submit', handterNyttProsjekt);
+    if ($('ny-kvittering')) $('ny-kvittering').addEventListener('submit', handterNyKvittering);
+    if ($('logg-ut')) $('logg-ut').addEventListener('click', function (e) {
+      e.preventDefault();
+      api('/api/auth/logout', { method: 'POST' }).then(function () { window.location = '/konto'; }).catch(function () { window.location = '/konto'; });
+    });
+
+    sjekkInnlogging().then(function (bruker) { if (bruker) lastKunder(); });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 })();

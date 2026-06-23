@@ -169,9 +169,21 @@ router.post('/:id/media', requireRole('ansatt', 'admin'), async (req, res) => {
   if (!Number.isInteger(id)) {
     return res.status(400).json({ error: 'Ugyldig id' });
   }
-  const { url, tittel, type } = req.body || {};
-  if (!url || !String(url).trim()) {
-    return res.status(400).json({ error: 'url er påkrevd' });
+  const { url, fil, tittel, type } = req.body || {};
+  // Godta enten ekstern URL, eller et opplastet bilde som base64 data-URL (lagres i url-feltet).
+  let lagretUrl = null;
+  if (fil !== undefined && fil !== null && fil !== '') {
+    if (typeof fil !== 'string' || !fil.startsWith('data:image/')) {
+      return res.status(400).json({ error: 'Vedlegg må være et bilde (data:image/...)' });
+    }
+    if (fil.length > 7000000) {
+      return res.status(400).json({ error: 'Bildet er for stort' });
+    }
+    lagretUrl = fil;
+  } else if (url && String(url).trim()) {
+    lagretUrl = String(url).trim();
+  } else {
+    return res.status(400).json({ error: 'url eller fil er påkrevd' });
   }
   try {
     const prosjekt = await db.one(
@@ -184,7 +196,7 @@ router.post('/:id/media', requireRole('ansatt', 'admin'), async (req, res) => {
       `INSERT INTO project_media (project_id, bruker_id, url, type, tittel)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id, project_id, bruker_id, url, type, tittel, opprettet`,
-      [id, prosjekt.bruker_id, String(url).trim(), type || 'bilde', tittel || null]
+      [id, prosjekt.bruker_id, lagretUrl, type || 'bilde', tittel || null]
     );
     res.status(201).json({ media });
   } catch (e) {
