@@ -133,3 +133,55 @@ CREATE INDEX IF NOT EXISTS idx_project_media_project_id ON project_media(project
 CREATE INDEX IF NOT EXISTS idx_receipts_bruker_id ON receipts(bruker_id);
 CREATE INDEX IF NOT EXISTS idx_customer_messages_bruker_id ON customer_messages(bruker_id);
 CREATE INDEX IF NOT EXISTS idx_projects_bruker_id ON projects(bruker_id);
+
+-- ===== Regnskap (Fiken-formet: belop i ore, norsk kontoplan, MVA-koder) =====
+-- regnskap_poster = bokforte poster. type 'inntekt' (Fiken Salg) | 'utgift' (Fiken Kjop).
+-- Lagres slik at en fremtidig integrasjon kan dytte rett inn i Fikens API.
+CREATE TABLE IF NOT EXISTS regnskap_poster (
+  id              SERIAL PRIMARY KEY,
+  type            TEXT NOT NULL,                 -- 'inntekt' | 'utgift'
+  dato            DATE NOT NULL,
+  kontakt         TEXT,                          -- kunde/leverandor (Fiken Contact-navn)
+  beskrivelse     TEXT NOT NULL,
+  konto           INTEGER,                       -- Fiken kontoplan (3000, 5000, 6300 ...)
+  mva_kode        INTEGER,                       -- Fiken MVA-kode (3=salg 25%, 1=kjop fradrag, 0=uten)
+  mva_sats        INTEGER NOT NULL DEFAULT 0,    -- 0 | 12 | 15 | 25 (prosent)
+  netto_ore       INTEGER NOT NULL DEFAULT 0,    -- nettobelop i ore
+  mva_ore         INTEGER NOT NULL DEFAULT 0,    -- mva-belop i ore
+  brutto_ore      INTEGER NOT NULL DEFAULT 0,    -- netto + mva i ore
+  betalingsmetode TEXT,                          -- 'bank' | 'kontant' | 'kort'
+  bilag           TEXT,                          -- referanse / vedlegg-URL
+  kilde           TEXT NOT NULL DEFAULT 'manuell',-- 'manuell' | 'booking' | 'butikk'
+  booking_id      INTEGER REFERENCES bookings(id),
+  fiken_status    TEXT NOT NULL DEFAULT 'ikke_sendt', -- 'ikke_sendt' | 'sendt'
+  opprettet       TIMESTAMPTZ DEFAULT now()
+);
+
+-- ansatte = lonnsmottakere (kobles valgfritt til en bruker)
+CREATE TABLE IF NOT EXISTS ansatte (
+  id           SERIAL PRIMARY KEY,
+  user_id      INTEGER REFERENCES users(id),
+  navn         TEXT NOT NULL,
+  epost        TEXT,
+  stilling     TEXT,
+  timelonn_ore INTEGER NOT NULL DEFAULT 0,       -- timelonn i ore
+  konto        INTEGER NOT NULL DEFAULT 5000,    -- Fiken lonnskonto
+  aktiv        BOOLEAN NOT NULL DEFAULT true,
+  opprettet    TIMESTAMPTZ DEFAULT now()
+);
+
+-- timeforinger = registrerte timer (Fiken Timeforing) -> grunnlag for lonn
+CREATE TABLE IF NOT EXISTS timeforinger (
+  id         SERIAL PRIMARY KEY,
+  ansatt_id  INTEGER NOT NULL REFERENCES ansatte(id) ON DELETE CASCADE,
+  dato       DATE NOT NULL,
+  timer      NUMERIC(5,2) NOT NULL DEFAULT 0,
+  aktivitet  TEXT,                               -- prosjekt/aktivitet
+  notat      TEXT,
+  opprettet  TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_poster_dato ON regnskap_poster(dato);
+CREATE INDEX IF NOT EXISTS idx_poster_type ON regnskap_poster(type);
+CREATE INDEX IF NOT EXISTS idx_timer_ansatt ON timeforinger(ansatt_id);
+CREATE INDEX IF NOT EXISTS idx_timer_dato ON timeforinger(dato);

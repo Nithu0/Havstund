@@ -133,4 +133,19 @@ module.exports = async function seed({ query, one }) {
   } catch (e) {
     console.error('  seed: demo-kunde feilet:', e.message);
   }
+
+  // --- Demo-ansatt (for timeliste/lønn), idempotent ---
+  try {
+    const ant = await one('SELECT COUNT(*)::int AS n FROM ansatte');
+    if (ant.n === 0) {
+      await query(
+        `INSERT INTO ansatte (navn, stilling, timelonn_ore, konto)
+         VALUES ($1, $2, $3, 5000)`,
+        ['Demo Ansatt', 'Keramiker', 22000]
+      );
+      console.log('  seed: demo-ansatt');
+    }
+  } catch (e) {
+    console.error('  seed: demo-ansatt feilet:', e.message);
+  }
 };

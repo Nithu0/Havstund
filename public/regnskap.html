@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Regnskap — Havstund</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    body{background:var(--cream)}
+    .adm-top{background:linear-gradient(100deg,var(--sea-deep),var(--sea));color:#fff;position:sticky;top:0;z-index:60;box-shadow:0 4px 20px rgba(10,39,71,.18)}
+    .adm-top .inner{max-width:1240px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+    .adm-top .logo{display:flex;flex-direction:column;gap:3px}
+    .adm-top .logo img{height:28px;width:auto;filter:drop-shadow(0 1px 4px rgba(0,0,0,.35))}
+    .adm-top .logo small{font-size:10px;font-weight:600;letter-spacing:3px;color:var(--turq-l);text-transform:uppercase}
+    .adm-top nav{margin-left:auto;display:flex;gap:20px;align-items:center}
+    .adm-top nav a{font-size:14px;font-weight:600;color:#cfe2f4;opacity:.9}
+    .adm-top nav a:hover{opacity:1;color:#fff}
+
+    .wrap2{max-width:1240px;margin:0 auto;padding:28px 24px 70px}
+    .topp{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:8px}
+    .topp h1{font-size:30px;color:var(--sea-deep)}
+    .topp .mnd{display:flex;align-items:center;gap:10px}
+    .topp .mnd label{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+    .topp .mnd input{padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:15px}
+    .lead{color:var(--muted);margin-bottom:22px;max-width:70ch}
+
+    /* faner */
+    .faner{display:flex;gap:6px;border-bottom:2px solid var(--line);margin-bottom:24px;flex-wrap:wrap}
+    .fane{background:none;border:none;cursor:pointer;font-family:inherit;font-weight:700;font-size:15px;color:var(--muted);
+      padding:12px 18px;border-bottom:3px solid transparent;margin-bottom:-2px;transition:.15s}
+    .fane.active{color:var(--sea-deep);border-bottom-color:var(--turq)}
+    .pane{display:none}
+    .pane.active{display:block}
+
+    /* kpi */
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+    .kpi{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:20px 22px;box-shadow:var(--shadow)}
+    .kpi .label{font-size:12px;text-transform:uppercase;letter-spacing:1.3px;color:var(--muted);font-weight:700}
+    .kpi .val{font-size:27px;font-weight:800;color:var(--sea-deep);margin-top:8px;line-height:1.05}
+    .kpi .val.pos{color:#1f7a4d}
+    .kpi .val.neg{color:#b03a2e}
+    .kpi .sub{font-size:12px;color:var(--muted);margin-top:5px}
+
+    .panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:22px 24px;box-shadow:var(--shadow);margin-bottom:22px}
+    .panel h3{margin-bottom:4px}
+    .panel .hint{color:var(--muted);font-size:13px;margin-bottom:16px}
+
+    /* skjema */
+    .skjema{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:end;margin-bottom:6px}
+    .felt{display:flex;flex-direction:column;gap:5px}
+    .felt label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+    .felt input,.felt select{padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:14px;background:#fff;color:var(--ink)}
+    .felt.bred{grid-column:span 2}
+    .skjema .btn{height:38px}
+
+    /* tabell */
+    .tbl{width:100%;border-collapse:collapse;font-size:14px;margin-top:14px}
+    .tbl th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:9px 10px;border-bottom:2px solid var(--line)}
+    .tbl td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+    .tbl tr:last-child td{border-bottom:none}
+    .tbl .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+    .tbl .belop{font-weight:700;color:var(--sea-deep)}
+    .konto-tag{display:inline-block;font-size:11px;font-weight:700;color:var(--teal);background:#e4eef9;padding:2px 8px;border-radius:6px}
+    .slett{background:none;border:none;color:#b03a2e;cursor:pointer;font-size:13px;font-weight:700;opacity:.7}
+    .slett:hover{opacity:1}
+    .tom{color:var(--muted);font-size:14px;padding:18px 4px}
+    .feil{background:#fdecec;color:#9b2226;border:1px solid #f3c5c5;padding:8px 12px;border-radius:8px;font-size:13px;margin:8px 0;display:none}
+    .feil.vis{display:block}
+    .sum-rad td{font-weight:800;color:var(--sea-deep);border-top:2px solid var(--line);background:#f6faff}
+    .fiken-note{background:#eef5fc;border:1px solid var(--turq-l);border-radius:12px;padding:14px 18px;font-size:13px;color:var(--sea);margin-top:8px}
+    .fiken-note b{color:var(--sea-deep)}
+
+    @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.felt.bred{grid-column:auto}}
+    @media(max-width:560px){.kpis{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header class="adm-top">
+    <div class="inner">
+      <a href="/" class="logo"><img src="bilder/wordmark.png" alt="Havstund"><small>Regnskap · Admin</small></a>
+      <nav>
+        <a href="/intranett">Intranett</a>
+        <a href="/kunde-dialog">Kundedialog</a>
+        <a href="/">Hjem</a>
+        <a href="#" id="logg-ut">Logg ut</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap2">
+    <div class="topp">
+      <div>
+        <h1>Regnskap</h1>
+      </div>
+      <div class="mnd">
+        <label for="maaned">Måned</label>
+        <input type="month" id="maaned">
+      </div>
+    </div>
+    <p class="lead">Inntekter, utgifter og timer føres her i samme form som Fiken bruker (konto, MVA-kode, beløp). Da kan tallene senere overføres til Fiken automatisk.</p>
+
+    <div class="faner">
+      <button class="fane active" data-pane="oversikt">Oversikt</button>
+      <button class="fane" data-pane="inntekter">Inntekter</button>
+      <button class="fane" data-pane="utgifter">Utgifter</button>
+      <button class="fane" data-pane="lonn">Timer &amp; lønn</button>
+    </div>
+
+    <!-- OVERSIKT -->
+    <section class="pane active" id="pane-oversikt">
+      <div class="kpis">
+        <div class="kpi"><div class="label">Inntekter (netto)</div><div class="val" id="o-inntekt">–</div><div class="sub">salg eks. mva</div></div>
+        <div class="kpi"><div class="label">Utgifter (netto)</div><div class="val" id="o-utgift">–</div><div class="sub">kjøp eks. mva</div></div>
+        <div class="kpi"><div class="label">Resultat</div><div class="val" id="o-resultat">–</div><div class="sub">inntekt − utgift</div></div>
+        <div class="kpi"><div class="label">MVA å betale</div><div class="val" id="o-mva">–</div><div class="sub">utgående − inngående</div></div>
+      </div>
+      <div class="panel">
+        <h3>Lønnsgrunnlag denne måneden</h3>
+        <p class="hint">Registrerte timer × timelønn — klart for lønnskjøring.</p>
+        <div class="kpis" style="margin-bottom:0">
+          <div class="kpi"><div class="label">Timer ført</div><div class="val" id="o-timer">–</div></div>
+          <div class="kpi"><div class="label">Brutto lønn</div><div class="val" id="o-lonn">–</div><div class="sub">konto 5000</div></div>
+        </div>
+      </div>
+      <div class="fiken-note">
+        <b>Til Fiken senere:</b> inntekter blir <b>Salg</b>, utgifter blir <b>Kjøp</b>, og lønnsgrunnlaget blir <b>lønnskjøring</b> — alt med riktig konto og MVA-kode allerede satt. Hjernen vi bygger trenger bare å hente disse postene og sende dem inn.
+      </div>
+    </section>
+
+    <!-- INNTEKTER -->
+    <section class="pane" id="pane-inntekter">
+      <div class="panel">
+        <h3>Ny inntekt</h3>
+        <p class="hint">F.eks. et verksted, kurs eller butikksalg.</p>
+        <div class="feil" id="feil-inntekt"></div>
+        <form id="form-inntekt">
+          <div class="skjema">
+            <div class="felt"><label>Dato</label><input type="date" name="dato" required></div>
+            <div class="felt bred"><label>Beskrivelse</label><input type="text" name="beskrivelse" placeholder="Håndbygging for 6 personer" required></div>
+            <div class="felt"><label>Kunde</label><input type="text" name="kontakt" placeholder="(valgfritt)"></div>
+            <div class="felt"><label>Konto</label><select name="konto" class="konto-inn"></select></div>
+            <div class="felt"><label>MVA</label><select name="mva_sats" class="mva-sel"></select></div>
+            <div class="felt"><label>Beløp (kr, eks. mva)</label><input type="number" name="netto" step="0.01" min="0" placeholder="0" required></div>
+            <div class="felt"><label>&nbsp;</label><button type="submit" class="btn btn-primary">Legg til</button></div>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h3>Inntekter denne måneden</h3>
+        <div id="liste-inntekt"></div>
+      </div>
+    </section>
+
+    <!-- UTGIFTER -->
+    <section class="pane" id="pane-utgifter">
+      <div class="panel">
+        <h3>Ny utgift</h3>
+        <p class="hint">F.eks. leire, glasur, leie, utstyr.</p>
+        <div class="feil" id="feil-utgift"></div>
+        <form id="form-utgift">
+          <div class="skjema">
+            <div class="felt"><label>Dato</label><input type="date" name="dato" required></div>
+            <div class="felt bred"><label>Beskrivelse</label><input type="text" name="beskrivelse" placeholder="Leirebestilling" required></div>
+            <div class="felt"><label>Leverandør</label><input type="text" name="kontakt" placeholder="(valgfritt)"></div>
+            <div class="felt"><label>Konto</label><select name="konto" class="konto-ut"></select></div>
+            <div class="felt"><label>MVA</label><select name="mva_sats" class="mva-sel"></select></div>
+            <div class="felt"><label>Beløp (kr, eks. mva)</label><input type="number" name="netto" step="0.01" min="0" placeholder="0" required></div>
+            <div class="felt"><label>Betalt med</label><select name="betalingsmetode"><option value="bank">Bank</option><option value="kort">Kort</option><option value="kontant">Kontant</option></select></div>
+            <div class="felt"><label>&nbsp;</label><button type="submit" class="btn btn-primary">Legg til</button></div>
+          </div>
+        </form>
+      </div>
+      <div class="panel">
+        <h3>Utgifter denne måneden</h3>
+        <div id="liste-utgift"></div>
+      </div>
+    </section>
+
+    <!-- TIMER & LØNN -->
+    <section class="pane" id="pane-lonn">
+      <div class="panel">
+        <h3>Ansatte</h3>
+        <p class="hint">Legg til de som skal ha lønn, med timelønn.</p>
+        <div class="feil" id="feil-ansatt"></div>
+        <form id="form-ansatt">
+          <div class="skjema">
+            <div class="felt bred"><label>Navn</label><input type="text" name="navn" required></div>
+            <div class="felt"><label>Stilling</label><input type="text" name="stilling" placeholder="(valgfritt)"></div>
+            <div class="felt"><label>Timelønn (kr)</label><input type="number" name="timelonn" step="1" min="0" required></div>
+            <div class="felt"><label>&nbsp;</label><button type="submit" class="btn btn-primary">Legg til</button></div>
+          </div>
+        </form>
+        <div id="liste-ansatt"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Registrer timer</h3>
+        <div class="feil" id="feil-timer"></div>
+        <form id="form-timer">
+          <div class="skjema">
+            <div class="felt"><label>Ansatt</label><select name="ansatt_id" id="timer-ansatt" required></select></div>
+            <div class="felt"><label>Dato</label><input type="date" name="dato" required></div>
+            <div class="felt"><label>Timer</label><input type="number" name="timer" step="0.25" min="0" max="24" required></div>
+            <div class="felt bred"><label>Aktivitet</label><input type="text" name="aktivitet" placeholder="Verksted, kurs, forberedelse …"></div>
+            <div class="felt"><label>&nbsp;</label><button type="submit" class="btn btn-primary">Legg til</button></div>
+          </div>
+        </form>
+        <div id="liste-timer"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Lønnsoversikt — klar for lønnskjøring</h3>
+        <p class="hint">Sum timer × timelønn per ansatt for valgt måned.</p>
+        <div id="liste-lonn"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/regnskap.js"></script>
+</body>
+</html>
