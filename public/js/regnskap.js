@@ -93,13 +93,30 @@
       $('o-timer').textContent = timer(d.sum_timer) + ' t';
       $('o-lonn').textContent = kr(d.lonn_ore);
     }).catch(function () {});
+    lastFikenStatus();
+  }
+
+  // ---- FIKEN-STATUS ----
+  function lastFikenStatus() {
+    var el = $('fiken-status');
+    if (!el) return;
+    api('/api/regnskap/fiken/status').then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || d.error) { el.textContent = ''; return; }
+      var n = Number(d.antall_usendt) || 0;
+      el.textContent = d.konfigurert
+        ? n + ' poster klare til å sendes til Fiken.'
+        : 'Fiken er ikke koblet til ennå — ' + n + ' poster venter.';
+    }).catch(function () { el.textContent = ''; });
   }
 
   // ---- POSTER (inntekt/utgift) ----
   function radPost(p) {
+    var vedleggLenke = p.har_vedlegg
+      ? '<br><a href="/api/regnskap/poster/' + p.id + '/vedlegg" target="_blank" rel="noopener" style="font-size:12px;font-weight:700;color:var(--teal)">Kvittering</a>'
+      : '';
     return '<tr>' +
       '<td>' + esc(p.dato) + '</td>' +
-      '<td>' + esc(p.beskrivelse) + (p.kontakt ? '<br><span style="color:var(--muted);font-size:12px">' + esc(p.kontakt) + '</span>' : '') + '</td>' +
+      '<td>' + esc(p.beskrivelse) + (p.kontakt ? '<br><span style="color:var(--muted);font-size:12px">' + esc(p.kontakt) + '</span>' : '') + vedleggLenke + '</td>' +
       '<td><span class="konto-tag">' + (p.konto || '–') + '</span></td>' +
       '<td class="num">' + kr(p.netto_ore) + '</td>' +
       '<td class="num">' + (p.mva_sats ? p.mva_sats + '%' : '–') + '</td>' +
@@ -142,14 +159,34 @@
     };
     if (!kropp.beskrivelse) { visFeil(feilId, 'Skriv en beskrivelse.'); return; }
     if (!kropp.netto_ore) { visFeil(feilId, 'Skriv et beløp.'); return; }
-    api('/api/regnskap/poster', { method: 'POST', body: JSON.stringify(kropp) })
-      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
-      .then(function (res) {
-        if (!res.ok) { visFeil(feilId, res.d.error || 'Kunne ikke lagre.'); return; }
-        form.reset(); fyllStandardDato();
-        lastPoster(type, listeId); lastOversikt();
-      })
-      .catch(function () { visFeil(feilId, 'Noe gikk galt. Prøv igjen.'); });
+
+    function gjorPost(body) {
+      api('/api/regnskap/poster', { method: 'POST', body: JSON.stringify(body) })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (res) {
+          if (!res.ok) { visFeil(feilId, res.d.error || 'Kunne ikke lagre.'); return; }
+          form.reset(); fyllStandardDato();
+          lastPoster(type, listeId); lastOversikt();
+        })
+        .catch(function () { visFeil(feilId, 'Noe gikk galt. Prøv igjen.'); });
+    }
+
+    // Kvittering (valgfri, kun utgift): les som data-URL og legg ved før POST.
+    var fil = f.vedlegg && f.vedlegg.files ? f.vedlegg.files[0] : null;
+    if (fil) {
+      var MAKS = 2.5 * 1024 * 1024; // ~2,5 MB
+      if (fil.size > MAKS) {
+        visFeil(feilId, 'Bildet er for stort — velg et mindre bilde (maks ~2,5 MB).');
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function () { kropp.vedlegg = reader.result; gjorPost(kropp); };
+      reader.onerror = function () { visFeil(feilId, 'Kunne ikke lese bildet. Prøv igjen.'); };
+      reader.readAsDataURL(fil);
+      return;
+    }
+
+    gjorPost(kropp);
   }
 
   // ---- ANSATTE ----
@@ -300,6 +337,27 @@
     $('logg-ut').addEventListener('click', function (e) {
       e.preventDefault();
       api('/api/auth/logout', { method: 'POST' }).then(function () { window.location = '/konto'; }).catch(function () { window.location = '/konto'; });
+    });
+
+    var fikenBtn = $('fiken-send');
+    if (fikenBtn) fikenBtn.addEventListener('click', function () {
+      fikenBtn.disabled = true;
+      var gammelTekst = fikenBtn.textContent;
+      fikenBtn.textContent = 'Sender …';
+      api('/api/regnskap/fiken/send', { method: 'POST' })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (res) {
+          var d = res.d || {};
+          if (!res.ok) { alert(d.error || 'Kunne ikke sende til Fiken.'); return; }
+          if (!d.konfigurert) {
+            alert('Fiken er ikke koblet til ennå. Legg inn Fiken-nøkkelen først, så sendes postene automatisk. (' + (Number(d.simulert) || 0) + ' poster ble simulert.)');
+          } else {
+            alert('Sendt: ' + (Number(d.sendt) || 0) + ', simulert: ' + (Number(d.simulert) || 0) + ', feilet: ' + (Number(d.feilet) || 0));
+          }
+          lastFikenStatus(); lastOversikt();
+        })
+        .catch(function () { alert('Noe gikk galt. Prøv igjen.'); })
+        .then(function () { fikenBtn.disabled = false; fikenBtn.textContent = gammelTekst; });
     });
 
     lastOversikt();

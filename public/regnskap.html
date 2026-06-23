@@ -123,7 +123,9 @@
         </div>
       </div>
       <div class="fiken-note">
-        <b>Til Fiken senere:</b> inntekter blir <b>Salg</b>, utgifter blir <b>Kjøp</b>, og lønnsgrunnlaget blir <b>lønnskjøring</b> — alt med riktig konto og MVA-kode allerede satt. Hjernen vi bygger trenger bare å hente disse postene og sende dem inn.
+        <b>Til Fiken:</b> inntekter blir <b>Salg</b>, utgifter blir <b>Kjøp</b>, og lønnsgrunnlaget blir <b>lønnskjøring</b> — alt med riktig konto og MVA-kode allerede satt.
+        <div id="fiken-status" style="margin-top:12px;font-weight:600">–</div>
+        <button id="fiken-send" class="btn btn-primary" style="margin-top:12px">Send til Fiken</button>
       </div>
     </section>
 
@@ -166,6 +168,7 @@
             <div class="felt"><label>MVA</label><select name="mva_sats" class="mva-sel"></select></div>
             <div class="felt"><label>Beløp (kr, eks. mva)</label><input type="number" name="netto" step="0.01" min="0" placeholder="0" required></div>
             <div class="felt"><label>Betalt med</label><select name="betalingsmetode"><option value="bank">Bank</option><option value="kort">Kort</option><option value="kontant">Kontant</option></select></div>
+            <div class="felt bred"><label>Kvittering (valgfritt)</label><input type="file" name="vedlegg" accept="image/*"></div>
             <div class="felt"><label>&nbsp;</label><button type="submit" class="btn btn-primary">Legg til</button></div>
           </div>
         </form>

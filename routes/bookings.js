@@ -53,6 +53,36 @@ router.post('/', async (req, res) => {
     // Varsle Discord (#general) — fire-and-forget, stopper aldri bookingen
     discord.bookingVarsel(booking, akt.navn);
 
+    // Speil bookingen som inntektspost i regnskapet — feiler aldri bookingen
+    try {
+      const finnes = await db.one(
+        'SELECT id FROM regnskap_poster WHERE booking_id = $1',
+        [booking.id]
+      );
+      if (!finnes) {
+        const brutto_ore = booking.belop * 100;
+        const netto_ore = Math.round(brutto_ore / 1.25);
+        const mva_ore = brutto_ore - netto_ore;
+        await db.query(
+          `INSERT INTO regnskap_poster
+             (type, dato, kontakt, beskrivelse, konto, mva_kode, mva_sats,
+              netto_ore, mva_ore, brutto_ore, betalingsmetode, kilde, booking_id)
+           VALUES ('inntekt',$1,$2,$3,3000,3,25,$4,$5,$6,NULL,'booking',$7)`,
+          [
+            booking.dato,
+            booking.navn,
+            `${akt.navn} (${booking.antall} pers)`,
+            netto_ore,
+            mva_ore,
+            brutto_ore,
+            booking.id,
+          ]
+        );
+      }
+    } catch (regnskapFeil) {
+      console.error('bookings: kunne ikke opprette regnskapspost:', regnskapFeil.message);
+    }
+
     res.status(201).json({ booking });
   } catch (e) {
     console.error('bookings POST / feilet:', e.message);

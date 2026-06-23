@@ -23,7 +23,7 @@ app.set('io', io);
 
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: '8mb' }));
 app.use(cookieParser());
 app.use(authOptional); // setter req.user hvis innlogget (valgfritt)
 

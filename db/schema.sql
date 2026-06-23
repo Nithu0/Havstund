@@ -151,11 +151,15 @@ CREATE TABLE IF NOT EXISTS regnskap_poster (
   brutto_ore      INTEGER NOT NULL DEFAULT 0,    -- netto + mva i ore
   betalingsmetode TEXT,                          -- 'bank' | 'kontant' | 'kort'
   bilag           TEXT,                          -- referanse / vedlegg-URL
+  vedlegg         TEXT,                          -- kvitteringsbilde som base64 data-URL (Railway-filsystem er flyktig)
   kilde           TEXT NOT NULL DEFAULT 'manuell',-- 'manuell' | 'booking' | 'butikk'
   booking_id      INTEGER REFERENCES bookings(id),
   fiken_status    TEXT NOT NULL DEFAULT 'ikke_sendt', -- 'ikke_sendt' | 'sendt'
   opprettet       TIMESTAMPTZ DEFAULT now()
 );
+
+-- Idempotent migrering: gir eksisterende databaser kvitteringsbilde-kolonnen
+ALTER TABLE regnskap_poster ADD COLUMN IF NOT EXISTS vedlegg TEXT;
 
 -- ansatte = lonnsmottakere (kobles valgfritt til en bruker)
 CREATE TABLE IF NOT EXISTS ansatte (

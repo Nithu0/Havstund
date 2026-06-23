@@ -17,6 +17,7 @@
 const express = require('express');
 const db = require('../db');
 const { requireRole } = require('../lib/auth');
+const fiken = require('../lib/fiken');
 
 const router = express.Router();
 
@@ -92,7 +93,8 @@ router.get('/poster', async (req, res) => {
   try {
     const { rows } = await db.query(
       `SELECT id, type, dato, kontakt, beskrivelse, konto, mva_kode, mva_sats,
-              netto_ore, mva_ore, brutto_ore, betalingsmetode, bilag, kilde, fiken_status
+              netto_ore, mva_ore, brutto_ore, betalingsmetode, bilag, kilde, fiken_status,
+              (vedlegg IS NOT NULL) AS har_vedlegg
          FROM regnskap_poster ${where}
         ORDER BY dato DESC, id DESC`,
       verdier
@@ -120,21 +122,53 @@ router.post('/poster', async (req, res) => {
   const konto = Number.isInteger(Number(b.konto)) ? Number(b.konto) : null;
   const mvaKode = Number.isInteger(Number(b.mva_kode)) ? Number(b.mva_kode) : null;
 
+  // Valgfritt kvitteringsbilde som base64 data-URL (lagres i DB — Railway-filsystem er flyktig)
+  let vedlegg = null;
+  if (b.vedlegg !== undefined && b.vedlegg !== null && b.vedlegg !== '') {
+    if (typeof b.vedlegg !== 'string' || !b.vedlegg.startsWith('data:image/')) {
+      return res.status(400).json({ error: 'Vedlegg maa vaere et bilde (data:image/...)' });
+    }
+    if (b.vedlegg.length > 7000000) {
+      return res.status(400).json({ error: 'Vedlegg for stort' });
+    }
+    vedlegg = b.vedlegg;
+  }
+
   try {
     const post = await db.one(
       `INSERT INTO regnskap_poster
          (type, dato, kontakt, beskrivelse, konto, mva_kode, mva_sats,
-          netto_ore, mva_ore, brutto_ore, betalingsmetode, bilag, kilde)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+          netto_ore, mva_ore, brutto_ore, betalingsmetode, bilag, vedlegg, kilde)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
        RETURNING id, type, dato, kontakt, beskrivelse, konto, mva_kode, mva_sats,
                  netto_ore, mva_ore, brutto_ore, betalingsmetode, bilag, kilde, fiken_status`,
       [type, b.dato, b.kontakt || null, String(b.beskrivelse).trim(), konto, mvaKode, sats,
-       nettoOre, mvaOre, bruttoOre, b.betalingsmetode || null, b.bilag || null, b.kilde || 'manuell']
+       nettoOre, mvaOre, bruttoOre, b.betalingsmetode || null, b.bilag || null, vedlegg, b.kilde || 'manuell']
     );
     res.status(201).json({ post });
   } catch (e) {
     console.error('regnskap /poster POST feilet:', e.message);
     res.status(500).json({ error: 'Kunne ikke lagre post' });
+  }
+});
+
+// Hent selve kvitteringsbildet for en post (parser data-URL -> binaer respons)
+router.get('/poster/:id/vedlegg', async (req, res) => {
+  if (!db.isConfigured()) return utilgjengelig(res);
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Ugyldig id' });
+  try {
+    const post = await db.one('SELECT vedlegg FROM regnskap_poster WHERE id = $1', [id]);
+    if (!post || !post.vedlegg) return res.status(404).json({ error: 'Ingen vedlegg' });
+    const m = /^data:([^;,]+);base64,(.*)$/s.exec(post.vedlegg);
+    if (!m) return res.status(404).json({ error: 'Ingen vedlegg' });
+    const buf = Buffer.from(m[2], 'base64');
+    res.set('Content-Type', m[1]);
+    res.set('Content-Length', String(buf.length));
+    res.send(buf);
+  } catch (e) {
+    console.error('regnskap /poster/:id/vedlegg GET feilet:', e.message);
+    res.status(500).json({ error: 'Kunne ikke hente vedlegg' });
   }
 });
 
@@ -306,6 +340,54 @@ router.get('/lonn', async (req, res) => {
   } catch (e) {
     console.error('regnskap /lonn feilet:', e.message);
     res.status(500).json({ error: 'Kunne ikke hente lonnsgrunnlag' });
+  }
+});
+
+// ---------- FIKEN-OVERFORING ----------
+router.get('/fiken/status', async (_req, res) => {
+  if (!db.isConfigured()) return utilgjengelig(res);
+  try {
+    const r = await db.one(
+      `SELECT COUNT(*)::int AS antall
+         FROM regnskap_poster
+        WHERE fiken_status = 'ikke_sendt'`
+    );
+    res.json({ konfigurert: fiken.isConfigured(), antall_usendt: r.antall });
+  } catch (e) {
+    console.error('regnskap /fiken/status feilet:', e.message);
+    res.status(500).json({ error: 'Kunne ikke hente Fiken-status' });
+  }
+});
+
+router.post('/fiken/send', async (_req, res) => {
+  if (!db.isConfigured()) return utilgjengelig(res);
+  try {
+    const { rows } = await db.query(
+      `SELECT id, type, dato, kontakt, beskrivelse, konto, mva_kode, mva_sats,
+              netto_ore, mva_ore, brutto_ore, betalingsmetode, bilag, kilde, fiken_status
+         FROM regnskap_poster
+        WHERE fiken_status = 'ikke_sendt'
+        ORDER BY dato ASC, id ASC`
+    );
+    let sendt = 0, feilet = 0, simulert = 0;
+    // Sekvensielt pga Fikens rate limit (maks ~1 request/sek) — IKKE parallelt.
+    for (const post of rows) {
+      const resultat = post.type === 'inntekt'
+        ? await fiken.sendSalg(post)
+        : await fiken.sendKjop(post);
+      if (resultat && resultat.ok) {
+        await db.query(`UPDATE regnskap_poster SET fiken_status = 'sendt' WHERE id = $1`, [post.id]);
+        sendt += 1;
+      } else if (resultat && resultat.simulert) {
+        simulert += 1;
+      } else {
+        feilet += 1;
+      }
+    }
+    res.json({ sendt, feilet, simulert, konfigurert: fiken.isConfigured() });
+  } catch (e) {
+    console.error('regnskap /fiken/send feilet:', e.message);
+    res.status(500).json({ error: 'Kunne ikke sende til Fiken' });
   }
 });
 
