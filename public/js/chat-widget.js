@@ -11,7 +11,7 @@
   var BLA = '#0e4a63';
   var DYP = '#082a36';
   var TURK = '#2bb6c2';
-  var LEIRE = '#d2823f';
+  var LEIRE = '#0e4a63';
   var CREAM = '#f6efe3';
 
   var threadId = null;
@@ -24,7 +24,7 @@
     '.hv-chat-btn{position:fixed;right:20px;bottom:20px;z-index:9998;width:60px;height:60px;border:none;' +
     'border-radius:50%;background:' + LEIRE + ';color:#fff;font-size:26px;cursor:pointer;box-shadow:0 10px 30px rgba(8,42,54,.35);' +
     'transition:transform .15s,background .2s}' +
-    '.hv-chat-btn:hover{transform:translateY(-2px);background:#a9602f}' +
+    '.hv-chat-btn:hover{transform:translateY(-2px);background:#082a36}' +
     '.hv-chat-btn .hv-dot{position:absolute;top:-2px;right:-2px;width:14px;height:14px;border-radius:50%;' +
     'background:' + TURK + ';border:2px solid #fff;display:none}' +
     '.hv-chat-btn.has-new .hv-dot{display:block}' +
@@ -59,13 +59,13 @@
   var btn = document.createElement('button');
   btn.className = 'hv-chat-btn';
   btn.setAttribute('aria-label', 'Åpne chat');
-  btn.innerHTML = '💬<span class="hv-dot"></span>';
+  btn.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.5 8.5 0 0 1-.9-3.8A8.38 8.38 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z"></path></svg><span class="hv-dot"></span>';
 
   var panel = document.createElement('div');
   panel.className = 'hv-chat-panel';
   panel.innerHTML =
     '<div class="hv-head">' +
-    '<div><div class="hv-t">Havstund</div><div class="hv-s">Vi svarer med en gang 🌊</div></div>' +
+    '<div><div class="hv-t">Havstund</div><div class="hv-s">Vi svarer med en gang</div></div>' +
     '<button class="hv-x" aria-label="Lukk">×</button>' +
     '</div>' +
     '<div class="hv-status" style="display:none"></div>' +
@@ -141,7 +141,7 @@
       });
       socket.on('ansatt_overtatt', function (d) {
         if (!d || Number(d.thread_id) !== Number(threadId)) return;
-        visStatus('En ansatt har tatt over samtalen 🌊');
+        visStatus('En ansatt har tatt over samtalen');
       });
     } catch (e) {
       // Socket.IO ikke tilgjengelig — chat fungerer fortsatt via REST
@@ -212,7 +212,7 @@
     input.focus();
     if (!apnet) {
       apnet = true;
-      leggTil('ai', 'Hei og velkommen til Havstund! 🌊 Spør meg gjerne om priser, opplevelser eller booking — jeg svarer med en gang.');
+      leggTil('ai', 'Hei og velkommen til Havstund! Spør meg gjerne om priser, opplevelser eller booking — jeg svarer med en gang.');
     }
   }
   function lukk() {

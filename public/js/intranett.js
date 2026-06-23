@@ -250,7 +250,7 @@
       var tag = document.createElement('span');
       tag.className = 'saved-tag';
       tag.style.display = 'none';
-      tag.textContent = 'Lagret ✓';
+      tag.textContent = 'Lagret';
 
       btn.addEventListener('click', function () {
         btn.disabled = true;

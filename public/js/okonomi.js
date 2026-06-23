@@ -407,7 +407,7 @@
     var knapp = el('lagre');
     if (knapp) {
       var orig = knapp.textContent;
-      knapp.textContent = '✓ Lagret';
+      knapp.textContent = 'Lagret';
       setTimeout(function () { knapp.textContent = orig; }, 1400);
     }
   }
