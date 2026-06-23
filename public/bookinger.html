@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bookinger — Havstund</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    body{background:var(--cream)}
+    .adm-top{background:linear-gradient(100deg,var(--sea-deep),var(--sea));color:#fff;position:sticky;top:0;z-index:60;box-shadow:0 4px 20px rgba(10,39,71,.18)}
+    .adm-top .inner{max-width:1240px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+    .adm-top .logo{display:flex;flex-direction:column;gap:3px}
+    .adm-top .logo img{height:28px;width:auto;filter:drop-shadow(0 1px 4px rgba(0,0,0,.35))}
+    .adm-top .logo small{font-size:10px;font-weight:600;letter-spacing:3px;color:var(--turq-l);text-transform:uppercase}
+    .adm-top nav{margin-left:auto;display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+    .adm-top nav a{font-size:14px;font-weight:600;color:#cfe2f4;opacity:.9}
+    .adm-top nav a:hover{opacity:1;color:#fff}
+
+    .wrap2{max-width:1240px;margin:0 auto;padding:28px 24px 70px}
+    .topp{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:6px}
+    .topp h1{font-size:30px;color:var(--sea-deep)}
+    .lead{color:var(--muted);margin-bottom:22px}
+
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+    .kpi{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow)}
+    .kpi .label{font-size:12px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:700}
+    .kpi .val{font-size:28px;font-weight:800;color:var(--sea-deep);margin-top:6px;line-height:1}
+    .kpi.vent .val{color:var(--clay-d)}
+
+    .panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:22px 24px;box-shadow:var(--shadow)}
+    .filtre{display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin-bottom:18px}
+    .felt{display:flex;flex-direction:column;gap:5px}
+    .felt label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+    .felt input,.felt select{padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:14px;background:#fff;color:var(--ink)}
+    .felt.sok{flex:1;min-width:200px}
+
+    .tbl{width:100%;border-collapse:collapse;font-size:14px}
+    .tbl th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:10px 12px;border-bottom:2px solid var(--line)}
+    .tbl td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+    .tbl tr:last-child td{border-bottom:none}
+    .tbl .belop{font-weight:700;color:var(--sea-deep);white-space:nowrap}
+    .tbl .muted{color:var(--muted);font-size:12px}
+    .tbl .melding{max-width:240px;color:var(--muted);font-size:13px}
+    .tbl select{padding:7px 10px;font-size:13px;border-radius:20px;border:1.5px solid var(--line);font-weight:700;cursor:pointer}
+    .tbl select.forespurt{background:#fff0dd;color:var(--clay-d);border-color:#f0d7b5}
+    .tbl select.bekreftet{background:#d8f3f6;color:#0a6f7a;border-color:#bfe6df}
+    .tbl select.fullfort{background:#dfeede;color:#2c6b35;border-color:#cce0c9}
+    .tbl select.avlyst{background:#f3ddd8;color:#9a3b2c;border-color:#eccabf}
+    .tom{color:var(--muted);font-size:15px;padding:26px 4px;text-align:center}
+    .loading{color:var(--muted);font-size:15px;padding:20px 0}
+    @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:560px){.kpis{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header class="adm-top">
+    <div class="inner">
+      <a href="/" class="logo"><img src="bilder/wordmark.png" alt="Havstund"><small>Bookinger · Admin</small></a>
+      <nav>
+        <a href="/intranett">Oversikt</a>
+        <a href="/kunde-dialog">Meldinger</a>
+        <a href="/regnskap">Regnskap</a>
+        <a href="#" id="logg-ut">Logg ut</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap2">
+    <div class="topp"><h1>Bookinger</h1></div>
+    <p class="lead">Alle forespørsler og bookinger. Endre status direkte i listen — kunden kan følge status på «Min side».</p>
+
+    <section class="kpis">
+      <div class="kpi vent"><div class="label">Venter svar</div><div class="val" id="k-forespurt">–</div></div>
+      <div class="kpi"><div class="label">Bekreftet</div><div class="val" id="k-bekreftet">–</div></div>
+      <div class="kpi"><div class="label">Kommende</div><div class="val" id="k-kommende">–</div></div>
+      <div class="kpi"><div class="label">Totalt</div><div class="val" id="k-total">–</div></div>
+    </section>
+
+    <section class="panel">
+      <div class="filtre">
+        <div class="felt sok"><label>Søk (navn, e-post, aktivitet)</label><input type="text" id="sok" placeholder="Søk …"></div>
+        <div class="felt"><label>Status</label>
+          <select id="f-status">
+            <option value="">Alle</option>
+            <option value="forespurt">Venter svar</option>
+            <option value="bekreftet">Bekreftet</option>
+            <option value="fullfort">Fullført</option>
+            <option value="avlyst">Avlyst</option>
+          </select>
+        </div>
+        <div class="felt"><label>Tid</label>
+          <select id="f-tid">
+            <option value="alle">Alle</option>
+            <option value="kommende">Kommende</option>
+            <option value="tidligere">Tidligere</option>
+          </select>
+        </div>
+      </div>
+      <div id="liste"><div class="loading">Laster bookinger …</div></div>
+    </section>
+  </main>
+
+  <script src="js/bookinger.js"></script>
+</body>
+</html>
