@@ -176,7 +176,7 @@
     .galleri-grid{display:grid;grid-template-columns:1.5fr 1fr;grid-template-rows:1fr 1fr;gap:14px;height:min(82vh,660px);}
     .galleri-item:first-child{grid-row:1 / span 2;}
     @media(max-width:700px){.galleri-grid{grid-template-columns:1fr;grid-template-rows:none;height:auto;}.galleri-item{aspect-ratio:1;}.galleri-item:first-child{grid-row:auto;}}
-    .galleri-item{position:relative;border-radius:18px;overflow:hidden;box-shadow:0 12px 36px rgba(10,79,94,.14);cursor:pointer;}
+    .galleri-item{position:relative;display:block;text-decoration:none;border-radius:18px;overflow:hidden;box-shadow:0 12px 36px rgba(10,79,94,.14);cursor:pointer;}
     .galleri-item img{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(1.1) contrast(1.05);transition:.55s;}
     .galleri-item:hover img{transform:scale(1.08);}
     .galleri-item .overlegg{position:absolute;inset:0;display:flex;align-items:flex-end;padding:20px;background:linear-gradient(to top,rgba(4,34,43,.82),transparent 55%);opacity:0;transition:.4s;}
@@ -432,9 +432,9 @@
     <h2 class="seksjon-tittel reveal" data-no="Fra studioet" data-en="From the studio">Fra studioet</h2>
     <p class="seksjon-undertekst reveal delay-1" data-no="Smakebiter på det som skapes hos Havstund — glasur fra dette havet, i hver eneste form." data-en="A glimpse of what's created at Havstund — glaze from this sea, in every single piece.">Smakebiter på det som skapes hos Havstund — glasur fra dette havet, i hver eneste form.</p>
     <div class="galleri-grid">
-      <div class="galleri-item reveal"><img src="bilder/keramikk1.jpg" alt="Keramikk-kopp med galakse-glasur" loading="lazy" /><div class="overlegg"><span data-no="Galakse-koppen" data-en="The galaxy cup">Galakse-koppen</span></div></div>
-      <div class="galleri-item reveal delay-1"><img src="bilder/keramikk2.jpg" alt="Turkise keramikk-tallerkener" loading="lazy" /><div class="overlegg"><span data-no="Havturkis servise" data-en="Sea-turquoise tableware">Havturkis servise</span></div></div>
-      <div class="galleri-item reveal delay-2"><img src="bilder/havvegg.jpg" alt="Havveggen — håndmalte fliser" loading="lazy" /><div class="overlegg"><span data-no="Havveggen" data-en="The Sea Wall">Havveggen</span></div></div>
+      <a class="galleri-item glightbox reveal" href="bilder/keramikk1.jpg" data-gallery="studio" data-glightbox="title: Galakse-koppen"><img src="bilder/keramikk1.jpg" alt="Keramikk-kopp med galakse-glasur" loading="lazy" /><div class="overlegg"><span data-no="Galakse-koppen" data-en="The galaxy cup">Galakse-koppen</span></div></a>
+      <a class="galleri-item glightbox reveal delay-1" href="bilder/keramikk2.jpg" data-gallery="studio" data-glightbox="title: Havturkis servise"><img src="bilder/keramikk2.jpg" alt="Turkise keramikk-tallerkener" loading="lazy" /><div class="overlegg"><span data-no="Havturkis servise" data-en="Sea-turquoise tableware">Havturkis servise</span></div></a>
+      <a class="galleri-item glightbox reveal delay-2" href="bilder/havvegg.jpg" data-gallery="studio" data-glightbox="title: Havveggen"><img src="bilder/havvegg.jpg" alt="Havveggen — håndmalte fliser" loading="lazy" /><div class="overlegg"><span data-no="Havveggen" data-en="The Sea Wall">Havveggen</span></div></a>
     </div>
   </div></section>
 
@@ -535,6 +535,9 @@
   <!-- Swiper: myk, touch-vennlig karusell (github.com/nolimits4web/swiper · 40k★ · MIT) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
   <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+  <!-- GLightbox: elegant galleri-visning m/ zoom + sveiping (github.com/biati-digital/glightbox · MIT) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
 
   <script>
     /* ---- Myk scrolling (Lenis) — gjør hele forsiden rolig og premium ---- */
@@ -633,12 +636,15 @@
       }).catch(function(){});
     })();
 
-    /* Lightbox for galleri + havvegg-foto */
+    /* Galleri-lightbox (GLightbox): zoom + sveip mellom bildene */
+    if (typeof GLightbox === 'function') { GLightbox({ selector: '.glightbox', loop: true, touchNavigation: true }); }
+
+    /* Lightbox for havvegg-foto (egen dialog) */
     (function(){
       var lb=document.getElementById('lightboks');
       if(!lb) return;
       var lbImg=document.getElementById('lightboksImg');
-      document.querySelectorAll('.galleri-item img, .havvegg-foto img').forEach(function(im){
+      document.querySelectorAll('.havvegg-foto img').forEach(function(im){
         im.style.cursor='zoom-in';
         im.addEventListener('click',function(){ lbImg.src=im.src; lb.showModal(); });
       });
