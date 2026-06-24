@@ -103,11 +103,12 @@
 
     /* ---------- Karusell (opplevelser) ---------- */
     .kar-wrap{position:relative;}
-    .kar{display:flex;gap:26px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 4px 24px;scrollbar-width:none;counter-reset:kort;}
-    .kar::-webkit-scrollbar{display:none;}
-    .kar .kort{position:relative;scroll-snap-align:center;flex:0 0 320px;background:var(--skum);border-radius:20px;padding:42px 34px 36px;box-shadow:0 10px 36px rgba(10,79,94,.07);border:1px solid var(--sand-mork);transition:.35s cubic-bezier(.2,.8,.2,1);}
-    .kar .kort::before{counter-increment:kort;content:counter(kort,decimal-leading-zero);display:block;font-family:'Fraunces',serif;font-size:.9rem;color:var(--leire);letter-spacing:.18em;margin-bottom:16px;}
-    .kar .kort:hover{transform:translateY(-8px);box-shadow:0 20px 44px rgba(10,79,94,.16);}
+    /* Opplevelser-karusell (Swiper) */
+    .opplevelser-swiper{counter-reset:kort;padding:6px 4px 30px;}
+    .opplevelser-swiper .swiper-slide{width:320px;height:auto;}
+    .kort{position:relative;height:100%;background:var(--skum);border-radius:20px;padding:42px 34px 36px;box-shadow:0 10px 36px rgba(10,79,94,.07);border:1px solid var(--sand-mork);transition:.35s cubic-bezier(.2,.8,.2,1);}
+    .kort::before{counter-increment:kort;content:counter(kort,decimal-leading-zero);display:block;font-family:'Fraunces',serif;font-size:.9rem;color:var(--leire);letter-spacing:.18em;margin-bottom:16px;}
+    .kort:hover{transform:translateY(-8px);box-shadow:0 20px 44px rgba(10,79,94,.16);}
     .kort .ikon{font-size:2.3rem;margin-bottom:14px;}
     .kort h3{color:var(--hav-dyp);margin-bottom:10px;font-size:1.3rem;}
     .kort p{color:var(--myk);font-size:.97rem;}
@@ -241,7 +242,7 @@
       .barn::before{animation:none;}
       .rad-2{grid-template-columns:1fr;}
       .signatur-flex{grid-template-columns:1fr;gap:36px;}
-      .kar .kort{flex-basis:80vw;}
+      .opplevelser-swiper .swiper-slide{width:80vw;}
       .kar-knapp{display:none;}
     }
     /* ---------- Rullende tekst-stripe (marquee) ---------- */
@@ -320,35 +321,35 @@
     <h2 class="seksjon-tittel reveal" data-no="Opplevelser" data-en="Experiences">Opplevelser</h2>
     <p class="seksjon-undertekst reveal delay-1" data-no="Senk skuldrene, glem klokka, og skap noe med hendene mens lyset står inn over havet." data-en="Drop your shoulders, forget the clock, and make something by hand while the light pours in over the sea.">Senk skuldrene, glem klokka, og skap noe med hendene mens lyset står inn over havet.</p>
     <div class="kar-wrap reveal delay-1">
-      <button class="kar-knapp prev" onclick="karRull(-1)" aria-label="forrige">‹</button>
-      <div class="kar" id="kar">
-        <div class="kort">
+      <button class="kar-knapp prev" aria-label="forrige">‹</button>
+      <div class="swiper opplevelser-swiper"><div class="swiper-wrapper">
+        <div class="swiper-slide kort">
           <h3 data-no="Drop-in (1,5 t)" data-en="Drop-in (1.5 h)">Drop-in (1,5 t)</h3>
           <p data-no="Kom som du er og lag din egen flis til Havveggen, eller en liten skål." data-en="Come as you are and make your own tile for the Sea Wall, or a small bowl.">Kom som du er og lag din egen flis til Havveggen, eller en liten skål.</p>
           <span class="pris" data-no="Hva vil DU lage?" data-en="What will YOU make?">Hva vil DU lage?</span>
         </div>
-        <div class="kort">
+        <div class="swiper-slide kort">
           <h3 data-no="Håndbygging (2 t)" data-en="Hand-building (2 h)">Håndbygging (2 t)</h3>
           <p data-no="Form leire med hendene og lag noe du kan drikke av eller stille fram hjemme." data-en="Shape clay with your hands and make something you can drink from or display at home.">Form leire med hendene og lag noe du kan drikke av eller stille fram hjemme.</p>
           <span class="pris" data-no="Noe som varer livet ut" data-en="Something that lasts a lifetime">Noe som varer livet ut</span>
         </div>
-        <div class="kort">
+        <div class="swiper-slide kort">
           <h3 data-no="Kurs (5–6 uker)" data-en="Course (5–6 weeks)">Kurs (5–6 uker)</h3>
           <p data-no="Gå dypere — fra leire til ferdig glasert verk, sammen med en profesjonell keramiker." data-en="Go deeper — from clay to finished glazed piece, alongside a professional ceramicist.">Gå dypere — fra leire til ferdig glasert verk, sammen med en profesjonell keramiker.</p>
           <span class="pris" data-no="Fra leire til ferdig verk" data-en="From clay to finished piece">Fra leire til ferdig verk</span>
         </div>
-        <div class="kort">
+        <div class="swiper-slide kort">
           <h3 data-no="For grupper" data-en="For groups">For grupper</h3>
           <p data-no="Bedrifter, bursdager og kollektivt maleri. Bedre i dårlig vær — nordlys-forsikring." data-en="Companies, birthdays and collective painting. Better in bad weather — your northern-lights insurance.">Bedrifter, bursdager og kollektivt maleri. Bedre i dårlig vær — nordlys-forsikring.</p>
           <span class="pris" data-no="Bedre i dårlig vær" data-en="Better in bad weather">Bedre i dårlig vær</span>
         </div>
-        <div class="kort">
+        <div class="swiper-slide kort">
           <h3 data-no="Mitt Nordlys" data-en="My Aurora">Mitt Nordlys</h3>
           <p data-no="Vinterens opplevelse: fang nordlyset, gjør det tydelig, mal din egen natt og ta den med hjem." data-en="The winter experience: capture the aurora, make it clear, paint your own night and take it home.">Vinterens opplevelse: fang nordlyset, gjør det tydelig, mal din egen natt og ta den med hjem.</p>
           <span class="pris" data-no="Fang din egen natt" data-en="Capture your own night">Fang din egen natt</span>
         </div>
-      </div>
-      <button class="kar-knapp next" onclick="karRull(1)" aria-label="neste">›</button>
+      </div></div>
+      <button class="kar-knapp next" aria-label="neste">›</button>
     </div>
   </section>
 
@@ -531,6 +532,9 @@
   <!-- Lenis: myk, premium scrolling (github.com/darkroomengineering/lenis · 14k★ · MIT) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lenis@1/dist/lenis.css">
   <script src="https://cdn.jsdelivr.net/npm/lenis@1/dist/lenis.min.js"></script>
+  <!-- Swiper: myk, touch-vennlig karusell (github.com/nolimits4web/swiper · 40k★ · MIT) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 
   <script>
     /* ---- Myk scrolling (Lenis) — gjør hele forsiden rolig og premium ---- */
@@ -548,6 +552,17 @@
             if (el) { e.preventDefault(); lenis.scrollTo(el, { offset: -10 }); }
           }
         });
+      });
+    })();
+
+    /* ---- Opplevelser-karusell (Swiper) — myk, touch-vennlig, gjenbruker pilknappene ---- */
+    (function(){
+      if (typeof Swiper !== 'function') return;
+      new Swiper('.opplevelser-swiper', {
+        slidesPerView: 'auto',
+        spaceBetween: 26,
+        grabCursor: true,
+        navigation: { prevEl: '.kar-knapp.prev', nextEl: '.kar-knapp.next' }
       });
     })();
 
