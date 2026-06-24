@@ -8,11 +8,14 @@
   function hent(id) { return document.getElementById(id); }
 
   function visMelding(el, tekst, type) {
-    if (!el) return;
-    el.textContent = tekst || '';
-    el.classList.remove('feil', 'ok', 'vis');
-    if (tekst) {
-      el.classList.add('vis', type || 'feil');
+    if (el) {
+      el.textContent = tekst || '';
+      el.classList.remove('feil', 'ok', 'vis');
+      if (tekst) el.classList.add('vis', type || 'feil');
+    }
+    // Pen varsel-boble (notie) i tillegg til inline-teksten
+    if (tekst && window.notie) {
+      notie.alert({ type: (type === 'ok' ? 'success' : 'error'), text: tekst, time: 4 });
     }
   }
 

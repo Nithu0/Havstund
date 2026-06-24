@@ -528,7 +528,29 @@
     <img alt="" id="lightboksImg" />
   </dialog>
 
+  <!-- Lenis: myk, premium scrolling (github.com/darkroomengineering/lenis · 14k★ · MIT) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lenis@1/dist/lenis.css">
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1/dist/lenis.min.js"></script>
+
   <script>
+    /* ---- Myk scrolling (Lenis) — gjør hele forsiden rolig og premium ---- */
+    (function(){
+      if (typeof Lenis !== 'function') return;
+      var lenis = new Lenis({ duration: 1.1, smoothWheel: true });
+      function raf(t){ lenis.raf(t); requestAnimationFrame(raf); }
+      requestAnimationFrame(raf);
+      // Ankerlenker (#booking osv.) scroller mykt i stedet for å hoppe
+      document.querySelectorAll('a[href^="#"]').forEach(function(a){
+        a.addEventListener('click', function(e){
+          var id = a.getAttribute('href');
+          if (id && id.length > 1) {
+            var el = document.querySelector(id);
+            if (el) { e.preventDefault(); lenis.scrollTo(el, { offset: -10 }); }
+          }
+        });
+      });
+    })();
+
     /* ---- Språk ---- */
     function setLang(lang){
       document.documentElement.lang = lang;
