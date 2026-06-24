@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Regnskap — Havstund</title>
   <link rel="stylesheet" href="css/styles.css">
+  <!-- Chart.js: grafer for regnskap (github.com/chartjs/Chart.js · 67k★ · MIT) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <style>
     body{background:var(--cream)}
     .adm-top{background:linear-gradient(100deg,var(--sea-deep),var(--sea));color:#fff;position:sticky;top:0;z-index:60;box-shadow:0 4px 20px rgba(10,39,71,.18)}
@@ -115,6 +117,11 @@
         <div class="kpi"><div class="label">Resultat</div><div class="val" id="o-resultat">–</div><div class="sub">inntekt − utgift</div></div>
         <div class="kpi"><div class="label">MVA å betale</div><div class="val" id="o-mva">–</div><div class="sub">utgående − inngående</div></div>
       </div>
+      <section class="panel">
+        <h3>Inntekter vs. utgifter</h3>
+        <p class="hint">Visuell oversikt for valgt måned.</p>
+        <div style="height:260px;position:relative"><canvas id="oversikt-graf"></canvas></div>
+      </section>
       <div class="panel">
         <h3>Lønnsgrunnlag denne måneden</h3>
         <p class="hint">Registrerte timer × timelønn — klart for lønnskjøring.</p>
@@ -127,6 +134,7 @@
         <b>Eksport til regnskap:</b> inntekter blir <b>Salg</b>, utgifter blir <b>Kjøp</b>, og lønnsgrunnlaget blir <b>lønnskjøring</b> — alt med riktig konto og MVA-kode allerede satt, klart for regnskapsprogrammet dere velger.
         <div id="fiken-status" style="margin-top:12px;font-weight:600">–</div>
         <button id="fiken-send" class="btn btn-primary" style="margin-top:12px">Eksporter til regnskap</button>
+        <button id="eksporter-excel" class="btn btn-ghost" style="margin-top:12px;margin-left:8px">Last ned måneden som Excel</button>
       </div>
     </section>
 

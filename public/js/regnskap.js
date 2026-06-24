@@ -92,8 +92,73 @@
       $('o-mva').textContent = kr(d.mva_aa_betale);
       $('o-timer').textContent = timer(d.sum_timer) + ' t';
       $('o-lonn').textContent = kr(d.lonn_ore);
+      tegnGraf(d);
     }).catch(function () {});
     lastFikenStatus();
+  }
+
+  // ---- Graf (Chart.js): inntekt / utgift / resultat ----
+  var grafInstans = null;
+  function tegnGraf(d) {
+    var el = $('oversikt-graf');
+    if (!el || typeof Chart !== 'function') return;
+    var verdier = [d.inntekt_netto / 100, d.utgift_netto / 100, d.resultat_ore / 100];
+    var farger = ['#1f7a4d', '#b03a2e', d.resultat_ore >= 0 ? '#163e66' : '#b03a2e'];
+    if (grafInstans) {
+      grafInstans.data.datasets[0].data = verdier;
+      grafInstans.data.datasets[0].backgroundColor = farger;
+      grafInstans.update();
+      return;
+    }
+    grafInstans = new Chart(el, {
+      type: 'bar',
+      data: { labels: ['Inntekter', 'Utgifter', 'Resultat'],
+        datasets: [{ data: verdier, backgroundColor: farger, borderRadius: 8, maxBarThickness: 90 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false },
+          tooltip: { callbacks: { label: function (c) { return kr(Math.round(c.parsed.y * 100)); } } } },
+        scales: { y: { beginAtZero: true, ticks: { callback: function (v) { return v.toLocaleString('no-NO') + ' kr'; } } } }
+      }
+    });
+  }
+
+  // ---- Excel-eksport (SheetJS, lastes ved behov) ----
+  function lastXLSX() {
+    if (window.XLSX) return Promise.resolve();
+    return new Promise(function (res, rej) {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  function eksporterExcel() {
+    var m = maaned();
+    lastXLSX()
+      .then(function () { return api('/api/regnskap/poster?maaned=' + m).then(function (r) { return r.json(); }); })
+      .then(function (rows) {
+        rows = Array.isArray(rows) ? rows : [];
+        if (!rows.length) { alert('Ingen poster å eksportere for ' + m + '.'); return; }
+        var data = rows.map(function (p) {
+          return {
+            Dato: String(p.dato || '').slice(0, 10),
+            Type: p.type,
+            Beskrivelse: p.beskrivelse,
+            Kontakt: p.kontakt || '',
+            Konto: p.konto || '',
+            'MVA %': p.mva_sats || 0,
+            'Netto (kr)': (p.netto_ore || 0) / 100,
+            'MVA (kr)': (p.mva_ore || 0) / 100,
+            'Brutto (kr)': (p.brutto_ore || 0) / 100
+          };
+        });
+        var ws = XLSX.utils.json_to_sheet(data);
+        var wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, m);
+        XLSX.writeFile(wb, 'havstund-regnskap-' + m + '.xlsx');
+      })
+      .catch(function () { alert('Kunne ikke eksportere. Prøv igjen.'); });
   }
 
   // ---- FIKEN-STATUS ----
@@ -359,6 +424,8 @@
         .catch(function () { alert('Noe gikk galt. Prøv igjen.'); })
         .then(function () { fikenBtn.disabled = false; fikenBtn.textContent = gammelTekst; });
     });
+
+    if ($('eksporter-excel')) $('eksporter-excel').addEventListener('click', eksporterExcel);
 
     lastOversikt();
   }
