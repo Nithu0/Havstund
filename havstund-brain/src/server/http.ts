@@ -40,10 +40,21 @@ function send(res: ServerResponse, status: number, body: unknown): void {
   res.end(json);
 }
 
-export async function buildAgent(config: Config): Promise<{ agent: Agent; store: PgStore; port: HttpWebsiteAdapter }> {
+export async function buildAgent(
+  config: Config,
+  injectedStore?: PgStore,
+): Promise<{ agent: Agent; store: PgStore; port: HttpWebsiteAdapter }> {
   const port = new HttpWebsiteAdapter({ baseUrl: config.WEBSITE_BASE_URL, serviceToken: config.WEBSITE_SERVICE_TOKEN });
-  const store = new PgStore(config.DATABASE_URL);
-  await store.migrate();
+  // Gjenbruk en allerede-migrert store hvis den er sendt inn (index.ts kjører
+  // migrasjonen FØR startServer på samme pool). Uten injeksjon: bygg en og
+  // migrer her, så buildAgent fortsatt er selvstendig (tester/contract-live).
+  let store: PgStore;
+  if (injectedStore) {
+    store = injectedStore;
+  } else {
+    store = new PgStore(config.DATABASE_URL);
+    await store.migrate();
+  }
   const client = await createRealClient(config.ANTHROPIC_API_KEY);
   const agent = new Agent({
     client,
@@ -60,8 +71,11 @@ export async function buildAgent(config: Config): Promise<{ agent: Agent; store:
   return { agent, store, port };
 }
 
-export async function startServer(config: Config): Promise<{ close: () => Promise<void> }> {
-  const { agent, store, port } = await buildAgent(config);
+export async function startServer(
+  config: Config,
+  injectedStore?: PgStore,
+): Promise<{ close: () => Promise<void> }> {
+  const { agent, store, port } = await buildAgent(config, injectedStore);
   const limiter = new RateLimiter(30, 60_000); // 30 kall / minutt / aktør
 
   const server = createServer((req, res) => {
