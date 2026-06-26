@@ -21,6 +21,14 @@ function isConfigured() {
   return !!pool;
 }
 
+// Ekte helsesjekk: pinger databasen med en triviell SELECT 1.
+// Kaster ved DB-feil (eller hvis DATABASE_URL mangler), slik at /api/health
+// kan svare 503. Returnerer true når databasen faktisk svarer.
+async function ping() {
+  await pool.query('SELECT 1');
+  return true;
+}
+
 async function query(text, params) {
   if (!pool) throw new Error('Database ikke konfigurert. Sett DATABASE_URL (Railway Postgres).');
   return pool.query(text, params);
@@ -73,4 +81,4 @@ async function init() {
   }
 }
 
-module.exports = { pool, query, one, init, isConfigured, withTransaction };
+module.exports = { pool, query, one, init, isConfigured, ping, withTransaction };

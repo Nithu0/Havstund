@@ -39,8 +39,16 @@ app.use(express.json({ limit: '8mb' }));
 app.use(cookieParser());
 app.use(authOptional); // setter req.user hvis innlogget (valgfritt)
 
-// Helsesjekk for Railway
-app.get('/api/health', (_req, res) => res.json({ ok: true, db: db.isConfigured() }));
+// Helsesjekk for Railway — pinger DB med SELECT 1 (db.ping). Svarer 200 når
+// databasen faktisk svarer, ellers 503. Kaster aldri selv (try/catch).
+app.get('/api/health', async (_req, res) => {
+  try {
+    await db.ping();
+    res.json({ ok: true, db: 'up' });
+  } catch {
+    res.status(503).json({ ok: false, db: 'down' });
+  }
+});
 
 // ---- Auto-last REST-ruter: routes/foo.js -> /api/foo ----
 const routesDir = path.join(__dirname, 'routes');
