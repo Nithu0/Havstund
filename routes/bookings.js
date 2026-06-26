@@ -116,7 +116,45 @@ router.post('/', async (req, res) => {
          RETURNING *`,
         [aktId, brukerId, navn, epost, tlf || null, dato, tid || null, antallN, belop, melding || null]
       );
-      return insRows[0];
+      const nyBooking = insRows[0];
+
+      // Speil bookingen som inntektspost i regnskapet — INNE i SAMME tx som
+      // booking-INSERT. Atomisitet (A5): booking + regnskapspost committer eller
+      // ruller tilbake SAMMEN. Feiler regnskap-INSERT, kastes feilen videre,
+      // withTransaction ROLLBACK-er bookingen, og POST svarer 500. Bevisst
+      // atferdsendring: ingen booking uten matchende regnskapspost.
+      // Idempotens-lookup bevart (samme client), så en re-kjøring ikke dobbelt-
+      // poster om bookingen allerede har en regnskapspost.
+      const { rows: finnesRows } = await client.query(
+        'SELECT id FROM regnskap_poster WHERE booking_id = $1',
+        [nyBooking.id]
+      );
+      if (!finnesRows[0]) {
+        // Fase 3: per-aktivitet MVA. Bruk aktivitetens sats (default 25 hvis null).
+        const sats = akt.mva_sats != null ? Number(akt.mva_sats) : 25;
+        const { netto_ore, mva_ore, brutto_ore, mva_sats } = mvaSplitt(nyBooking.belop * 100, sats);
+        // Fiken MVA-kode: 3=salg 25%, 0=uten avgift. Annet -> behold 3 (salg).
+        const mvaKode = mva_sats === 0 ? 0 : 3;
+        await client.query(
+          `INSERT INTO regnskap_poster
+             (type, dato, kontakt, beskrivelse, konto, mva_kode, mva_sats,
+              netto_ore, mva_ore, brutto_ore, betalingsmetode, kilde, booking_id)
+           VALUES ('inntekt',$1,$2,$3,3000,$4,$5,$6,$7,$8,NULL,'booking',$9)`,
+          [
+            nyBooking.dato,
+            nyBooking.navn,
+            `${akt.navn} (${nyBooking.antall} pers)`,
+            mvaKode,
+            mva_sats,
+            netto_ore,
+            mva_ore,
+            brutto_ore,
+            nyBooking.id,
+          ]
+        );
+      }
+
+      return nyBooking;
     });
 
     if (fullt) {
@@ -125,40 +163,6 @@ router.post('/', async (req, res) => {
 
     // Varsle Discord (#general) — fire-and-forget, stopper aldri bookingen
     discord.bookingVarsel(booking, akt.navn);
-
-    // Speil bookingen som inntektspost i regnskapet — feiler aldri bookingen
-    try {
-      const finnes = await db.one(
-        'SELECT id FROM regnskap_poster WHERE booking_id = $1',
-        [booking.id]
-      );
-      if (!finnes) {
-        // Fase 3: per-aktivitet MVA. Bruk aktivitetens sats (default 25 hvis null).
-        const sats = akt.mva_sats != null ? Number(akt.mva_sats) : 25;
-        const { netto_ore, mva_ore, brutto_ore, mva_sats } = mvaSplitt(booking.belop * 100, sats);
-        // Fiken MVA-kode: 3=salg 25%, 0=uten avgift. Annet -> behold 3 (salg).
-        const mvaKode = mva_sats === 0 ? 0 : 3;
-        await db.query(
-          `INSERT INTO regnskap_poster
-             (type, dato, kontakt, beskrivelse, konto, mva_kode, mva_sats,
-              netto_ore, mva_ore, brutto_ore, betalingsmetode, kilde, booking_id)
-           VALUES ('inntekt',$1,$2,$3,3000,$4,$5,$6,$7,$8,NULL,'booking',$9)`,
-          [
-            booking.dato,
-            booking.navn,
-            `${akt.navn} (${booking.antall} pers)`,
-            mvaKode,
-            mva_sats,
-            netto_ore,
-            mva_ore,
-            brutto_ore,
-            booking.id,
-          ]
-        );
-      }
-    } catch (regnskapFeil) {
-      console.error('bookings: kunne ikke opprette regnskapspost:', regnskapFeil.message);
-    }
 
     res.status(201).json({ booking });
   } catch (e) {
