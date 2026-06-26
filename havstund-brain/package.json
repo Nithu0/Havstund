@@ -6,7 +6,7 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node -e \"require('fs').copyFileSync('src/brain/migrations.sql','dist/src/brain/migrations.sql')\"",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "start": "node dist/index.js",
     "test": "vitest run",
