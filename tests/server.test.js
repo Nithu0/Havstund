@@ -38,11 +38,36 @@ describe('server.js wiring', () => {
     expect(typeof gracefulShutdown).toBe('function');
   });
 
-  it('request gjennom hele kjeden (logger + ruter) svarer på /api/health', async () => {
-    const res = await getViaApp('/api/health');
-    expect(res.status).toBe(200);
-    const body = JSON.parse(res.body);
-    expect(body.ok).toBe(true);
+  it('/api/health svarer 200 {ok:true, db:up} når db.ping resolver', async () => {
+    // db-singletonen mutes (vi.mock fanger ikke require() — vi muterer metoden
+    // på den faktiske modulen, slik resten av denne testfila gjor).
+    const origPing = db.ping;
+    db.ping = async () => true;
+    try {
+      const res = await getViaApp('/api/health');
+      expect(res.status).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.ok).toBe(true);
+      expect(body.db).toBe('up');
+    } finally {
+      db.ping = origPing;
+    }
+  });
+
+  it('/api/health svarer 503 {ok:false, db:down} når db.ping kaster (ingen DB)', async () => {
+    const origPing = db.ping;
+    db.ping = async () => {
+      throw new Error('SELECT 1 feilet — ingen DB');
+    };
+    try {
+      const res = await getViaApp('/api/health');
+      expect(res.status).toBe(503);
+      const body = JSON.parse(res.body);
+      expect(body.ok).toBe(false);
+      expect(body.db).toBe('down');
+    } finally {
+      db.ping = origPing;
+    }
   });
 
   it('error-middleware svarer 500 JSON uten å kaste', () => {
