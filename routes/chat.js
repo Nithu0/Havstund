@@ -63,7 +63,7 @@ router.post('/thread', async (req, res) => {
     );
 
     res.cookie(CHAT_COOKIE, String(traad.id), {
-      httpOnly: false, // frontend leser den ikke, men ufarlig — holdes lesbar for enkelhet
+      httpOnly: true, // frontend leser den ikke — beskytt mot XSS-tyveri
       sameSite: 'lax',
       maxAge: 7 * 24 * 3600 * 1000,
       secure: process.env.NODE_ENV === 'production',

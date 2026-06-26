@@ -497,6 +497,20 @@
     </form>
   </div></section>
 
+  <!-- ÅPNINGSTIDER -->
+  <section id="apningstider" class="full" style="text-align:center;">
+    <div style="max-width:720px;margin:0 auto;padding:0 24px;">
+      <h2 class="seksjon-tittel reveal" data-no="Åpningstider" data-en="Opening hours">Åpningstider</h2>
+      <p class="seksjon-undertekst reveal delay-1" data-no="Når du finner oss i studioet på Ballstad." data-en="When you'll find us in the studio at Ballstad.">Når du finner oss i studioet på Ballstad.</p>
+      <table class="apningstider-tabell reveal delay-1" style="margin:0 auto;border-collapse:collapse;min-width:280px;">
+        <tbody id="apningstiderRader">
+          <tr><td style="padding:8px 14px;color:var(--myk);" data-no="Laster…" data-en="Loading…">Laster…</td></tr>
+        </tbody>
+      </table>
+      <div id="stengteDatoer" class="reveal delay-2" style="margin-top:22px;"></div>
+    </div>
+  </section>
+
   <!-- FØLG OSS / INSTAGRAM -->
   <section id="instagram" class="full" style="background:var(--sand);text-align:center;">
     <div style="max-width:760px;margin:0 auto;padding:0 24px;">
@@ -633,6 +647,58 @@
           o.textContent = a.navn + (a.pris ? ' (fra ' + a.pris + ' kr)' : '');
           sel.appendChild(o);
         });
+      }).catch(function(){});
+    })();
+
+    /* Åpningstider — hentes offentlig fra /api/hours */
+    (function(){
+      var tbody = document.getElementById('apningstiderRader');
+      if(!tbody) return;
+      // ukedag 0=mandag .. 6=sondag (jf. business_hours-skjema)
+      var DAGER_NO = ['Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag','Søndag'];
+      var DAGER_EN = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+      function klokke(t){ return t ? String(t).slice(0,5) : ''; }
+      fetch('/api/hours').then(function(r){ return r.json(); }).then(function(data){
+        if(!data || !Array.isArray(data.hours)) return;
+        var perDag = {};
+        data.hours.forEach(function(h){ perDag[h.ukedag] = h; });
+        tbody.innerHTML = '';
+        for(var d=0; d<7; d++){
+          var h = perDag[d];
+          var tr = document.createElement('tr');
+          var tdDag = document.createElement('td');
+          tdDag.style.cssText = 'padding:8px 14px;text-align:right;font-weight:600;';
+          tdDag.setAttribute('data-no', DAGER_NO[d]);
+          tdDag.setAttribute('data-en', DAGER_EN[d]);
+          tdDag.textContent = DAGER_NO[d];
+          var tdTid = document.createElement('td');
+          tdTid.style.cssText = 'padding:8px 14px;text-align:left;color:var(--myk);';
+          if(!h || h.stengt || (!h.apner && !h.stenger)){
+            tdTid.setAttribute('data-no','Stengt');
+            tdTid.setAttribute('data-en','Closed');
+            tdTid.textContent = 'Stengt';
+          } else {
+            tdTid.textContent = klokke(h.apner) + '–' + klokke(h.stenger);
+          }
+          tr.appendChild(tdDag); tr.appendChild(tdTid);
+          tbody.appendChild(tr);
+        }
+        var boks = document.getElementById('stengteDatoer');
+        if(boks && Array.isArray(data.closed) && data.closed.length){
+          var tittel = document.createElement('p');
+          tittel.style.cssText = 'font-weight:600;margin-bottom:6px;';
+          tittel.setAttribute('data-no','Stengt på følgende datoer:');
+          tittel.setAttribute('data-en','Closed on the following dates:');
+          tittel.textContent = 'Stengt på følgende datoer:';
+          boks.appendChild(tittel);
+          data.closed.forEach(function(c){
+            var p = document.createElement('p');
+            p.style.cssText = 'color:var(--myk);font-size:.92rem;margin:2px 0;';
+            var dato = String(c.dato).slice(0,10);
+            p.textContent = dato + (c.grunn ? ' — ' + c.grunn : '');
+            boks.appendChild(p);
+          });
+        }
       }).catch(function(){});
     })();
 

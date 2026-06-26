@@ -3,13 +3,17 @@
 const express = require('express');
 const db = require('../db');
 const {
-  hashPassword, verifyPassword, signToken, setAuthCookie, clearAuthCookie,
+  hashPassword, verifyPassword, signToken, setAuthCookie, clearAuthCookie, requireAuth,
 } = require('../lib/auth');
+const { writeAudit } = require('../lib/audit');
 
 const router = express.Router();
 
 // Enkel e-postvalidering (god nok for skjema).
 const EPOST_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Minste tillatte passordlengde — konfigurerbar via env, default 8.
+const MIN_PW = Number.parseInt(process.env.MIN_PASSORD_LENGTH, 10) || 8;
 
 function rensEpost(v) {
   return typeof v === 'string' ? v.trim().toLowerCase() : '';
@@ -35,8 +39,8 @@ router.post('/register', async (req, res) => {
 
     if (!navn) return res.status(400).json({ error: 'Navn må fylles ut.' });
     if (!EPOST_RE.test(epost)) return res.status(400).json({ error: 'Ugyldig e-postadresse.' });
-    if (passord.length < 6) {
-      return res.status(400).json({ error: 'Passordet må være minst 6 tegn.' });
+    if (passord.length < MIN_PW) {
+      return res.status(400).json({ error: `Passordet må være minst ${MIN_PW} tegn.` });
     }
 
     const finnes = await db.one('SELECT id FROM users WHERE epost=$1', [epost]);
@@ -82,6 +86,14 @@ router.post('/login', async (req, res) => {
 
     const token = signToken(bruker);
     setAuthCookie(res, token);
+
+    // Revisjonsspor — fire-and-forget (writeAudit kaster aldri).
+    await writeAudit(
+      { id: bruker.id, navn: bruker.navn },
+      'login',
+      { epost: bruker.epost, rolle: bruker.rolle },
+    );
+
     return res.json({ user: offentligBruker(bruker) });
   } catch (e) {
     if (/Database ikke konfigurert/i.test(e.message)) return dbUtilgjengelig(res);
@@ -113,6 +125,46 @@ router.get('/me', async (req, res) => {
     if (/Database ikke konfigurert/i.test(e.message)) return dbUtilgjengelig(res);
     console.error('me-feil:', e.message);
     return res.status(500).json({ error: 'Noe gikk galt.' });
+  }
+});
+
+/* POST /api/auth/change-password {gammelt,nytt} — krever innlogging. */
+router.post('/change-password', requireAuth, async (req, res) => {
+  try {
+    const gammelt = typeof req.body.gammelt === 'string' ? req.body.gammelt : '';
+    const nytt = typeof req.body.nytt === 'string' ? req.body.nytt : '';
+
+    if (!gammelt || !nytt) {
+      return res.status(400).json({ error: 'Fyll ut både gammelt og nytt passord.' });
+    }
+    if (nytt.length < MIN_PW) {
+      return res.status(400).json({ error: `Det nye passordet må være minst ${MIN_PW} tegn.` });
+    }
+
+    const bruker = await db.one(
+      'SELECT passord_hash FROM users WHERE id=$1',
+      [req.user.id],
+    );
+    if (!bruker) {
+      clearAuthCookie(res);
+      return res.status(401).json({ error: 'Ikke innlogget' });
+    }
+
+    if (!(await verifyPassword(gammelt, bruker.passord_hash))) {
+      return res.status(403).json({ error: 'Feil nåværende passord.' });
+    }
+
+    const hash = await hashPassword(nytt);
+    await db.query('UPDATE users SET passord_hash=$1 WHERE id=$2', [hash, req.user.id]);
+
+    // Revisjonsspor — fire-and-forget (writeAudit kaster aldri).
+    await writeAudit(req.user, 'passordbytte', { user_id: req.user.id });
+
+    return res.json({ ok: true });
+  } catch (e) {
+    if (/Database ikke konfigurert/i.test(e.message)) return dbUtilgjengelig(res);
+    console.error('change-password-feil:', e.message);
+    return res.status(500).json({ error: 'Noe gikk galt ved passordbytte.' });
   }
 });
 

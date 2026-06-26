@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aktiviteter — Havstund</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    body{background:var(--cream)}
+    .adm-top{background:linear-gradient(100deg,var(--sea-deep),var(--sea));color:#fff;position:sticky;top:0;z-index:60;box-shadow:0 4px 20px rgba(10,39,71,.18)}
+    .adm-top .inner{max-width:1240px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+    .adm-top .logo{display:flex;flex-direction:column;gap:3px}
+    .adm-top .logo img{height:28px;width:auto;filter:drop-shadow(0 1px 4px rgba(0,0,0,.35))}
+    .adm-top .logo small{font-size:10px;font-weight:600;letter-spacing:3px;color:var(--turq-l);text-transform:uppercase}
+    .adm-top nav{margin-left:auto;display:flex;gap:20px;align-items:center}
+    .adm-top nav a{font-size:14px;font-weight:600;color:#cfe2f4;opacity:.9}
+    .adm-top nav a:hover{opacity:1;color:#fff}
+
+    .wrap2{max-width:1240px;margin:0 auto;padding:28px 24px 70px}
+    .topp{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+    .topp h1{font-size:30px;color:var(--sea-deep)}
+    .lead{color:var(--muted);margin:8px 0 22px;max-width:70ch}
+
+    .knapp{padding:11px 18px;border:none;border-radius:10px;background:var(--sea-deep);color:#fff;font-weight:700;cursor:pointer;font-size:14px}
+    .knapp:hover{background:var(--sea)}
+    .knapp.sek{background:#fff;color:var(--sea-deep);border:1px solid var(--line)}
+    .knapp.sek:hover{background:var(--cream)}
+    .knapp.fare{background:#fff;color:#b3261e;border:1px solid #f2c4c0}
+    .knapp.fare:hover{background:#fdecea}
+    .knapp.liten{padding:6px 12px;font-size:13px}
+
+    .panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:22px 24px;box-shadow:var(--shadow);margin-bottom:22px}
+
+    .tbl{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+    .tbl th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:9px 10px;border-bottom:2px solid var(--line)}
+    .tbl td{padding:10px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+    .tbl tr:last-child td{border-bottom:none}
+    .tbl .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+    .tbl tr.inaktiv td{opacity:.55}
+    .tbl .navn{font-weight:700;color:var(--sea-deep)}
+    .tbl .slug{font-size:12px;color:var(--muted)}
+    .tom{color:var(--muted);font-size:14px;padding:14px 4px}
+    .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:#eef5fb;color:var(--sea-deep)}
+    .pill.av{background:#fdecea;color:#b3261e}
+    .handling{display:flex;gap:8px;justify-content:flex-end;white-space:nowrap}
+
+    .melding{padding:12px 14px;border-radius:10px;margin-bottom:16px;font-size:14px;font-weight:600;display:none}
+    .melding.vis{display:block}
+    .melding.ok{background:#e7f6ec;color:#1d6b3a;border:1px solid #bfe3cb}
+    .melding.feil{background:#fdecea;color:#b3261e;border:1px solid #f2c4c0}
+
+    /* Modal/skjema */
+    .overlay{position:fixed;inset:0;background:rgba(10,39,71,.45);display:none;align-items:flex-start;justify-content:center;z-index:80;padding:40px 16px;overflow:auto}
+    .overlay.vis{display:flex}
+    .dialog{background:#fff;border-radius:var(--r);box-shadow:0 18px 60px rgba(10,39,71,.3);max-width:560px;width:100%;padding:26px 28px}
+    .dialog h2{font-size:22px;color:var(--sea-deep);margin-bottom:18px}
+    .felt{margin-bottom:15px}
+    .felt label{display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px}
+    .felt input,.felt textarea{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-size:15px;font-family:inherit}
+    .felt textarea{min-height:80px;resize:vertical}
+    .felt .sub{font-size:12px;color:var(--muted);margin-top:5px}
+    .rad{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .dialog-bunn{display:flex;gap:10px;justify-content:flex-end;margin-top:22px}
+
+    @media(max-width:700px){.rad{grid-template-columns:1fr}.handling{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <header class="adm-top">
+    <div class="inner">
+      <a href="/intranett" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.45);color:#fff;font-weight:700;font-size:13px;padding:8px 15px;border-radius:30px;white-space:nowrap">← Tilbake til oversikt</a>
+      <a href="/" class="logo"><img src="bilder/wordmark.png" alt="Havstund"><small>Aktiviteter · Admin</small></a>
+      <nav>
+        <a href="/intranett">Intranett</a>
+        <a href="/admin-innsikt">Innsikt</a>
+        <a href="/">Hjem</a>
+        <a href="#" id="logg-ut">Logg ut</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap2">
+    <div class="topp">
+      <h1>Aktiviteter</h1>
+      <button class="knapp" id="ny-knapp" style="margin-left:auto">+ Ny aktivitet</button>
+    </div>
+    <p class="lead">Administrer aktivitetene som vises på nettsiden. Slett gjør aktiviteten inaktiv (skjult), men beholder historikk i bookinger.</p>
+
+    <div class="melding" id="melding"></div>
+
+    <section class="panel">
+      <div id="liste-omr">
+        <p class="tom" id="laster">Laster aktiviteter…</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Skjema-dialog (opprett/rediger) -->
+  <div class="overlay" id="overlay">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-tittel">
+      <h2 id="dlg-tittel">Ny aktivitet</h2>
+      <form id="skjema">
+        <input type="hidden" id="f-id">
+        <div class="felt">
+          <label for="f-navn">Navn *</label>
+          <input id="f-navn" type="text" maxlength="200" required autocomplete="off">
+        </div>
+        <div class="felt">
+          <label for="f-slug">Slug *</label>
+          <input id="f-slug" type="text" maxlength="64" autocomplete="off" placeholder="f.eks. fisketur-fjord">
+          <div class="sub">Bare a-z, 0-9 og bindestrek. Brukes i URL.</div>
+        </div>
+        <div class="felt">
+          <label for="f-beskrivelse">Beskrivelse</label>
+          <textarea id="f-beskrivelse" maxlength="2000"></textarea>
+        </div>
+        <div class="rad">
+          <div class="felt">
+            <label for="f-varighet">Varighet</label>
+            <input id="f-varighet" type="text" maxlength="100" autocomplete="off" placeholder="f.eks. 3 timer">
+          </div>
+          <div class="felt">
+            <label for="f-bilde">Bilde (sti/URL)</label>
+            <input id="f-bilde" type="text" maxlength="300" autocomplete="off" placeholder="bilder/…">
+          </div>
+        </div>
+        <div class="rad">
+          <div class="felt">
+            <label for="f-pris">Pris (kr)</label>
+            <input id="f-pris" type="number" min="0" step="1" inputmode="numeric" value="0">
+          </div>
+          <div class="felt">
+            <label for="f-kapasitet">Kapasitet</label>
+            <input id="f-kapasitet" type="number" min="0" step="1" inputmode="numeric" value="0">
+          </div>
+        </div>
+        <div class="dialog-bunn">
+          <button type="button" class="knapp sek" id="avbryt">Avbryt</button>
+          <button type="submit" class="knapp" id="lagre">Lagre</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var krFmt = new Intl.NumberFormat('no-NO', { style: 'currency', currency: 'NOK', maximumFractionDigits: 0 });
+    function kr(v) { return krFmt.format(Number(v) || 0); }
+    function $(id) { return document.getElementById(id); }
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    function api(sti, opt) {
+      opt = opt || {};
+      opt.credentials = 'same-origin';
+      opt.headers = Object.assign({ 'Content-Type': 'application/json' }, opt.headers || {});
+      return fetch(sti, opt);
+    }
+    // Pakker respons -> { ok, d } med parset JSON (tom kropp -> {}).
+    function jres(r) {
+      return r.text().then(function (t) {
+        var d = {};
+        if (t) { try { d = JSON.parse(t); } catch (e) { d = {}; } }
+        return { ok: r.ok, status: r.status, d: d };
+      });
+    }
+    function melding(tekst, type) {
+      var m = $('melding');
+      m.textContent = tekst;
+      m.className = 'melding vis ' + (type === 'ok' ? 'ok' : 'feil');
+      if (type === 'ok') {
+        setTimeout(function () { m.className = 'melding'; }, 4000);
+      }
+    }
+
+    // ---- Liste ----
+    function last() {
+      var omr = $('liste-omr');
+      omr.innerHTML = '<p class="tom">Laster aktiviteter…</p>';
+      api('/api/activities/admin/all')
+        .then(jres)
+        .then(function (res) {
+          if (res.status === 401 || res.status === 403) {
+            window.location = '/konto';
+            return;
+          }
+          if (!res.ok) {
+            omr.innerHTML = '<p class="tom">' + esc((res.d && res.d.error) || 'Kunne ikke hente aktiviteter.') + '</p>';
+            return;
+          }
+          tegnListe(Array.isArray(res.d) ? res.d : []);
+        })
+        .catch(function () {
+          omr.innerHTML = '<p class="tom">Kunne ikke hente aktiviteter.</p>';
+        });
+    }
+
+    function tegnListe(rows) {
+      var omr = $('liste-omr');
+      if (!rows.length) {
+        omr.innerHTML = '<p class="tom">Ingen aktiviteter ennå. Klikk «+ Ny aktivitet» for å legge til.</p>';
+        return;
+      }
+      var html = '<table class="tbl"><thead><tr>' +
+        '<th>Navn</th><th>Status</th><th class="num">Pris</th><th class="num">Kapasitet</th><th></th>' +
+        '</tr></thead><tbody>';
+      rows.forEach(function (a) {
+        var aktiv = a.aktiv !== false;
+        html += '<tr class="' + (aktiv ? '' : 'inaktiv') + '" data-id="' + esc(a.id) + '">' +
+          '<td><div class="navn">' + esc(a.navn || '–') + '</div>' +
+          '<div class="slug">' + esc(a.slug || '') + '</div></td>' +
+          '<td>' + (aktiv ? '<span class="pill">Aktiv</span>' : '<span class="pill av">Skjult</span>') + '</td>' +
+          '<td class="num">' + kr(a.pris) + '</td>' +
+          '<td class="num">' + (Number(a.kapasitet) || 0) + '</td>' +
+          '<td><div class="handling">' +
+            '<button class="knapp sek liten" data-rediger="' + esc(a.id) + '">Rediger</button>' +
+            (aktiv ? '<button class="knapp fare liten" data-slett="' + esc(a.id) + '">Slett</button>' : '') +
+          '</div></td>' +
+          '</tr>';
+      });
+      html += '</tbody></table>';
+      omr.innerHTML = html;
+
+      // Lagre rader for redigering (unngår nytt nettverkskall).
+      window.__rader = {};
+      rows.forEach(function (a) { window.__rader[String(a.id)] = a; });
+
+      var redKnapper = omr.querySelectorAll('[data-rediger]');
+      for (var i = 0; i < redKnapper.length; i++) {
+        redKnapper[i].addEventListener('click', function () {
+          aapne(window.__rader[this.getAttribute('data-rediger')]);
+        });
+      }
+      var slettKnapper = omr.querySelectorAll('[data-slett]');
+      for (var j = 0; j < slettKnapper.length; j++) {
+        slettKnapper[j].addEventListener('click', function () {
+          slett(this.getAttribute('data-slett'));
+        });
+      }
+    }
+
+    // ---- Skjema ----
+    function aapne(rad) {
+      rad = rad || null;
+      $('dlg-tittel').textContent = rad ? 'Rediger aktivitet' : 'Ny aktivitet';
+      $('f-id').value = rad ? rad.id : '';
+      $('f-navn').value = rad ? (rad.navn || '') : '';
+      $('f-slug').value = rad ? (rad.slug || '') : '';
+      $('f-beskrivelse').value = rad ? (rad.beskrivelse || '') : '';
+      $('f-varighet').value = rad ? (rad.varighet || '') : '';
+      $('f-bilde').value = rad ? (rad.bilde || '') : '';
+      $('f-pris').value = rad ? (Number(rad.pris) || 0) : 0;
+      $('f-kapasitet').value = rad ? (Number(rad.kapasitet) || 0) : 0;
+      $('overlay').classList.add('vis');
+      $('f-navn').focus();
+    }
+    function lukk() { $('overlay').classList.remove('vis'); }
+
+    function lagre(e) {
+      e.preventDefault();
+      var id = $('f-id').value.trim();
+      var kropp = {
+        navn: $('f-navn').value.trim(),
+        slug: $('f-slug').value.trim(),
+        beskrivelse: $('f-beskrivelse').value.trim() || null,
+        varighet: $('f-varighet').value.trim() || null,
+        bilde: $('f-bilde').value.trim() || null,
+        pris: Number($('f-pris').value) || 0,
+        kapasitet: Number($('f-kapasitet').value) || 0
+      };
+      $('lagre').disabled = true;
+      var sti = id ? '/api/activities/' + encodeURIComponent(id) : '/api/activities';
+      var metode = id ? 'PUT' : 'POST';
+      api(sti, { method: metode, body: JSON.stringify(kropp) })
+        .then(jres)
+        .then(function (res) {
+          $('lagre').disabled = false;
+          if (res.status === 401 || res.status === 403) { window.location = '/konto'; return; }
+          if (!res.ok) {
+            melding((res.d && res.d.error) || 'Kunne ikke lagre.', 'feil');
+            return;
+          }
+          lukk();
+          melding(id ? 'Aktivitet oppdatert.' : 'Aktivitet opprettet.', 'ok');
+          last();
+        })
+        .catch(function () {
+          $('lagre').disabled = false;
+          melding('Kunne ikke lagre.', 'feil');
+        });
+    }
+
+    function slett(id) {
+      var rad = window.__rader && window.__rader[String(id)];
+      var navn = rad ? rad.navn : 'denne aktiviteten';
+      if (!window.confirm('Skjule «' + navn + '»? Den fjernes fra nettsiden, men historikk beholdes.')) return;
+      api('/api/activities/' + encodeURIComponent(id), { method: 'DELETE' })
+        .then(jres)
+        .then(function (res) {
+          if (res.status === 401 || res.status === 403) { window.location = '/konto'; return; }
+          if (!res.ok) {
+            melding((res.d && res.d.error) || 'Kunne ikke slette.', 'feil');
+            return;
+          }
+          melding('Aktivitet skjult.', 'ok');
+          last();
+        })
+        .catch(function () { melding('Kunne ikke slette.', 'feil'); });
+    }
+
+    // ---- Events ----
+    $('ny-knapp').addEventListener('click', function () { aapne(null); });
+    $('avbryt').addEventListener('click', lukk);
+    $('skjema').addEventListener('submit', lagre);
+    $('overlay').addEventListener('click', function (e) {
+      if (e.target === $('overlay')) lukk();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && $('overlay').classList.contains('vis')) lukk();
+    });
+
+    var loggUt = $('logg-ut');
+    if (loggUt) {
+      loggUt.addEventListener('click', function (e) {
+        e.preventDefault();
+        api('/api/auth/logout', { method: 'POST' })
+          .then(function () { window.location = '/konto'; })
+          .catch(function () { window.location = '/konto'; });
+      });
+    }
+
+    last();
+  })();
+  </script>
+</body>
+</html>

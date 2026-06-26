@@ -92,16 +92,20 @@
 Et public repo uten beskyttelse + lekkede default-secrets er den eneste "kan-gå-galt-i-dag"-risikoen.
 **Bindende rekkefølge for CI/protection:** push `ci.yml` FØRST (så `test`-checken har kjørt minst én gang), DERETTER branch protection — ellers låses `main` til en check som aldri rapporterer grønt.
 
-- [ ] 1. Roter default-secrets + herd `.env.example` (+ `.env.local` i `.gitignore`) — IKKE startet
-- [~] 2. `lib/regnskap.js` — ren MVA-splitt LAGET, men **ikke tatt i bruk** i `routes/bookings.js:62-65` ennå
-- [ ] 3. Fiks input-validering: passord-min (`routes/auth.js:38`), CMS-nøkkel/størrelse (`routes/admin.js:114-117`), chat-cookie `httpOnly` (`routes/chat.js:66`) — IKKE startet
-- [~] 4. `lib/security.js` — helmet + rate limiting LAGET, men **ikke mountet** i `server.js`, og `helmet`+`express-rate-limit` er **ikke** i `package.json`/installert
-- [ ] 5. vitest + første tester (`tests/lib/auth.test.js`, `tests/lib/regnskap.test.js`) — IKKE startet (mappene `tests/lib`, `tests/routes` er laget, tomme)
+- [x] 1. Roter default-secrets + herd `.env.example` (+ `.env.local` i `.gitignore`) — GJORT: `JWT_SECRET`/`ADMIN_PASSWORD` → `CHANGE_ME`, `.env.local` lagt til gitignore
+- [x] 2. `lib/regnskap.js` — TATT I BRUK i `routes/bookings.js:64` (`mvaSplitt(belop*100, 25)`). Tall bit-identiske med gammel `brutto/1.25` (verifisert på 500/750/1200/99/3333 kr)
+- [x] 3. Input-validering: `auth.js:41` min nå `MIN_PW` (env, default 8); `admin.js:119-123` validerer `nokkel` + capper `verdi` 50k; `chat.js:66` `httpOnly:true`
+- [x] 4. `lib/security.js` — MOUNTET i `server.js:21` (`applySecurity(app)` før body-parsere); `helmet@8.2.0` + `express-rate-limit@7.5.1` i `package.json` + installert
+- [x] 5. vitest + tester — `tests/lib/regnskap.test.js` (4) + `tests/lib/auth.test.js` (6), **10/10 grønn**. `vitest.config.js` lagt til (globals, så CommonJS-require virker)
 - [x] 6. `.github/workflows/ci.yml` — fil laget. Ikke pushet til main / ingen PR ennå
 - [ ] 7. **Operator kjører:** branch protection-kommando (se nederst) etter at CI har kjørt én gang
 
-### Resume her (neste terminal) — gjenstående wiring
-Nye filer finnes men er IKKE koblet inn (appen kjører uendret — ingenting importerer dem ennå):
+### Resume her — GJENSTÅR KUN OPERATOR-STEG (all wiring DONE + verifisert av karri 5 2026-06-25)
+Alle 9 wiring-steg under er fullført og koblet inn. `npm test` grønn, `npm ci --dry-run` = lockfile i sync (CI vil kjøre). Gjenstår kun git/gh som karri 5 ikke gjør:
+- Commit de endrede filene (IKKE `public/index_gammel_backup.html` — stray backup, hold utenfor), push `fase-1-infra-sikkerhet`, åpne PR mot `main`.
+- PR trigger `ci.yml` → `test`-checken kjører grønt → DERETTER branch protection-kommandoen nederst.
+
+<details><summary>Original 9-stegs wiring-spec (alle DONE)</summary>
 1. **`package.json`**: legg til `helmet` + `express-rate-limit` i `dependencies`, og en devDep `vitest` + `"test": "vitest run"` i `scripts`. Kjør `npm install` (lager `package-lock.json` som `ci.yml` vil bruke).
 2. **`server.js`**: `const { applySecurity } = require('./lib/security')` og kall `applySecurity(app)` rett etter `const app = express()` (før `express.json`/ruter).
 3. **`routes/bookings.js:62-65`**: erstatt den manuelle `brutto/1.25`-splitten med `const { mvaSplitt } = require('../lib/regnskap')` → `const { netto_ore, mva_ore } = mvaSplitt(booking.belop * 100, 25)`. Samme tall, men nå testet.
@@ -111,6 +115,7 @@ Nye filer finnes men er IKKE koblet inn (appen kjører uendret — ingenting imp
 7. **`lib/auth.js:6`** (HIGH, fra ADMIN-REVIEW #1): fail-closed `JWT_SECRET` i prod — kast ved oppstart hvis mangler/< ~32 tegn; tilfeldig per-prosess i dev.
 8. **Tester**: `tests/lib/regnskap.test.js` (mvaSplitt: 500 kr → brutto 50000 øre → netto 40000, mva 10000), `tests/lib/auth.test.js` (requireRole gater rolle, JWT sign/verify roundtrip, hash/verify). `npm test` skal være grønn.
 9. Commit, push branch, åpne PR, så kjør branch protection-kommandoen nederst.
+</details>
 
 ### Fase 2 — admin blir brukbar daglig  (annen terminal)
 Rekkefølge: passordbytte → kalender/kapasitet → aktivitets-CRUD → kundevarsel → agenda → åpningstider.
@@ -166,3 +171,8 @@ gh api repos/Nithu0/Havstund/branches/main/protection \
   `docs/ADMIN-REVIEW.md`, `.github/workflows/ci.yml`, `lib/regnskap.js`, `lib/security.js`.
   Gjenstår: wiring-stegene over ("Resume her"). Ingen eksisterende kildekode er endret ennå —
   appen kjører uendret. Sjekk ut `fase-1-infra-sikkerhet` for å fortsette.
+- 2026-06-25: Fase 1-wiring FULLFØRT (alle 9 steg koblet inn) + uavhengig verifisert av karri 5.
+  Endret: `.env.example`, `.gitignore`, `package.json`(+lock), `server.js`, `lib/auth.js`,
+  `routes/{bookings,auth,admin,chat}.js`; lagt til `tests/lib/{regnskap,auth}.test.js`, `vitest.config.js`.
+  `npm test` = 10/10 grønn. MVA-tall bit-identiske med før. Lockfile i sync (`npm ci` virker).
+  ENNÅ IKKE committet/pushet (karri 5 er lese/verifikator-rolle — operator tar git+PR+branch protection).

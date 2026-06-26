@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kunder — Havstund</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    body{background:var(--cream)}
+    .adm-top{background:linear-gradient(100deg,var(--sea-deep),var(--sea));color:#fff;position:sticky;top:0;z-index:60;box-shadow:0 4px 20px rgba(10,39,71,.18)}
+    .adm-top .inner{max-width:1240px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+    .adm-top .logo{display:flex;flex-direction:column;gap:3px}
+    .adm-top .logo img{height:28px;width:auto;filter:drop-shadow(0 1px 4px rgba(0,0,0,.35))}
+    .adm-top .logo small{font-size:10px;font-weight:600;letter-spacing:3px;color:var(--turq-l);text-transform:uppercase}
+    .adm-top nav{margin-left:auto;display:flex;gap:20px;align-items:center}
+    .adm-top nav a{font-size:14px;font-weight:600;color:#cfe2f4;opacity:.9}
+    .adm-top nav a:hover{opacity:1;color:#fff}
+
+    .wrap2{max-width:1240px;margin:0 auto;padding:28px 24px 70px}
+    .topp h1{font-size:30px;color:var(--sea-deep)}
+    .lead{color:var(--muted);margin-bottom:22px;max-width:70ch}
+
+    .grid{display:grid;grid-template-columns:340px 1fr;gap:22px;align-items:start}
+    .panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:22px 24px;box-shadow:var(--shadow);margin-bottom:22px}
+    .panel h3{margin-bottom:4px}
+    .panel .hint{color:var(--muted);font-size:13px;margin-bottom:16px}
+
+    .sok{display:flex;gap:8px;margin-bottom:14px}
+    .sok input{flex:1;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-size:15px}
+    .sok button{padding:11px 18px;border:none;border-radius:10px;background:var(--sea-deep);color:#fff;font-weight:700;cursor:pointer}
+
+    .liste{list-style:none;margin:0;padding:0}
+    .liste li{padding:11px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;cursor:pointer;transition:.12s}
+    .liste li:hover{border-color:var(--sea);background:var(--cream)}
+    .liste li.aktiv{border-color:var(--sea-deep);background:#eef5fb}
+    .liste .navn{font-weight:700;color:var(--sea-deep)}
+    .liste .epost{font-size:13px;color:var(--muted)}
+
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+    .kpi{background:var(--cream);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+    .kpi .label{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:700}
+    .kpi .val{font-size:22px;font-weight:800;color:var(--sea-deep);margin-top:6px}
+
+    .tbl{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+    .tbl th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:9px 10px;border-bottom:2px solid var(--line)}
+    .tbl td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+    .tbl tr:last-child td{border-bottom:none}
+    .tbl .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+    .tom{color:var(--muted);font-size:14px;padding:14px 4px}
+    .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:#eef5fb;color:var(--sea-deep)}
+
+    @media(max-width:900px){.grid{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
+  </style>
+</head>
+<body>
+  <header class="adm-top">
+    <div class="inner">
+      <a href="/intranett" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.45);color:#fff;font-weight:700;font-size:13px;padding:8px 15px;border-radius:30px;white-space:nowrap">← Tilbake til oversikt</a>
+      <a href="/" class="logo"><img src="bilder/wordmark.png" alt="Havstund"><small>Kunder · Admin</small></a>
+      <nav>
+        <a href="/intranett">Intranett</a>
+        <a href="/admin-innsikt">Innsikt</a>
+        <a href="/">Hjem</a>
+        <a href="#" id="logg-ut">Logg ut</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap2">
+    <div class="topp"><h1>Kunder</h1></div>
+    <p class="lead">Søk opp en kunde og se samlet profil: bookinger, meldinger og prosjekter på ett sted.</p>
+
+    <div class="grid">
+      <section class="panel">
+        <h3>Søk</h3>
+        <p class="hint">Navn eller e-post.</p>
+        <form class="sok" id="sok-form">
+          <input id="sok-input" type="text" placeholder="Søk kunde…" autocomplete="off" maxlength="100">
+          <button type="submit">Søk</button>
+        </form>
+        <ul class="liste" id="treff"></ul>
+      </section>
+
+      <section class="panel" id="profil-panel">
+        <h3 id="profil-tittel">Kundeprofil</h3>
+        <p class="hint" id="profil-hint">Velg en kunde fra listen.</p>
+        <div id="profil"></div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var krFmt = new Intl.NumberFormat('no-NO', { style: 'currency', currency: 'NOK', maximumFractionDigits: 0 });
+    function kr(v) { return krFmt.format(Number(v) || 0); }
+    function $(id) { return document.getElementById(id); }
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    function api(sti, opt) {
+      opt = opt || {};
+      opt.credentials = 'same-origin';
+      opt.headers = Object.assign({ 'Content-Type': 'application/json' }, opt.headers || {});
+      return fetch(sti, opt);
+    }
+    function dato(s) {
+      if (!s) return '–';
+      var d = new Date(s);
+      return isNaN(d) ? '–' : d.toLocaleDateString('no-NO');
+    }
+
+    var valgtId = null;
+
+    // ---- Søk ----
+    function sok(q) {
+      var liste = $('treff');
+      liste.innerHTML = '<li class="tom" style="border:none;cursor:default">Søker…</li>';
+      api('/api/customers/search?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (res) {
+          if (!res.ok) {
+            liste.innerHTML = '<li class="tom" style="border:none;cursor:default">' + esc((res.d && res.d.error) || 'Feil ved søk') + '</li>';
+            return;
+          }
+          var rows = res.d;
+          if (!Array.isArray(rows) || !rows.length) {
+            liste.innerHTML = '<li class="tom" style="border:none;cursor:default">Ingen treff.</li>';
+            return;
+          }
+          liste.innerHTML = '';
+          rows.forEach(function (k) {
+            var li = document.createElement('li');
+            li.setAttribute('data-id', k.id);
+            li.innerHTML = '<div class="navn">' + esc(k.navn || '–') + '</div><div class="epost">' + esc(k.epost) + '</div>';
+            li.addEventListener('click', function () { velg(k.id, li); });
+            liste.appendChild(li);
+          });
+        })
+        .catch(function () {
+          liste.innerHTML = '<li class="tom" style="border:none;cursor:default">Feil ved søk.</li>';
+        });
+    }
+
+    function velg(id, li) {
+      valgtId = id;
+      var alle = document.querySelectorAll('#treff li');
+      for (var i = 0; i < alle.length; i++) alle[i].classList.remove('aktiv');
+      if (li) li.classList.add('aktiv');
+      lastProfil(id);
+    }
+
+    // ---- Profil ----
+    function lastProfil(id) {
+      $('profil-hint').textContent = 'Laster…';
+      $('profil').innerHTML = '';
+      api('/api/crm/customers/' + encodeURIComponent(id) + '/profile')
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (res) {
+          if (!res.ok) {
+            $('profil-hint').textContent = (res.d && res.d.error) || 'Kunne ikke hente profil.';
+            return;
+          }
+          tegnProfil(res.d);
+        })
+        .catch(function () { $('profil-hint').textContent = 'Kunne ikke hente profil.'; });
+    }
+
+    function tegnProfil(p) {
+      var b = p.bruker || {};
+      var o = p.oppsummering || {};
+      $('profil-tittel').textContent = b.navn || 'Kundeprofil';
+      $('profil-hint').textContent = esc(b.epost || '') + ' · kunde siden ' + dato(b.opprettet);
+
+      var html = '';
+      html += '<div class="kpis">' +
+        '<div class="kpi"><div class="label">Bookinger</div><div class="val">' + (Number(o.antall_bookinger) || 0) + '</div></div>' +
+        '<div class="kpi"><div class="label">Omsetning</div><div class="val">' + kr(o.omsetning) + '</div></div>' +
+        '<div class="kpi"><div class="label">Meldinger</div><div class="val">' + (Number(o.antall_meldinger) || 0) + '</div></div>' +
+        '<div class="kpi"><div class="label">Prosjekter</div><div class="val">' + (Number(o.antall_prosjekter) || 0) + '</div></div>' +
+        '</div>';
+
+      // Bookinger
+      html += '<h3 style="margin-top:8px">Bookinger</h3>';
+      if (p.bookinger && p.bookinger.length) {
+        html += '<table class="tbl"><thead><tr><th>Aktivitet</th><th>Dato</th><th>Status</th><th class="num">Antall</th><th class="num">Beløp</th></tr></thead><tbody>';
+        p.bookinger.forEach(function (x) {
+          html += '<tr><td>' + esc(x.aktivitet || '–') + '</td><td>' + dato(x.dato) + '</td>' +
+            '<td><span class="pill">' + esc(x.status) + '</span></td>' +
+            '<td class="num">' + (Number(x.antall) || 0) + '</td>' +
+            '<td class="num">' + kr(x.belop) + '</td></tr>';
+        });
+        html += '</tbody></table>';
+      } else { html += '<p class="tom">Ingen bookinger.</p>'; }
+
+      // Meldinger
+      html += '<h3 style="margin-top:18px">Meldinger</h3>';
+      if (p.meldinger && p.meldinger.length) {
+        html += '<table class="tbl"><thead><tr><th>Avsender</th><th>Melding</th><th>Tid</th></tr></thead><tbody>';
+        p.meldinger.forEach(function (m) {
+          html += '<tr><td><span class="pill">' + esc(m.avsender) + '</span></td>' +
+            '<td>' + esc(m.tekst) + '</td><td class="num">' + dato(m.opprettet) + '</td></tr>';
+        });
+        html += '</tbody></table>';
+      } else { html += '<p class="tom">Ingen meldinger.</p>'; }
+
+      // Prosjekter
+      html += '<h3 style="margin-top:18px">Prosjekter</h3>';
+      if (p.prosjekter && p.prosjekter.length) {
+        html += '<table class="tbl"><thead><tr><th>Tittel</th><th>Type</th><th>Status</th><th class="num">Opprettet</th></tr></thead><tbody>';
+        p.prosjekter.forEach(function (pr) {
+          html += '<tr><td>' + esc(pr.tittel) + '</td><td>' + esc(pr.type || '–') + '</td>' +
+            '<td><span class="pill">' + esc(pr.status) + '</span></td>' +
+            '<td class="num">' + dato(pr.opprettet) + '</td></tr>';
+        });
+        html += '</tbody></table>';
+      } else { html += '<p class="tom">Ingen prosjekter.</p>'; }
+
+      $('profil').innerHTML = html;
+    }
+
+    // ---- Events ----
+    $('sok-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var q = $('sok-input').value.trim();
+      if (q) sok(q);
+    });
+
+    var loggUt = $('logg-ut');
+    if (loggUt) {
+      loggUt.addEventListener('click', function (e) {
+        e.preventDefault();
+        api('/api/auth/logout', { method: 'POST' })
+          .then(function () { window.location = '/konto'; })
+          .catch(function () { window.location = '/konto'; });
+      });
+    }
+  })();
+  </script>
+</body>
+</html>
