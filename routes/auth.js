@@ -27,7 +27,13 @@ function dbUtilgjengelig(res) {
 }
 
 function offentligBruker(u) {
-  return { id: u.id, navn: u.navn, epost: u.epost, rolle: u.rolle };
+  return {
+    id: u.id,
+    navn: u.navn,
+    epost: u.epost,
+    rolle: u.rolle,
+    ai_agent_enabled: !!u.ai_agent_enabled,
+  };
 }
 
 /* POST /api/auth/register {navn,epost,passord} */
@@ -113,7 +119,7 @@ router.get('/me', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Ikke innlogget' });
   try {
     const bruker = await db.one(
-      'SELECT id, navn, epost, rolle FROM users WHERE id=$1',
+      'SELECT id, navn, epost, rolle, ai_agent_enabled FROM users WHERE id=$1',
       [req.user.id],
     );
     if (!bruker) {

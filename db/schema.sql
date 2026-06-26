@@ -230,6 +230,10 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
   kjort    TIMESTAMPTZ DEFAULT now()
 );
 
+-- users: utvalgt-admin-flagg for AI-agenten (idempotent). Kun admin med
+-- ai_agent_enabled=true ser/bruker AI-brainen (se integrations/brain-shim.js).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_agent_enabled BOOLEAN DEFAULT false;
+
 -- users: TOTP/MFA + GDPR-anonymisering (idempotent).
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret    TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled   BOOLEAN DEFAULT false;

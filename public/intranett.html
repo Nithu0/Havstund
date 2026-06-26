@@ -229,10 +229,23 @@
           <div id="contentWrap"><div class="loading">Laster innhold …</div></div>
         </section>
 
+        <!-- AI-assistent: vises KUN hvis /api/auth/me melder ai_agent_enabled.
+             js/agent.js holder seksjonen skjult ellers. -->
+        <section class="panel" id="aiAssistent" style="display:none">
+          <h3>AI-assistent</h3>
+          <p class="sub">Spør om bookinger, kalender, kunder og innhold. Endringer foreslås — ingenting skjer før du trykker «Send».</p>
+          <div id="aiSamtale" style="max-height:340px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;background:#fff"></div>
+          <div style="display:flex;gap:8px">
+            <input id="aiInput" type="text" placeholder="Skriv en melding …" style="flex:1;padding:10px 12px;border:1px solid var(--line);border-radius:8px" autocomplete="off">
+            <button class="btn" id="aiSend">Spør</button>
+          </div>
+        </section>
+
       </div>
     </main>
   </div>
 
   <script src="js/intranett.js"></script>
+  <script src="js/agent.js"></script>
 </body>
 </html>

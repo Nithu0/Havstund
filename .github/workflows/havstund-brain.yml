@@ -1,0 +1,89 @@
+name: havstund-brain CI
+
+# Egen CI for AI-brainen (eget npm-package i havstund-brain/). Adskilt fra
+# nettsidens CI (ci.yml). Kjører KUN når noe under havstund-brain/ endres.
+# INGEN API-nøkkel i denne jobben — testene bruker en scriptet Anthropic-stub,
+# aldri ekte Claude. nightly-live (ekte API) er en SEPARAT, ikke-blokkerende jobb.
+
+on:
+  push:
+    branches: [main]
+    paths: ['havstund-brain/**', '.github/workflows/havstund-brain.yml']
+  pull_request:
+    branches: [main]
+    paths: ['havstund-brain/**', '.github/workflows/havstund-brain.yml']
+  schedule:
+    # 03:15 UTC — nattlig fake<->ekte-kontrakt (nightly-live, ikke-blokkerende).
+    - cron: '15 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: havstund-brain
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: havstund-brain/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Typecheck (tsc --noEmit)
+        run: npm run typecheck
+
+      - name: Test (vitest — scriptet Anthropic-stub, ingen ekte Claude)
+        run: npm test
+
+      # Blokker på høy/kritisk CVE i PROD-deps (samme policy som nettsidens CI).
+      # Dev-tooling-vulns (eslint/vite) gates ikke releaser — Dependabot varsler.
+      - name: Security audit (blocking on high/critical, prod only)
+        run: npm audit --omit=dev --audit-level=high
+
+      # Hemmelighet-skann: ingen ekte ANTHROPIC_API_KEY / service-/operatør-token
+      # skal finnes i committed kode. Feiler jobben hvis noe matcher.
+      - name: Secret scan (ingen ekte nøkler i git)
+        run: |
+          if grep -rnE 'sk-ant-[A-Za-z0-9_-]{20,}' --include='*.ts' --include='*.js' --include='*.json' . ; then
+            echo "::error::Mulig ekte ANTHROPIC_API_KEY funnet i koden"
+            exit 1
+          fi
+          echo "Ingen ekte nøkler funnet."
+
+  # Nattlig fake↔ekte-kontrakt mot en ekte nettside + ekte Claude. SEPARAT og
+  # IKKE merge-blokkerende. Krever secrets operatøren setter; hopper pent over
+  # ellers. Kjør ALDRI mot produksjon (oppretter test-bookinger).
+  nightly-live:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: havstund-brain/package-lock.json
+      - name: Install dependencies
+        run: npm ci || npm install
+      - name: Live contract test (mock <-> ekte adapter)
+        env:
+          BRAIN_LIVE_CONTRACT: 'true'
+          WEBSITE_BASE_URL: ${{ secrets.BRAIN_WEBSITE_BASE_URL }}
+          WEBSITE_SERVICE_TOKEN: ${{ secrets.BRAIN_WEBSITE_SERVICE_TOKEN }}
+        run: |
+          if [ -z "$WEBSITE_BASE_URL" ] || [ -z "$WEBSITE_SERVICE_TOKEN" ]; then
+            echo "Live-secrets mangler — hopper over (ikke en feil)."
+            exit 0
+          fi
+          npm run nightly:contract
