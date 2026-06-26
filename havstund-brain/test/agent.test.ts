@@ -9,7 +9,7 @@
  *  - skygge-modus (allowWrites=false) skriver ALDRI
  *  - META: hvert skrive-verktøy har propose+execute-dekning
  */
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { Agent } from '../src/brain/agent.js';
 import type { AgentDeps } from '../src/brain/agent.js';
 import { InMemoryStore } from '../src/brain/store.js';
