@@ -3,3 +3,7 @@ node_modules/
 .env.local
 .DS_Store
 npm-debug.log*
+
+# Lokale db-backuper (scripts/backup.sh / backup-workflow). Inneholder
+# personopplysninger — skal aldri sjekkes inn. Se docs/BACKUP-RESTORE.md.
+backups/

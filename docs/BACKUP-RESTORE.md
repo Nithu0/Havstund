@@ -51,6 +51,29 @@ Kjorer du i Railway: bruk en separat cron-/worker-tjeneste med samme
 `DATABASE_URL`-referanse, eller ta backup fra en driftsmaskin som har
 nettverkstilgang til Postgres.
 
+### Planlagt (GitHub Actions)
+
+`.github/workflows/backup.yml` kjorer `scripts/backup.sh` nattlig (02:30 UTC)
+og laster dumpen opp som en **GitHub Actions-artifact** (`havstund-db-backup`,
+retention 30 dager). Kan ogsa trigges manuelt via "Run workflow" i Actions.
+
+**Operator MAA gjore (engangs):** legg til repo-secreten `DATABASE_URL`
+(Settings -> Secrets and variables -> Actions -> New repository secret) med
+Railway-tilkoblingsstrengen. Uten secreten hopper jobben pent over (ingen rod
+CI) — den feiler ikke, men tar heller ingen backup.
+
+Hent en dump: Actions -> kjoringen -> last ned `havstund-db-backup`-artifacten,
+pakk ut, og folg restore-stegene under.
+
+> **Aerlig om DR-rekkevidde:** dette er belte-og-bukseseler, ikke ekte off-site
+> disaster recovery alene. Artifactene ligger hos GitHub (samme leverandor-
+> okosystem som koden, 30 dagers retention). Verifiser ogsa om **Railways
+> managed Postgres alt tar snapshots / PITR** — gjor den det, er denne
+> workflowen en ekstra kopi, ikke primaerstrategien. Ekte off-site DR (egen
+> kryptert bucket i en annen sky, testet restore-rutine) krever fortsatt
+> operator-oppsett. Dumpen inneholder personopplysninger — se "Oppbevaring &
+> sikkerhet" under.
+
 ---
 
 ## 3. Restore (gjenoppretting)
