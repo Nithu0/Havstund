@@ -30,6 +30,9 @@ const state = {
   agendaRows: [],
   txInsertParams: null,   // params til INSERT INTO bookings via tx-klienten
   txClientUsed: false,    // ble INSERT kjort via withTransaction-klienten?
+  regnskapViaTx: false,   // ble regnskap-INSERT kjort via tx-klienten? (A5)
+  regnskapFeiler: false,  // simuler at regnskap-INSERT kaster (A5 rollback)
+  regnskapFinnes: false,  // idempotens: regnskapspost finnes allerede
 };
 
 db.isConfigured = () => true;
@@ -66,14 +69,27 @@ db.query = async (text, params) => {
   return { rows: [] };
 };
 
-// Kapasitetssjekk + INSERT kjorer naa i db.withTransaction. Vi stubber den til
-// aa kalle fn med en fake client hvis .query svarer som tabellene i state.
+// Kapasitetssjekk + booking-INSERT + regnskap-INSERT (A5) kjorer naa ALLE i
+// db.withTransaction paa SAMME klient. Vi stubber withTransaction til aa kalle
+// fn med en fake client, og speiler ROLLBACK-semantikken: hvis fn kaster,
+// re-kaster vi (booking + regnskapspost ruller tilbake sammen).
 db.withTransaction = async (fn) => {
   const client = {
     query: async (text, params) => {
       if (/FROM activities WHERE id .* FOR UPDATE/i.test(text)) return { rows: [{ id: state.akt.id }] };
       if (/FROM availability/i.test(text)) return { rows: state.avail ? [state.avail] : [] };
       if (/COALESCE\(SUM\(antall\)/i.test(text)) return { rows: [{ sum: state.sum }] };
+      if (/SELECT id FROM regnskap_poster WHERE booking_id/i.test(text)) {
+        // Idempotens-lookup paa tx-klienten.
+        return { rows: state.regnskapFinnes ? [{ id: 1 }] : [] };
+      }
+      if (/INSERT INTO regnskap_poster/i.test(text)) {
+        // A5: regnskap-INSERT skjer naa via tx-klienten, ikke db.query.
+        state.regnskapViaTx = true;
+        if (state.regnskapFeiler) throw new Error('regnskap-INSERT feilet (simulert)');
+        state.regnskap.push(params);
+        return { rows: [] };
+      }
       if (/INSERT INTO bookings/i.test(text)) {
         state.txClientUsed = true;
         state.txInsertParams = params;
@@ -88,6 +104,7 @@ db.withTransaction = async (fn) => {
       return { rows: [] };
     },
   };
+  // Speil withTransaction: feiler fn, re-kast (ekte impl ROLLBACK-er da).
   return fn(client);
 };
 
@@ -129,6 +146,7 @@ function reset() {
   state.closed = null; state.bh = null; state.avail = null; state.sum = 0;
   state.regnskap = []; state.meldinger = []; state.agendaRows = [];
   state.txInsertParams = null; state.txClientUsed = false;
+  state.regnskapViaTx = false; state.regnskapFeiler = false; state.regnskapFinnes = false;
   state.refundBooking = { id: 5, activity_id: 1, navn: 'Kari', belop: 500, bruker_id: 9 };
 }
 
@@ -171,8 +189,41 @@ describe('POST /api/bookings — kapasitet (#3)', () => {
       expect(state.txInsertParams).not.toBeNull();
       expect(state.txInsertParams[0]).toBe(1); // activity_id
       expect(state.regnskap).toHaveLength(1);
+      // A5: regnskap-INSERT skjer naa paa SAMME tx-klient som booking-INSERT.
+      expect(state.regnskapViaTx).toBe(true);
       // mva_sats er 5. param i INSERT (0-indeks 4)
       expect(state.regnskap[0][4]).toBe(12);
+    } finally { srv.close(); }
+  });
+});
+
+describe('POST /api/bookings — atomisitet booking+regnskap (A5)', () => {
+  it('regnskap-INSERT ruller booking tilbake hvis den feiler (ingen 201)', async () => {
+    reset();
+    state.regnskapFeiler = true; // simuler at regnskap-INSERT kaster i tx
+    const srv = await lytt(lagApp(KUNDE));
+    try {
+      const r = await post(srv, '/api/bookings', { activity_id: 1, navn: 'Kari', epost: 'k@x.no', dato: HVERDAG, tid: '12:00', antall: 1 });
+      // Tx kaster -> withTransaction ROLLBACK -> route fanger -> 500.
+      expect(r.status).toBe(500);
+      // Booking-INSERT ble forsokt paa tx-klienten, men ingen regnskapspost lagret
+      // (rullet tilbake sammen): ingen booking uten regnskapspost.
+      expect(state.txClientUsed).toBe(true);
+      expect(state.regnskapViaTx).toBe(true);
+      expect(state.regnskap).toHaveLength(0);
+    } finally { srv.close(); }
+  });
+
+  it('idempotens bevart: hopper over regnskap-INSERT hvis posten finnes (paa tx-klient)', async () => {
+    reset();
+    state.regnskapFinnes = true; // idempotens-lookup paa tx-klient returnerer en rad
+    const srv = await lytt(lagApp(KUNDE));
+    try {
+      const r = await post(srv, '/api/bookings', { activity_id: 1, navn: 'Kari', epost: 'k@x.no', dato: HVERDAG, tid: '12:00', antall: 1 });
+      expect(r.status).toBe(201);
+      expect(state.txClientUsed).toBe(true);
+      // Ingen ny regnskapspost (idempotent).
+      expect(state.regnskap).toHaveLength(0);
     } finally { srv.close(); }
   });
 });
