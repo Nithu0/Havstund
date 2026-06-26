@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agenda — Havstund</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    body{background:var(--cream)}
+    .adm-top{background:linear-gradient(100deg,var(--sea-deep),var(--sea));color:#fff;position:sticky;top:0;z-index:60;box-shadow:0 4px 20px rgba(10,39,71,.18)}
+    .adm-top .inner{max-width:1240px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+    .adm-top .logo{display:flex;flex-direction:column;gap:3px}
+    .adm-top .logo img{height:28px;width:auto;filter:drop-shadow(0 1px 4px rgba(0,0,0,.35))}
+    .adm-top .logo small{font-size:10px;font-weight:600;letter-spacing:3px;color:var(--turq-l);text-transform:uppercase}
+    .adm-top nav{margin-left:auto;display:flex;gap:20px;align-items:center}
+    .adm-top nav a{font-size:14px;font-weight:600;color:#cfe2f4;opacity:.9}
+    .adm-top nav a:hover{opacity:1;color:#fff}
+
+    .wrap2{max-width:1240px;margin:0 auto;padding:28px 24px 70px}
+    .topp{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:8px}
+    .topp h1{font-size:30px;color:var(--sea-deep)}
+    .lead{color:var(--muted);margin-bottom:22px;max-width:70ch}
+
+    .ctrls{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:20px}
+    .ctrls .felt{display:flex;flex-direction:column;gap:5px}
+    .ctrls label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700}
+    .ctrls input[type=date]{padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;color:var(--sea-deep)}
+    .ctrls button{padding:9px 18px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;background:var(--sea-deep);color:#fff}
+    .ctrls button.ghost{background:#fff;border:1px solid var(--line);color:var(--sea-deep)}
+
+    .panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:22px 24px;box-shadow:var(--shadow);margin-bottom:22px}
+    .panel h3{margin-bottom:4px}
+    .panel .hint{color:var(--muted);font-size:13px;margin-bottom:16px}
+
+    .tbl{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+    .tbl th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:9px 10px;border-bottom:2px solid var(--line)}
+    .tbl td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+    .tbl tr:last-child td{border-bottom:none}
+    .tbl .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+    .tbl .belop{font-weight:700;color:var(--sea-deep)}
+    .tom{color:var(--muted);font-size:14px;padding:18px 4px}
+
+    .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:30px;letter-spacing:.3px}
+    .pill.forespurt{background:#fff4e0;color:#9a6400}
+    .pill.bekreftet{background:#e3f4e7;color:#1d6b35}
+    .pill.fullfort{background:#e6eef7;color:#1d4e7a}
+    .pill.avlyst{background:#f7e3e3;color:#8a2a2a}
+  </style>
+</head>
+<body>
+  <header class="adm-top">
+    <div class="inner">
+      <a href="/intranett" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.45);color:#fff;font-weight:700;font-size:13px;padding:8px 15px;border-radius:30px;white-space:nowrap">← Tilbake til oversikt</a>
+      <a href="/" class="logo"><img src="bilder/wordmark.png" alt="Havstund"><small>Agenda · Admin</small></a>
+      <nav>
+        <a href="/intranett">Intranett</a>
+        <a href="/bookinger">Bookinger</a>
+        <a href="/">Hjem</a>
+        <a href="#" id="logg-ut">Logg ut</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap2">
+    <div class="topp">
+      <div>
+        <h1>Agenda</h1>
+      </div>
+    </div>
+    <p class="lead">Dagens og kommende bookinger. Velg en dato for å se hva som skjer den dagen og fremover.</p>
+
+    <div class="ctrls">
+      <div class="felt">
+        <label for="dato">Fra dato</label>
+        <input type="date" id="dato">
+      </div>
+      <button id="vis">Vis</button>
+      <button id="idag" class="ghost">I dag</button>
+    </div>
+
+    <section class="panel">
+      <h3 id="panel-tittel">Bookinger</h3>
+      <p class="hint" id="panel-hint">Laster …</p>
+      <div id="agenda-tabell"></div>
+    </section>
+  </main>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var krFmt = new Intl.NumberFormat('no-NO', { style: 'currency', currency: 'NOK', maximumFractionDigits: 0 });
+    function kr(v) { return krFmt.format(Number(v) || 0); }
+    function $(id) { return document.getElementById(id); }
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    function api(sti, opt) {
+      opt = opt || {};
+      opt.credentials = 'same-origin';
+      opt.headers = Object.assign({ 'Content-Type': 'application/json' }, opt.headers || {});
+      return fetch(sti, opt);
+    }
+    function isoDato(d) {
+      // YYYY-MM-DD i lokal tid (unngår UTC-skli fra toISOString)
+      var p = function (n) { return (n < 10 ? '0' : '') + n; };
+      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+    }
+    function visDato(s) {
+      if (!s) return '–';
+      var d = new Date(s);
+      return isNaN(d) ? esc(s) : d.toLocaleDateString('no-NO', { weekday: 'short', day: '2-digit', month: 'short' });
+    }
+    function statusPill(s) {
+      var v = String(s || '').toLowerCase();
+      var kjent = { forespurt: 1, bekreftet: 1, fullfort: 1, avlyst: 1 };
+      var kl = kjent[v] ? v : 'forespurt';
+      return '<span class="pill ' + kl + '">' + esc(s || '–') + '</span>';
+    }
+
+    function tegn(rows) {
+      if (!rows.length) {
+        $('agenda-tabell').innerHTML = '<p class="tom">Ingen bookinger fra og med valgt dato.</p>';
+        $('panel-hint').textContent = '0 bookinger.';
+        return;
+      }
+      $('panel-hint').textContent = rows.length.toLocaleString('no-NO') + ' booking' + (rows.length === 1 ? '' : 'er') + '.';
+      var html = '<table class="tbl"><thead><tr>' +
+        '<th>Dato</th><th>Tid</th><th>Aktivitet</th><th>Kunde</th><th>Kontakt</th>' +
+        '<th class="num">Pers.</th><th>Status</th><th class="num">Beløp</th>' +
+        '</tr></thead><tbody>';
+      rows.forEach(function (r) {
+        var kontakt = [r.epost, r.tlf].filter(Boolean).map(esc).join('<br>');
+        html += '<tr>' +
+          '<td>' + visDato(r.dato) + '</td>' +
+          '<td>' + esc(r.tid || '–') + '</td>' +
+          '<td>' + esc(r.aktivitet_navn || r.aktivitet || '–') + '</td>' +
+          '<td>' + esc(r.navn || '–') + '</td>' +
+          '<td>' + (kontakt || '–') + '</td>' +
+          '<td class="num">' + (Number(r.antall) || 0).toLocaleString('no-NO') + '</td>' +
+          '<td>' + statusPill(r.status) + '</td>' +
+          '<td class="num belop">' + kr(r.belop) + '</td>' +
+          '</tr>';
+      });
+      html += '</tbody></table>';
+      $('agenda-tabell').innerHTML = html;
+    }
+
+    function last(dato) {
+      $('panel-hint').textContent = 'Laster …';
+      $('agenda-tabell').innerHTML = '';
+      $('panel-tittel').textContent = 'Bookinger fra ' + dato;
+      api('/api/bookings/agenda?dato=' + encodeURIComponent(dato))
+        .then(function (r) { return r.ok ? r.json() : []; })
+        .then(function (data) {
+          // Tål både ren array og innpakket { bookinger: [...] } / { rows: [...] }
+          var rows = Array.isArray(data) ? data
+            : (data && (data.bookinger || data.rows || data.data)) || [];
+          if (!Array.isArray(rows)) rows = [];
+          tegn(rows);
+        })
+        .catch(function () {
+          $('agenda-tabell').innerHTML = '<p class="tom">Kunne ikke hente agenda. Prøv igjen.</p>';
+          $('panel-hint').textContent = '';
+        });
+    }
+
+    var idag = isoDato(new Date());
+    $('dato').value = idag;
+
+    $('vis').addEventListener('click', function () {
+      last($('dato').value || idag);
+    });
+    $('idag').addEventListener('click', function () {
+      $('dato').value = idag;
+      last(idag);
+    });
+
+    // ---- Logg ut ----
+    var loggUt = $('logg-ut');
+    if (loggUt) {
+      loggUt.addEventListener('click', function (e) {
+        e.preventDefault();
+        api('/api/auth/logout', { method: 'POST' })
+          .then(function () { window.location = '/konto'; })
+          .catch(function () { window.location = '/konto'; });
+      });
+    }
+
+    last(idag);
+  })();
+  </script>
+</body>
+</html>

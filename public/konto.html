@@ -143,6 +143,25 @@
           <p class="tom" id="booking-tom" style="display:none">Du har ingen bookinger ennå.</p>
         </div>
       </div>
+
+      <!-- ===== Bytt passord ===== -->
+      <div class="card" style="margin-top:20px">
+        <h3>Bytt passord</h3>
+        <div class="melding feil" id="feil-pw"></div>
+        <div class="melding ok" id="ok-pw"></div>
+        <form id="skjema-pw" novalidate style="margin-top:12px">
+          <div class="field">
+            <label for="pw-gammelt">Nåværende passord</label>
+            <input type="password" id="pw-gammelt" name="gammelt" autocomplete="current-password" required>
+          </div>
+          <div class="field">
+            <label for="pw-nytt">Nytt passord</label>
+            <input type="password" id="pw-nytt" name="nytt" autocomplete="new-password" required>
+            <small style="color:var(--muted);font-size:13px">Minst 8 tegn.</small>
+          </div>
+          <button type="submit" class="btn btn-primary">Oppdater passord</button>
+        </form>
+      </div>
     </div>
 
   </div>
@@ -151,5 +170,62 @@
 <script src="js/track.js" defer></script>
 <script src="js/chat-widget.js" defer></script>
 <script src="js/konto.js"></script>
+
+<!-- Passordbytte-pane (Fase 2 #1) — selvstendig, rører ikke konto.js -->
+<script>
+(function () {
+  'use strict';
+  var skjema = document.getElementById('skjema-pw');
+  if (!skjema) return;
+
+  function pwApi(sti, opt) {
+    opt = opt || {};
+    opt.credentials = 'same-origin';
+    opt.headers = Object.assign({ 'Content-Type': 'application/json' }, opt.headers || {});
+    return fetch(sti, opt);
+  }
+
+  function pwMelding(id, tekst, type) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = tekst || '';
+    el.classList.toggle('vis', !!tekst);
+    if (tekst && window.notie) {
+      notie.alert({ type: (type === 'ok' ? 'success' : 'error'), text: tekst, time: 4 });
+    }
+  }
+
+  skjema.addEventListener('submit', function (e) {
+    e.preventDefault();
+    pwMelding('feil-pw', '');
+    pwMelding('ok-pw', '');
+    var knapp = skjema.querySelector('button[type="submit"]');
+    knapp.disabled = true;
+
+    var kropp = {
+      gammelt: document.getElementById('pw-gammelt').value,
+      nytt: document.getElementById('pw-nytt').value,
+    };
+
+    pwApi('/api/auth/change-password', { method: 'POST', body: JSON.stringify(kropp) })
+      .then(function (r) {
+        return r.json().then(function (data) { return { ok: r.ok, data: data }; });
+      })
+      .then(function (res) {
+        if (!res.ok) {
+          var fallback = (res.data && res.data.error) || 'Klarte ikke å bytte passord.';
+          pwMelding('feil-pw', fallback, 'feil');
+          return;
+        }
+        skjema.reset();
+        pwMelding('ok-pw', 'Passordet er oppdatert.', 'ok');
+      })
+      .catch(function () {
+        pwMelding('feil-pw', 'Klarte ikke å bytte passord. Prøv igjen.', 'feil');
+      })
+      .then(function () { knapp.disabled = false; });
+  });
+})();
+</script>
 </body>
 </html>

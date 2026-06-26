@@ -189,3 +189,59 @@ CREATE INDEX IF NOT EXISTS idx_poster_dato ON regnskap_poster(dato);
 CREATE INDEX IF NOT EXISTS idx_poster_type ON regnskap_poster(type);
 CREATE INDEX IF NOT EXISTS idx_timer_ansatt ON timeforinger(ansatt_id);
 CREATE INDEX IF NOT EXISTS idx_timer_dato ON timeforinger(dato);
+
+-- ===== Apningstider (Fase 2) =====
+-- business_hours = fast ukentlig apningstid. ukedag 0=mandag .. 6=sondag.
+CREATE TABLE IF NOT EXISTS business_hours (
+  ukedag   SMALLINT PRIMARY KEY,            -- 0=mandag .. 6=sondag
+  apner    TIME,
+  stenger  TIME,
+  stengt   BOOLEAN DEFAULT false
+);
+
+-- closed_dates = enkeltdatoer som overstyrer apningstid (helligdager, ferie).
+CREATE TABLE IF NOT EXISTS closed_dates (
+  dato   DATE PRIMARY KEY,
+  grunn  TEXT
+);
+
+-- ===== Fase 3: revisjon, passord-reset, migrasjonslogg, GDPR/MFA, refusjon, MVA =====
+
+-- audit_log = revisjonsspor for admin-/ansatt-handlinger (GDPR-ansvarlighet).
+CREATE TABLE IF NOT EXISTS audit_log (
+  id         SERIAL PRIMARY KEY,
+  tid        TIMESTAMPTZ DEFAULT now(),
+  actor_id   INTEGER,
+  actor_navn TEXT,
+  handling   TEXT,
+  detaljer   JSONB
+);
+
+-- reset_tokens = engangs-tokens for passordtilbakestilling.
+CREATE TABLE IF NOT EXISTS reset_tokens (
+  token    TEXT PRIMARY KEY,
+  user_id  INTEGER,
+  utloper  TIMESTAMPTZ
+);
+
+-- schema_migrations = sporing av kjorte migrasjoner.
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  versjon  TEXT PRIMARY KEY,
+  kjort    TIMESTAMPTZ DEFAULT now()
+);
+
+-- users: TOTP/MFA + GDPR-anonymisering (idempotent).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret    TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled   BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS anonymized_at  TIMESTAMPTZ;
+
+-- bookings: refusjon (idempotent).
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS refund_amount_ore INTEGER;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS refund_reason     TEXT;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS refunded_at       TIMESTAMPTZ;
+
+-- activities: MVA-sats per aktivitet (idempotent; default 25%).
+ALTER TABLE activities ADD COLUMN IF NOT EXISTS mva_sats SMALLINT DEFAULT 25;
+
+CREATE INDEX IF NOT EXISTS idx_audit_log_tid ON audit_log(tid);
+CREATE INDEX IF NOT EXISTS idx_reset_tokens_user ON reset_tokens(user_id);

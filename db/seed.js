@@ -148,4 +148,27 @@ module.exports = async function seed({ query, one }) {
   } catch (e) {
     console.error('  seed: demo-ansatt feilet:', e.message);
   }
+
+  // --- Apningstider (Fase 2): 7 default-rader, idempotent ---
+  // ukedag 0=mandag .. 6=sondag. Man-fre 10-16, lor 10-14, son stengt.
+  try {
+    const hours = [
+      [0, '10:00', '16:00', false], // mandag
+      [1, '10:00', '16:00', false], // tirsdag
+      [2, '10:00', '16:00', false], // onsdag
+      [3, '10:00', '16:00', false], // torsdag
+      [4, '10:00', '16:00', false], // fredag
+      [5, '10:00', '14:00', false], // lordag
+      [6, null, null, true],        // sondag (stengt)
+    ];
+    for (const [ukedag, apner, stenger, stengt] of hours) {
+      await query(
+        `INSERT INTO business_hours (ukedag, apner, stenger, stengt)
+         VALUES ($1, $2, $3, $4) ON CONFLICT (ukedag) DO NOTHING`,
+        [ukedag, apner, stenger, stengt]
+      );
+    }
+  } catch (e) {
+    console.error('  seed: apningstider feilet:', e.message);
+  }
 };

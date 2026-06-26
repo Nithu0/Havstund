@@ -3,6 +3,7 @@
 const express = require('express');
 const db = require('../db');
 const { requireRole } = require('../lib/auth');
+const { writeAudit } = require('../lib/audit');
 
 const router = express.Router();
 
@@ -116,6 +117,12 @@ router.put('/content/:nokkel', async (req, res) => {
     const nokkel = req.params.nokkel;
     const verdi = (req.body && req.body.verdi != null) ? String(req.body.verdi) : '';
     if (!nokkel) return res.status(400).json({ error: 'Mangler nøkkel' });
+    if (!/^[a-z0-9_.-]{1,64}$/.test(nokkel)) {
+      return res.status(400).json({ error: 'Ugyldig nøkkel (kun a-z, 0-9, _ . - og maks 64 tegn)' });
+    }
+    if (verdi.length > 50000) {
+      return res.status(400).json({ error: 'Verdien er for stor (maks 50 000 tegn)' });
+    }
 
     const rad = await db.one(
       `INSERT INTO content (nokkel, verdi, oppdatert)
@@ -125,6 +132,10 @@ router.put('/content/:nokkel', async (req, res) => {
        RETURNING nokkel, verdi, oppdatert`,
       [nokkel, verdi]
     );
+
+    // Revisjonsspor — fire-and-forget (writeAudit kaster aldri).
+    await writeAudit(req.user, 'cms:endret', { nokkel });
+
     return res.json(rad);
   } catch (e) {
     console.error('admin/content put-feil:', e.message);

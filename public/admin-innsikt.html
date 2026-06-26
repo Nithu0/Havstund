@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Innsikt — Havstund</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- Chart.js: grafer for innsikt (github.com/chartjs/Chart.js · MIT) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <style>
+    body{background:var(--cream)}
+    .adm-top{background:linear-gradient(100deg,var(--sea-deep),var(--sea));color:#fff;position:sticky;top:0;z-index:60;box-shadow:0 4px 20px rgba(10,39,71,.18)}
+    .adm-top .inner{max-width:1240px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+    .adm-top .logo{display:flex;flex-direction:column;gap:3px}
+    .adm-top .logo img{height:28px;width:auto;filter:drop-shadow(0 1px 4px rgba(0,0,0,.35))}
+    .adm-top .logo small{font-size:10px;font-weight:600;letter-spacing:3px;color:var(--turq-l);text-transform:uppercase}
+    .adm-top nav{margin-left:auto;display:flex;gap:20px;align-items:center}
+    .adm-top nav a{font-size:14px;font-weight:600;color:#cfe2f4;opacity:.9}
+    .adm-top nav a:hover{opacity:1;color:#fff}
+
+    .wrap2{max-width:1240px;margin:0 auto;padding:28px 24px 70px}
+    .topp{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:8px}
+    .topp h1{font-size:30px;color:var(--sea-deep)}
+    .lead{color:var(--muted);margin-bottom:22px;max-width:70ch}
+
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+    .kpi{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:20px 22px;box-shadow:var(--shadow)}
+    .kpi .label{font-size:12px;text-transform:uppercase;letter-spacing:1.3px;color:var(--muted);font-weight:700}
+    .kpi .val{font-size:27px;font-weight:800;color:var(--sea-deep);margin-top:8px;line-height:1.05}
+    .kpi .sub{font-size:12px;color:var(--muted);margin-top:5px}
+
+    .panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:22px 24px;box-shadow:var(--shadow);margin-bottom:22px}
+    .panel h3{margin-bottom:4px}
+    .panel .hint{color:var(--muted);font-size:13px;margin-bottom:16px}
+
+    .tbl{width:100%;border-collapse:collapse;font-size:14px;margin-top:14px}
+    .tbl th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:9px 10px;border-bottom:2px solid var(--line)}
+    .tbl td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+    .tbl tr:last-child td{border-bottom:none}
+    .tbl .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+    .tbl .belop{font-weight:700;color:var(--sea-deep)}
+    .tom{color:var(--muted);font-size:14px;padding:18px 4px}
+
+    @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:560px){.kpis{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header class="adm-top">
+    <div class="inner">
+      <a href="/intranett" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.45);color:#fff;font-weight:700;font-size:13px;padding:8px 15px;border-radius:30px;white-space:nowrap">← Tilbake til oversikt</a>
+      <a href="/" class="logo"><img src="bilder/wordmark.png" alt="Havstund"><small>Innsikt · Admin</small></a>
+      <nav>
+        <a href="/intranett">Intranett</a>
+        <a href="/regnskap">Regnskap</a>
+        <a href="/">Hjem</a>
+        <a href="#" id="logg-ut">Logg ut</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap2">
+    <div class="topp">
+      <div>
+        <h1>Innsikt</h1>
+      </div>
+    </div>
+    <p class="lead">Forretningsmetrikker bygget på bookinger: hvilke aktiviteter som drar inn mest, og hvilke kunder som er mest verdifulle (livstidsverdi). Omsetning teller kun bekreftede og fullførte bookinger.</p>
+
+    <div class="kpis">
+      <div class="kpi"><div class="label">Total omsetning</div><div class="val" id="k-omsetning">–</div><div class="sub">bekreftet + fullført</div></div>
+      <div class="kpi"><div class="label">Bookinger</div><div class="val" id="k-bookinger">–</div><div class="sub">alle statuser</div></div>
+      <div class="kpi"><div class="label">Kunder</div><div class="val" id="k-kunder">–</div><div class="sub">unike e-poster</div></div>
+      <div class="kpi"><div class="label">Snitt CLV</div><div class="val" id="k-clv">–</div><div class="sub">per kunde</div></div>
+    </div>
+
+    <section class="panel">
+      <h3>Omsetning per aktivitet</h3>
+      <p class="hint">Hvilke aktiviteter som drar inn mest.</p>
+      <div style="height:300px;position:relative"><canvas id="aktivitet-graf"></canvas></div>
+      <div id="aktivitet-tabell"></div>
+    </section>
+
+    <section class="panel">
+      <h3>Topp-kunder (livstidsverdi)</h3>
+      <p class="hint">CLV = sum av kundens bekreftede/fullførte bookinger.</p>
+      <div id="kunde-tabell"></div>
+    </section>
+  </main>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var krFmt = new Intl.NumberFormat('no-NO', { style: 'currency', currency: 'NOK', maximumFractionDigits: 0 });
+    function kr(v) { return krFmt.format(Number(v) || 0); }
+    function $(id) { return document.getElementById(id); }
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    function api(sti, opt) {
+      opt = opt || {};
+      opt.credentials = 'same-origin';
+      opt.headers = Object.assign({ 'Content-Type': 'application/json' }, opt.headers || {});
+      return fetch(sti, opt);
+    }
+    function dato(s) {
+      if (!s) return '–';
+      var d = new Date(s);
+      return isNaN(d) ? '–' : d.toLocaleDateString('no-NO');
+    }
+
+    // ---- Aktivitets-statistikk ----
+    var aktivitetGraf = null;
+    function lastAktiviteter() {
+      api('/api/insights/activity-stats').then(function (r) { return r.json(); }).then(function (rows) {
+        if (!Array.isArray(rows)) return;
+
+        var totalOms = rows.reduce(function (s, r) { return s + (Number(r.omsetning) || 0); }, 0);
+        var totalBkn = rows.reduce(function (s, r) { return s + (Number(r.antall_bookinger) || 0); }, 0);
+        $('k-omsetning').textContent = kr(totalOms);
+        $('k-bookinger').textContent = totalBkn.toLocaleString('no-NO');
+
+        tegnAktivitetGraf(rows);
+
+        if (!rows.length) {
+          $('aktivitet-tabell').innerHTML = '<p class="tom">Ingen bookinger ennå.</p>';
+          return;
+        }
+        var html = '<table class="tbl"><thead><tr><th>Aktivitet</th>' +
+          '<th class="num">Bookinger</th><th class="num">Personer</th><th class="num">Omsetning</th></tr></thead><tbody>';
+        rows.forEach(function (r) {
+          html += '<tr><td>' + esc(r.aktivitet) + '</td>' +
+            '<td class="num">' + (Number(r.antall_bookinger) || 0).toLocaleString('no-NO') + '</td>' +
+            '<td class="num">' + (Number(r.antall_personer) || 0).toLocaleString('no-NO') + '</td>' +
+            '<td class="num belop">' + kr(r.omsetning) + '</td></tr>';
+        });
+        html += '</tbody></table>';
+        $('aktivitet-tabell').innerHTML = html;
+      }).catch(function () {});
+    }
+
+    function tegnAktivitetGraf(rows) {
+      var el = $('aktivitet-graf');
+      if (!el || typeof Chart !== 'function') return;
+      var labels = rows.map(function (r) { return r.aktivitet; });
+      var verdier = rows.map(function (r) { return (Number(r.omsetning) || 0); });
+      if (aktivitetGraf) {
+        aktivitetGraf.data.labels = labels;
+        aktivitetGraf.data.datasets[0].data = verdier;
+        aktivitetGraf.update();
+        return;
+      }
+      aktivitetGraf = new Chart(el, {
+        type: 'bar',
+        data: { labels: labels, datasets: [{ data: verdier, backgroundColor: '#163e66', borderRadius: 8, maxBarThickness: 70 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false },
+            tooltip: { callbacks: { label: function (c) { return kr(c.parsed.y); } } } },
+          scales: { y: { beginAtZero: true, ticks: { callback: function (v) { return v.toLocaleString('no-NO') + ' kr'; } } } }
+        }
+      });
+    }
+
+    // ---- Kunde-metrikker (CLV) ----
+    function lastKunder() {
+      api('/api/insights/customer-metrics').then(function (r) { return r.json(); }).then(function (rows) {
+        if (!Array.isArray(rows)) return;
+        $('k-kunder').textContent = rows.length.toLocaleString('no-NO');
+        var sumClv = rows.reduce(function (s, r) { return s + (Number(r.clv) || 0); }, 0);
+        $('k-clv').textContent = rows.length ? kr(Math.round(sumClv / rows.length)) : kr(0);
+
+        if (!rows.length) {
+          $('kunde-tabell').innerHTML = '<p class="tom">Ingen kunder ennå.</p>';
+          return;
+        }
+        var html = '<table class="tbl"><thead><tr><th>Kunde</th><th>E-post</th>' +
+          '<th class="num">Bookinger</th><th class="num">CLV</th><th class="num">Siste</th></tr></thead><tbody>';
+        rows.slice(0, 50).forEach(function (r) {
+          html += '<tr><td>' + esc(r.navn || '–') + '</td>' +
+            '<td>' + esc(r.epost) + '</td>' +
+            '<td class="num">' + (Number(r.antall_bookinger) || 0).toLocaleString('no-NO') + '</td>' +
+            '<td class="num belop">' + kr(r.clv) + '</td>' +
+            '<td class="num">' + dato(r.siste_booking) + '</td></tr>';
+        });
+        html += '</tbody></table>';
+        $('kunde-tabell').innerHTML = html;
+      }).catch(function () {});
+    }
+
+    // ---- Logg ut ----
+    var loggUt = $('logg-ut');
+    if (loggUt) {
+      loggUt.addEventListener('click', function (e) {
+        e.preventDefault();
+        api('/api/auth/logout', { method: 'POST' })
+          .then(function () { window.location = '/konto'; })
+          .catch(function () { window.location = '/konto'; });
+      });
+    }
+
+    lastAktiviteter();
+    lastKunder();
+  })();
+  </script>
+</body>
+</html>

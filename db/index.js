@@ -32,6 +32,30 @@ async function one(text, params) {
   return rows[0] || null;
 }
 
+// Kjører fn(client) inne i en transaksjon på ÉN connection fra poolen.
+// BEGIN → fn → COMMIT ved suksess; ROLLBACK + re-kast ved feil; alltid release.
+// Klienten holder samme connection, så SELECT ... FOR UPDATE-låser består
+// gjennom hele transaksjonen.
+async function withTransaction(fn) {
+  if (!pool) throw new Error('Database ikke konfigurert. Sett DATABASE_URL (Railway Postgres).');
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (e) {
+    try {
+      await client.query('ROLLBACK');
+    } catch (_) {
+      // svelg rollback-feil; den opprinnelige feilen re-kastes under
+    }
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
 async function init() {
   if (!pool) {
     console.warn('\n⚠  DATABASE_URL mangler — databasefunksjoner er AV.');
@@ -49,4 +73,4 @@ async function init() {
   }
 }
 
-module.exports = { pool, query, one, init, isConfigured };
+module.exports = { pool, query, one, init, isConfigured, withTransaction };
