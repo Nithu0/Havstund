@@ -26,6 +26,7 @@ import { ALL_TOOLS, getTool, isWriteTool, toolsForApi } from './tools.js';
 import { buildSystemPrompt } from './system-prompt.js';
 import { signConfirmToken, verifyConfirmToken } from '../lib/confirm-token.js';
 import { executeWrite, revalidateWrite } from './write-exec.js';
+import { MEMORY_TOOLS, isMemoryTool, runMemoryTool } from './memory/tools.js';
 import type { BrainStore, PendingAction } from './store.js';
 import type { WebsitePort } from '../port/website-port.js';
 import type { LessonRow } from './store.js';
@@ -58,6 +59,11 @@ export interface ProposedWrite {
 export type AgentTurn =
   | { kind: 'final'; text: string; conversationId: string; transcript: ConversationMessage[] }
   | { kind: 'proposal'; text: string; proposal: ProposedWrite; conversationId: string; transcript: ConversationMessage[] };
+
+/** Website-verktøy + memory-verktøy i Anthropic-format. */
+function allApiTools() {
+  return [...toolsForApi(), ...MEMORY_TOOLS.map((t) => ({ name: t.name, description: t.description, input_schema: t.input_schema }))];
+}
 
 function textOf(resp: MessageResponse): string {
   return resp.content
@@ -100,7 +106,7 @@ export class Agent {
         max_tokens: MAX_TOKENS,
         system,
         messages,
-        tools: toolsForApi(),
+        tools: allApiTools(),
         tool_choice: { type: 'auto', disable_parallel_tool_use: true },
         thinking: { type: 'adaptive' },
         output_config: { effort: 'high' },
@@ -173,8 +179,12 @@ export class Agent {
         };
       }
 
-      // LESE-verktøy: kjør automatisk, mat tool_result tilbake.
-      const result = await this.runReadTool(tu.name, tu.input);
+      // Memory-verktøy (save/correct/retire_lesson): trygge, ingen confirm —
+      // de endrer kun agentens hukommelse, ikke nettsiden. Kjør automatisk.
+      // writeLesson håndhever domene-isolasjon + assertNoHardState.
+      const result = isMemoryTool(tu.name)
+        ? await runMemoryTool(this.deps.store, tu.name, tu.input)
+        : await this.runReadTool(tu.name, tu.input);
       const block: ToolResultBlock = {
         type: 'tool_result',
         tool_use_id: tu.id,
@@ -307,7 +317,7 @@ export class Agent {
       max_tokens: MAX_TOKENS,
       system: buildSystemPrompt({ lessons }),
       messages,
-      tools: toolsForApi(),
+      tools: allApiTools(),
       tool_choice: { type: 'auto', disable_parallel_tool_use: true },
       thinking: { type: 'adaptive' },
       output_config: { effort: 'high' },

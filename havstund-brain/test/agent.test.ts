@@ -227,6 +227,35 @@ describe('set_booking_status revalidering (stale + gyldig overgang)', () => {
   });
 });
 
+describe('lærings-loop: lessons injiseres + memory-verktøy kjøres i loopen', () => {
+  it('aktive lessons injiseres i system-prompten', async () => {
+    const port = new MockWebsiteAdapter(baseSeed);
+    const store = new InMemoryStore();
+    await store.insertLesson({ domain: 'customer', type: 'preference', entity_ref: null, payload: { note: 'Svar alltid på norsk' }, confidence: 0.9, source: 'admin_correction', supersedes: null });
+    const client = new StubAnthropic([textTurn('ok')]);
+    const agent = new Agent({
+      client, port, store, model: MODEL, confirmSecret: SECRET, confirmTtlMin: 15, allowWrites: true,
+      getLessons: async () => store.getLessons({ domain: 'customer', status: 'active' }),
+    });
+    await agent.message({ text: 'hei' });
+    expect(client.calls[0]!.system).toContain('Svar alltid på norsk');
+  });
+
+  it('save_lesson kjøres automatisk i loopen (ingen confirm) og persisteres', async () => {
+    const port = new MockWebsiteAdapter(baseSeed);
+    const store = new InMemoryStore();
+    const client = new StubAnthropic([
+      toolTurn('save_lesson', { domain: 'timesheet', type: 'pattern', entity_ref: 'ansatt:3', note: 'Per fører sjelden helg' }),
+      textTurn('Notert.'),
+    ]);
+    const agent = new Agent({ client, port, store, model: MODEL, confirmSecret: SECRET, confirmTtlMin: 15, allowWrites: true });
+    const turn = await agent.message({ text: 'Per jobber ikke lørdager' });
+    expect(turn.kind).toBe('final'); // memory-verktøy gir ikke forslag
+    const lessons = await store.getLessons({ domain: 'timesheet', entityRef: 'ansatt:3', status: 'active' });
+    expect(lessons).toHaveLength(1);
+  });
+});
+
 describe('META: hvert skrive-verktøy har propose+execute-dekning', () => {
   // Per-verktøy: ett scriptet tool_use → forslag → confirm → utført.
   const cases: Record<string, Record<string, unknown>> = {
