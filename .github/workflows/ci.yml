@@ -20,8 +20,12 @@ jobs:
       - name: Install dependencies
         run: npm ci || npm install
 
-      - name: Security audit (non-blocking)
-        run: npm audit --omit=dev || true
+      # Blocks CI (red) if a high/critical-severity prod-dependency CVE appears.
+      # --omit=dev: dev-only tooling vulns don't gate releases. Moderate/low are
+      # surfaced by Dependabot alerts (now enabled), not the gate. Lower
+      # --audit-level if moderates should also block.
+      - name: Security audit (blocking on high/critical)
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Test
         run: npm test --if-present
