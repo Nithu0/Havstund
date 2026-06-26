@@ -16,7 +16,9 @@ function utilgjengelig(res) {
   return res.status(503).json({ error: 'Meldinger er midlertidig utilgjengelig. Prøv igjen om litt.' });
 }
 
-const erAnsatt = (u) => u && (u.rolle === 'ansatt' || u.rolle === 'admin');
+// 'agent' (service-token, brain) behandles som ansatt/admin: svarer kunder via
+// ?bruker_id= og leser kundetråder. Egen kunde-gren (req.user.id) treffes aldri.
+const erAnsatt = (u) => u && (u.rolle === 'ansatt' || u.rolle === 'admin' || u.rolle === 'agent');
 
 // GET / — kundens egen tråd, eller (ansatt/admin) en valgt kundes tråd
 router.get('/', async (req, res) => {

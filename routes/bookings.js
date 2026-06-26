@@ -181,7 +181,9 @@ router.get('/', async (req, res) => {
   }
 
   try {
-    const erAnsatt = req.user.rolle === 'ansatt' || req.user.rolle === 'admin';
+    // 'agent' (service-token, brain) leser som ansatt/admin: hele lista.
+    const erAnsatt =
+      req.user.rolle === 'ansatt' || req.user.rolle === 'admin' || req.user.rolle === 'agent';
     if (erAnsatt) {
       const { rows } = await db.query(
         `SELECT b.*, a.navn AS aktivitet_navn

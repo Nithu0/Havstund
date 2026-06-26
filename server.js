@@ -15,6 +15,7 @@ const { Server } = require('socket.io');
 
 const db = require('./db');
 const { authOptional } = require('./lib/auth');
+const { agentAuth, agentGate } = require('./lib/agent-auth');
 const { applySecurity } = require('./lib/security');
 const { logger, lagRequestLogger } = require('./lib/logger');
 const sentry = require('./lib/sentry');
@@ -37,7 +38,9 @@ sentry.init(app);
 
 app.use(express.json({ limit: '8mb' }));
 app.use(cookieParser());
+app.use(agentAuth);    // service-token -> 'agent'-principal (brain). FØR authOptional.
 app.use(authOptional); // setter req.user hvis innlogget (valgfritt)
+app.use(agentGate);    // agent kun på allowlistede ruter (også handler-rolle-ruter)
 
 // Helsesjekk for Railway — pinger DB med SELECT 1 (db.ping). Svarer 200 når
 // databasen faktisk svarer, ellers 503. Kaster aldri selv (try/catch).
