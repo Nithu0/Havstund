@@ -66,7 +66,9 @@ export class PgStore implements BrainStore {
 
   async migrate(): Promise<void> {
     const here = dirname(fileURLToPath(import.meta.url));
-    // I dist/ ligger migrations.sql ved siden av; i src under utvikling også.
+    // I dist/ ligger migrations.sql ved siden av (build kopierer den til
+    // dist/src/brain/migrations.sql); i src under utvikling også. Idempotent —
+    // filen bruker CREATE TABLE IF NOT EXISTS, trygt å kjøre gjentatte ganger.
     const sql = readFileSync(join(here, 'migrations.sql'), 'utf8');
     await this.pool.query(sql);
   }
