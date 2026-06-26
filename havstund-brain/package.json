@@ -4,11 +4,11 @@
   "description": "Havstund Brain — pluggbar AI-agent med lærings-hjerne. Egen prosess, snakker med nettsidens REST-API over service-token. Av/på utenfor nettsidens hot path.",
   "private": true,
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json && node -e \"require('fs').copyFileSync('src/brain/migrations.sql','dist/src/brain/migrations.sql')\"",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "start": "node dist/index.js",
+    "start": "node dist/src/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
