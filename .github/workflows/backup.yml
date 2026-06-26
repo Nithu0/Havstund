@@ -1,0 +1,77 @@
+name: Scheduled DB backup
+
+# Nattlig pg_dump av produksjonsdatabasen, lastet opp som GitHub Actions-
+# artifact (retention 30 dager). Belte-og-bukseseler oppa Railways egne
+# snapshots — IKKE ekte off-site DR alene (artifacts ligger hos GitHub).
+#
+# KREVER repo-secret DATABASE_URL (operator maa legge til):
+#   Settings -> Secrets and variables -> Actions -> New repository secret
+#   Name: DATABASE_URL   Value: <Railway Postgres connection string>
+# Uten secreten hopper jobben pent over (ingen rod CI) — se "guard"-steget.
+#
+# Gjenbruker scripts/backup.sh slik at backup-logikken (dump + gzip +
+# --no-owner/--no-acl) er den samme som ved manuell/cron-kjoring.
+
+on:
+  schedule:
+    # 02:30 UTC hver natt (~03:30/04:30 norsk tid avh. sommertid).
+    - cron: '30 2 * * *'
+  # Tillat manuell kjoring fra Actions-fanen (test/ad-hoc).
+  workflow_dispatch:
+
+# Backupen kan inneholde personopplysninger — begrens tokenets rettigheter.
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Hopp pent over (ikke feil) hvis DATABASE_URL-secreten ikke er satt enda.
+      # Setter run=true bare naar secreten finnes.
+      - name: Guard — krever DATABASE_URL-secret
+        id: guard
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL-secret mangler — hopper over backup."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # pg_dump matchende en nyere server-major (unngaar "server version
+      # mismatch"). Henter postgresql-client-16 fra PGDG-repoet.
+      - name: Installer postgresql-client (16)
+        if: steps.guard.outputs.run == 'true'
+        run: |
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-16
+
+      - name: Ta backup (scripts/backup.sh)
+        if: steps.guard.outputs.run == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BACKUP_DIR: ./backups
+          # Lokal prune-retention irrelevant her (frisk runner hver gang);
+          # artifact-retention styres av upload-steget under.
+          BACKUP_RETENTION: '1'
+          # postgresql-client-common-wrapperen /usr/bin/pg_dump velger hoyeste
+          # installerte versjon (16), saa default PGDUMP=pg_dump holder.
+        run: |
+          chmod +x scripts/backup.sh
+          ./scripts/backup.sh
+
+      - name: Last opp dump som artifact (retention 30 dager)
+        if: steps.guard.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: havstund-db-backup
+          path: backups/havstund-*.sql.gz
+          retention-days: 30
+          if-no-files-found: error
