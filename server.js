@@ -64,6 +64,9 @@ if (fs.existsSync(routesDir)) {
   }
 }
 
+// ---- AI-brain (av/på via BRAIN_ENABLED). Returnerer umiddelbart når av. ----
+require('./integrations/brain-shim')(app);
+
 // ---- Auto-last Socket.IO-handlere: realtime/*.js (exporterer function(io)) ----
 const rtDir = path.join(__dirname, 'realtime');
 if (fs.existsSync(rtDir)) {
