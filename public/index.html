@@ -4,6 +4,59 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title data-no="Havstund — Et øyeblikk med havet" data-en="Havstund — A moment with the sea">Havstund — Et øyeblikk med havet</title>
+
+  <!-- ---- SEO / deling (statisk, additivt) ---- -->
+  <meta name="description" content="Havstund — keramikk- og kunststudio på Ballstad i Lofoten. Lag noe ekte med dine egne hender: keramikk, kollektivt maleri og barneklubb. Book en opplevelse." />
+  <link rel="canonical" href="https://havstund.no/" />
+  <meta name="robots" content="index,follow" />
+  <meta name="theme-color" content="#225781" />
+
+  <!-- Open Graph (Facebook, LinkedIn m.fl.) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Havstund" />
+  <meta property="og:locale" content="nb_NO" />
+  <meta property="og:locale:alternate" content="en_US" />
+  <meta property="og:title" content="Havstund — Et øyeblikk med havet" />
+  <meta property="og:description" content="Keramikk- og kunststudio på Ballstad i Lofoten. Lag noe ekte med dine egne hender — og book en opplevelse." />
+  <meta property="og:url" content="https://havstund.no/" />
+  <meta property="og:image" content="https://havstund.no/bilder/hero-bg.jpg" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Havstund — Et øyeblikk med havet" />
+  <meta name="twitter:description" content="Keramikk- og kunststudio på Ballstad i Lofoten. Lag noe ekte med dine egne hender." />
+  <meta name="twitter:image" content="https://havstund.no/bilder/hero-bg.jpg" />
+
+  <!-- Strukturert data (schema.org) — turistattraksjon / lokal virksomhet + tilbud -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": ["TouristAttraction", "LocalBusiness"],
+    "name": "Havstund",
+    "description": "Keramikk- og kunststudio på Ballstad i Lofoten — keramikk, kollektivt maleri og barneklubb.",
+    "url": "https://havstund.no/",
+    "image": "https://havstund.no/bilder/hero-bg.jpg",
+    "email": "post@havstund.no",
+    "slogan": "Et øyeblikk med havet",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Ballstad",
+      "addressRegion": "Lofoten",
+      "addressCountry": "NO"
+    },
+    "makesOffer": {
+      "@type": "Offer",
+      "name": "Book en opplevelse",
+      "url": "https://havstund.no/#booking",
+      "availability": "https://schema.org/InStock",
+      "itemOffered": {
+        "@type": "Service",
+        "name": "Keramikk- og kunstopplevelser"
+      }
+    }
+  }
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,0,400;9..144,0,500;9..144,0,600;9..144,1,400&family=Caveat:wght@500;600;700&family=Quicksand:wght@500;600;700&family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -295,13 +348,17 @@
     </nav>
   </header>
 
+  <!-- KAMPANJE-BANNER (CMS-styrt via /api/content -> kampanje_banner).
+       Skjult til serveren gir innhold; forsiden setter kun textContent. -->
+  <div id="kampanjeBanner" role="status" style="display:none;background:var(--leire);color:#fff;text-align:center;padding:11px 18px;font-weight:600;font-size:.95rem;letter-spacing:.01em;" data-no="" data-en=""></div>
+
   <!-- HERO -->
   <div class="hero">
     <div class="hero-bg" aria-hidden="true"></div>
     <div class="hero-inner">
       <div class="liten reveal" data-no="Keramikk- og kunststudio · Ballstad, Lofoten" data-en="Ceramics & art studio · Ballstad, Lofoten">Keramikk- og kunststudio · Ballstad, Lofoten</div>
       <h1 class="reveal delay-1"><img src="bilder/wordmark.png" alt="Havstund" class="hero-wordmark"></h1>
-      <div class="tagline reveal delay-1" data-no="Et øyeblikk med havet" data-en="A moment with the sea">Et øyeblikk med havet</div>
+      <div id="heroSitat" class="tagline reveal delay-1" data-no="Et øyeblikk med havet" data-en="A moment with the sea">Et øyeblikk med havet</div>
       <p class="reveal delay-2" data-no="Lag noe ekte av Lofoten med dine egne hender — og ta med deg hjem noe som varer, og en følelse du aldri glemmer." data-en="Create something real from Lofoten with your own hands — and bring home something that lasts, and a feeling you'll never forget.">Lag noe ekte av Lofoten med dine egne hender — og ta med deg hjem noe som varer, og en følelse du aldri glemmer.</p>
       <a href="#booking" class="knapp magnetisk reveal delay-3" data-no="Book en opplevelse" data-en="Book an experience">Book en opplevelse</a>
     </div>
@@ -461,7 +518,7 @@
   <!-- NYHETER -->
   <section id="nyheter" class="nyheter full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
     <h2 class="seksjon-tittel reveal" data-no="Nyheter" data-en="News">Nyheter</h2>
-    <p class="seksjon-undertekst reveal delay-1" data-no="Her legger vi ut alt nytt til dere — nyeste øverst. Send meg teksten, så legger jeg den inn." data-en="Here we post everything new — newest on top. Send me the text and I'll add it.">Her legger vi ut alt nytt til dere — nyeste øverst. Send meg teksten, så legger jeg den inn.</p>
+    <p id="nyheterIntro" class="seksjon-undertekst reveal delay-1" data-no="Her legger vi ut alt nytt til dere — nyeste øverst." data-en="Here we post everything new — newest on top.">Her legger vi ut alt nytt til dere — nyeste øverst.</p>
     <div style="max-width:780px;margin:0 auto;">
       <div class="nyhet reveal">
         <div class="dato" data-no="Eksempel" data-en="Example">Eksempel</div>
@@ -595,6 +652,30 @@
       if(typeof aktiverOrdvis==='function') aktiverOrdvis();
     }
     (function(){ var s=null; try{s=localStorage.getItem('havstund-lang');}catch(e){} if(s==='en') setLang('en'); })();
+
+    /* ---- Redigerbart innhold (CMS) — henter offentlig /api/content og
+       oppdaterer data-no/data-en på utvalgte elementer. HTML beholdes som
+       fallback: feiler kallet eller er verdien tom, står markup igjen.
+       Rendres via textContent (setLang), aldri innerHTML. ---- */
+    (function(){
+      var MAAL = { hero_sitat:'heroSitat', nyheter:'nyheterIntro', kampanje_banner:'kampanjeBanner' };
+      function gjeldendeSprak(){ return document.documentElement.lang === 'en' ? 'en' : 'no'; }
+      fetch('/api/content').then(function(r){ return r.ok ? r.json() : null; }).then(function(data){
+        if(!data || typeof data !== 'object') return;
+        Object.keys(MAAL).forEach(function(nokkel){
+          var el = document.getElementById(MAAL[nokkel]);
+          var v = data[nokkel];
+          if(!el || !v) return;
+          var no = v.no != null ? String(v.no) : '';
+          var en = v.en != null ? String(v.en) : '';
+          if(!no && !en) return; // tom CMS-verdi -> behold HTML-fallback
+          if(no) el.setAttribute('data-no', no);
+          el.setAttribute('data-en', en || no);
+          if(nokkel === 'kampanje_banner') el.style.display = ''; // vis banner når innhold finnes
+        });
+        setLang(gjeldendeSprak()); // rendrer trygt via textContent
+      }).catch(function(){});
+    })();
 
     /* ---- Scroll-reveal (ting glir inn) ---- */
     var io = new IntersectionObserver(function(entries){
