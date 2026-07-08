@@ -8,7 +8,7 @@ const db = require('../../db');
 
 // Logger alle SQL-kall + styrer svar pa db.one basert pa SQL-teksten.
 const calls = [];
-const state = { bruker: { id: 7, anonymized_at: null } };
+const state = { bruker: { id: 7, anonymized_at: null }, failOn: null };
 
 db.isConfigured = () => true;
 db.one = async (text, params) => {
@@ -19,6 +19,19 @@ db.one = async (text, params) => {
 db.query = async (text, params) => {
   calls.push({ fn: 'query', text, params });
   return { rows: [] };
+};
+// Anonymiseringen kjorer naa i EN transaksjon -> mock withTransaction slik at
+// client.query logges likt. En simulert feil propagerer som en ekte tx ville
+// rullet tilbake, saa ingen UPDATE committes uavhengig av de andre.
+db.withTransaction = async (fn) => {
+  const client = {
+    query: async (text, params) => {
+      calls.push({ fn: 'query', text, params });
+      if (state.failOn && state.failOn.test(text)) throw new Error('simulert DB-feil');
+      return { rows: [] };
+    },
+  };
+  return fn(client);
 };
 
 const router = require('../../routes/gdpr');
@@ -51,6 +64,7 @@ describe('POST /api/gdpr/anonymize/:customerId', () => {
   beforeEach(() => {
     calls.length = 0;
     state.bruker = { id: 7, anonymized_at: null };
+    state.failOn = null;
   });
 
   it('sender riktig anonymiserings-SQL (users + bookings) og svarer ok', async () => {
@@ -61,7 +75,7 @@ describe('POST /api/gdpr/anonymize/:customerId', () => {
       expect(res.body).toEqual({ ok: true, anonymized: 7 });
 
       const updates = calls.filter((c) => c.fn === 'query' && /^\s*UPDATE/i.test(c.text));
-      expect(updates).toHaveLength(2);
+      expect(updates).toHaveLength(3);
 
       const usersSql = updates.find((c) => /UPDATE users/i.test(c.text));
       expect(usersSql).toBeTruthy();
@@ -80,6 +94,25 @@ describe('POST /api/gdpr/anonymize/:customerId', () => {
       expect(bookingsSql.text).not.toMatch(/belop/i);
       expect(bookingsSql.text).not.toMatch(/antall/i);
       expect(bookingsSql.params).toEqual([7]);
+
+      const chatSql = updates.find((c) => /UPDATE chat_threads/i.test(c.text));
+      expect(chatSql).toBeTruthy();
+      expect(chatSql.text).toMatch(/navn\s*=\s*'\[slettet\]'/i);
+      expect(chatSql.text).toMatch(/epost\s*=\s*NULL/i);
+      expect(chatSql.params).toEqual([7]);
+    } finally { srv.close(); }
+  });
+
+  it('ruller tilbake (500) og naar aldri chat_threads nar bookings-UPDATE feiler', async () => {
+    state.failOn = /UPDATE bookings/i;
+    const srv = await lytt(lagApp(ADMIN));
+    try {
+      const res = await post(srv, '/api/gdpr/anonymize/7');
+      expect(res.status).toBe(500);
+      // bookings feiler -> resten av transaksjonen avbrytes (ekte ROLLBACK er
+      // DB-nivaa). chat_threads-UPDATE skal derfor aldri ha kjort.
+      const chatSql = calls.find((c) => /UPDATE chat_threads/i.test(c.text || ''));
+      expect(chatSql).toBeUndefined();
     } finally { srv.close(); }
   });
 

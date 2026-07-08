@@ -66,6 +66,11 @@ router.post('/register', async (req, res) => {
     setAuthCookie(res, token);
     return res.status(201).json({ user: offentligBruker(bruker) });
   } catch (e) {
+    // Race: forhaandssjekken passerte, men INSERT tapte pga UNIQUE(epost) -> 23505.
+    // Map til samme 409 som forhaandssjekken (speiler routes/staff.js /invite).
+    if (e.code === '23505') {
+      return res.status(409).json({ error: 'E-postadressen er allerede registrert.' });
+    }
     if (/Database ikke konfigurert/i.test(e.message)) return dbUtilgjengelig(res);
     console.error('register-feil:', e.message);
     return res.status(500).json({ error: 'Noe gikk galt ved registrering.' });
