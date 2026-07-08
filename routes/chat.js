@@ -9,6 +9,7 @@ const db = require('../db');
 const ai = require('../lib/ai');
 const { requireRole } = require('../lib/auth');
 const discord = require('../lib/discord');
+const { signChatToken, verifyChatToken, chatTokenId } = require('../lib/chat-token');
 
 const router = express.Router();
 
@@ -28,6 +29,17 @@ function emitMelding(req, threadId, melding) {
   }
 }
 
+// Eierskaps-sjekk mot IDOR (anonym chat): TRUE hvis ansatt/admin, innlogget
+// eier (traad.bruker_id === req.user.id), eller gyldig SIGNERT cookie for
+// nettopp denne tråden. Fail-closed ellers — usignerte/forfalskede cookies
+// validerer ikke. Se lib/chat-token.js.
+function harTilgang(traad, req) {
+  if (req.user && (req.user.rolle === 'ansatt' || req.user.rolle === 'admin')) return true;
+  if (req.user && traad.bruker_id != null && Number(traad.bruker_id) === Number(req.user.id)) return true;
+  const token = req.cookies && req.cookies[CHAT_COOKIE];
+  return verifyChatToken(token, traad.id);
+}
+
 // POST /thread — opprett ny tråd, eller gjenbruk via cookie hvis den fortsatt finnes
 router.post('/thread', async (req, res) => {
   if (!db.isConfigured()) return utilgjengelig(res);
@@ -37,8 +49,10 @@ router.post('/thread', async (req, res) => {
 
   try {
     // Gjenbruk eksisterende tråd hvis cookie peker på en gyldig, ikke-lukket tråd
-    const cookieId = Number(req.cookies && req.cookies[CHAT_COOKIE]);
-    if (Number.isInteger(cookieId) && cookieId > 0) {
+    // Kun en gyldig SIGNERT cookie får gjenbruke en tråd — hindrer at en
+    // forfalsket cookie leser tråd-id eller overskriver en annens navn/epost.
+    const cookieId = chatTokenId(req.cookies && req.cookies[CHAT_COOKIE]);
+    if (cookieId) {
       const eksisterende = await db.one(
         "SELECT id FROM chat_threads WHERE id = $1 AND status <> 'lukket'",
         [cookieId]
@@ -62,7 +76,7 @@ router.post('/thread', async (req, res) => {
       [navn || null, epost || null, brukerId]
     );
 
-    res.cookie(CHAT_COOKIE, String(traad.id), {
+    res.cookie(CHAT_COOKIE, signChatToken(traad.id), {
       httpOnly: true, // frontend leser den ikke — beskytt mot XSS-tyveri
       sameSite: 'lax',
       maxAge: 7 * 24 * 3600 * 1000,
@@ -88,8 +102,11 @@ router.post('/thread/:id/message', async (req, res) => {
   if (tekst.length > 4000) return res.status(400).json({ error: 'Meldingen er for lang' });
 
   try {
-    const traad = await db.one('SELECT id, status, navn FROM chat_threads WHERE id = $1', [id]);
+    const traad = await db.one('SELECT id, status, navn, bruker_id FROM chat_threads WHERE id = $1', [id]);
     if (!traad) return res.status(404).json({ error: 'Tråd ikke funnet' });
+    // Ingen tilgang behandles som ikke funnet (404) — unngå eksistens-orakel
+    // via sekvensielle tråd-id-er. Se harTilgang().
+    if (!harTilgang(traad, req)) return res.status(404).json({ error: 'Tråd ikke funnet' });
 
     // Lagre kundens melding
     const kundeMelding = await db.one(
@@ -171,10 +188,14 @@ router.get('/thread/:id/messages', async (req, res) => {
 
   try {
     const traad = await db.one(
-      'SELECT id, navn, epost, status, opprettet, sist FROM chat_threads WHERE id = $1',
+      'SELECT id, navn, epost, status, opprettet, sist, bruker_id FROM chat_threads WHERE id = $1',
       [id]
     );
     if (!traad) return res.status(404).json({ error: 'Tråd ikke funnet' });
+    // Ingen tilgang behandles som ikke funnet (404) — unngå eksistens-orakel.
+    if (!harTilgang(traad, req)) return res.status(404).json({ error: 'Tråd ikke funnet' });
+    // Ikke lekk eierskap til klienten — bruker_id er kun for tilgangssjekken.
+    delete traad.bruker_id;
 
     const { rows } = await db.query(
       `SELECT id, thread_id, avsender, tekst, opprettet
