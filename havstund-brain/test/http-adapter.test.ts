@@ -32,9 +32,14 @@ function route(req: IncomingMessage, res: ServerResponse, body: unknown) {
   if (method === 'GET' && url === '/api/hours') return json(200, { hours: [{ ukedag: 0, apner: '09:00', stenger: '17:00', stengt: false }], closed: [{ dato: '2026-12-25', grunn: 'jul' }] });
   if (method === 'GET' && url.startsWith('/api/availability')) return json(200, [{ id: 1, activity_id: 1, dato: '2026-07-01', tid: '10:00', kapasitet: 3 }]);
   if (method === 'GET' && url === '/api/bookings') return json(200, [{ id: 5, activity_id: 1, bruker_id: null, navn: 'A', epost: 'a@b.no', tlf: null, dato: '2026-07-01', tid: '10:00', antall: 1, status: 'bekreftet', belop: 500, melding: null }]);
-  if (method === 'POST' && url === '/api/bookings') return json(201, { booking: { id: 9, activity_id: 1, bruker_id: null, navn: 'Ny', epost: 'n@b.no', tlf: null, dato: '2026-07-01', tid: '10:00', antall: 1, status: 'forespurt', belop: 500, melding: null } });
+  if (method === 'POST' && url === '/api/bookings') {
+    const nb = body as { navn?: string } | null;
+    if (nb && nb.navn === '__FULLT__') return json(409, { error: 'Ingen ledige plasser', code: 'fullt', feil: 'fullt' });
+    if (nb && nb.navn === '__STENGT__') return json(409, { error: 'Stengt den datoen', code: 'stengt', feil: 'stengt' });
+    if (nb && nb.navn === '__FULLT_LEGACY__') return json(409, { feil: 'fullt' });
+    return json(201, { booking: { id: 9, activity_id: 1, bruker_id: null, navn: 'Ny', epost: 'n@b.no', tlf: null, dato: '2026-07-01', tid: '10:00', antall: 1, status: 'forespurt', belop: 500, melding: null } });
+  }
   if (method === 'PATCH' && url === '/api/bookings/9') return json(200, { booking: { id: 9, status: 'bekreftet', activity_id: 1, bruker_id: null, navn: 'Ny', epost: 'n@b.no', tlf: null, dato: '2026-07-01', tid: '10:00', antall: 1, belop: 500, melding: null } });
-  if (method === 'POST' && url === '/api/bookings/full') return json(409, { feil: 'fullt' });
   if (method === 'GET' && url.startsWith('/api/meldinger')) return json(200, { kunde: { id: 1, navn: 'Kari', epost: 'k@b.no', rolle: 'kunde' }, meldinger: [{ id: 1, bruker_id: 1, avsender: 'kunde', tekst: 'hei', pris: null, lest: false, opprettet: '2026-06-01' }] });
   if (method === 'POST' && url.startsWith('/api/meldinger')) return json(201, { melding: { id: 2, bruker_id: 1, avsender: 'admin', tekst: 'svar', pris: null, lest: false, opprettet: '2026-06-02' } });
   if (method === 'GET' && url === '/api/admin/content') return json(200, [{ nokkel: 'forside.tittel', verdi: 'Hei', oppdatert: '2026-06-01' }]);
@@ -142,5 +147,26 @@ describe('HttpWebsiteAdapter — skrive + feil-mapping', () => {
   it('updateBooking nektes (ikke støttet av API)', async () => {
     const a = adapter();
     await expect(a.updateBooking(1, { melding: 'x' })).rejects.toMatchObject({ code: 'validation' });
+  });
+
+  it('createBooking 409 code:fullt → CapacityError (driver fail())', async () => {
+    const a = adapter();
+    await expect(
+      a.createBooking({ activity_id: 1, navn: '__FULLT__', epost: 'n@b.no', dato: '2026-07-01', tid: '10:00', antall: 1 }),
+    ).rejects.toMatchObject({ code: 'capacity' });
+  });
+
+  it('createBooking 409 code:stengt → ClosedDayError (driver fail())', async () => {
+    const a = adapter();
+    await expect(
+      a.createBooking({ activity_id: 1, navn: '__STENGT__', epost: 'n@b.no', dato: '2026-07-01', tid: '10:00', antall: 1 }),
+    ).rejects.toMatchObject({ code: 'closed_day' });
+  });
+
+  it('createBooking 409 legacy {feil:fullt} → CapacityError (superset-migrering)', async () => {
+    const a = adapter();
+    await expect(
+      a.createBooking({ activity_id: 1, navn: '__FULLT_LEGACY__', epost: 'n@b.no', dato: '2026-07-01', tid: '10:00', antall: 1 }),
+    ).rejects.toMatchObject({ code: 'capacity' });
   });
 });

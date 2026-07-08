@@ -157,7 +157,11 @@
       })
       .then(function (res) {
         if (!res.ok) {
-          throw new Error((res.body && res.body.error) || 'Noe gikk galt. Prøv igjen.');
+          var b = res.body || {};
+          var kode = b.code || b.feil;
+          if (kode === 'fullt') throw new Error('Beklager, det er dessverre fullt for valgt dato/tidspunkt. Prøv et annet tidspunkt.');
+          if (kode === 'stengt') throw new Error('Vi holder dessverre stengt den valgte datoen. Velg en annen dag.');
+          throw new Error(b.error || 'Noe gikk galt. Prøv igjen.');
         }
         visBekreftelse();
         form.reset();

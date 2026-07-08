@@ -1,7 +1,7 @@
 // describe/it/expect er globale (vitest.config.js -> globals: true)
 // Tester /api/bookings Fase 2 + 3:
-//  - POST -> 409 {feil:'fullt'} ved overbooking
-//  - POST -> 409 {feil:'stengt'} ved stengt dag (closed_dates)
+//  - POST -> 409 {error,code:'fullt',feil:'fullt'} ved overbooking (superset)
+//  - POST -> 409 {error,code:'stengt',feil:'stengt'} ved stengt dag (closed_dates)
 //  - GET /agenda -> filtrerer dato >= og krever rolle
 //  - POST regnskapspost faar aktivitetens mva_sats (per-akt MVA)
 //  - POST /:id/refusjon -> negativ regnskapspost
@@ -154,25 +154,29 @@ function reset() {
 const HVERDAG = '2026-07-07';
 
 describe('POST /api/bookings — kapasitet (#3)', () => {
-  it('avviser overbooking med 409 {feil:fullt}', async () => {
+  it('avviser overbooking med 409 {error,code:fullt,feil:fullt}', async () => {
     reset();
     state.sum = 8; // allerede fullt (kapasitet 8)
     const srv = await lytt(lagApp(KUNDE));
     try {
       const r = await post(srv, '/api/bookings', { activity_id: 1, navn: 'Kari', epost: 'k@x.no', dato: HVERDAG, tid: '12:00', antall: 1 });
       expect(r.status).toBe(409);
-      expect(r.body.feil).toBe('fullt');
+      expect(r.body.code).toBe('fullt');
+      expect(r.body.feil).toBe('fullt'); // superset bevart under migrering
+      expect(typeof r.body.error).toBe('string');
     } finally { srv.close(); }
   });
 
-  it('avviser stengt dag med 409 {feil:stengt}', async () => {
+  it('avviser stengt dag med 409 {error,code:stengt,feil:stengt}', async () => {
     reset();
     state.closed = { dato: HVERDAG };
     const srv = await lytt(lagApp(KUNDE));
     try {
       const r = await post(srv, '/api/bookings', { activity_id: 1, navn: 'Kari', epost: 'k@x.no', dato: HVERDAG, tid: '12:00', antall: 2 });
       expect(r.status).toBe(409);
-      expect(r.body.feil).toBe('stengt');
+      expect(r.body.code).toBe('stengt');
+      expect(r.body.feil).toBe('stengt'); // superset bevart under migrering
+      expect(typeof r.body.error).toBe('string');
     } finally { srv.close(); }
   });
 
