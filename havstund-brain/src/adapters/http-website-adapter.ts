@@ -125,10 +125,10 @@ export class HttpWebsiteAdapter implements WebsitePort {
     const msg =
       (data && typeof data === 'object' && ((data as Record<string, unknown>).error || (data as Record<string, unknown>).feil)) ||
       `HTTP ${status}`;
-    const feil = (data as Record<string, unknown> | null)?.feil;
+    const kode = (data && typeof data === 'object') ? ((data as Record<string, unknown>).code ?? (data as Record<string, unknown>).feil) : undefined;
     if (status === 404) throw new NotFoundError(String(msg));
-    if (status === 409 && feil === 'fullt') throw new CapacityError();
-    if (status === 409 && feil === 'stengt') throw new ClosedDayError();
+    if (status === 409 && kode === 'fullt') throw new CapacityError();
+    if (status === 409 && kode === 'stengt') throw new ClosedDayError();
     if (status === 400) throw new ValidationError(String(msg), data);
     throw new WebsiteApiError(`${ctx}: ${String(msg)}`, status, data);
   }

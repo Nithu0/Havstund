@@ -57,7 +57,7 @@ router.post('/', async (req, res) => {
       [dato]
     );
     if (stengtDato) {
-      return res.status(409).json({ feil: 'stengt' });
+      return res.status(409).json({ error: 'Vi holder dessverre stengt den valgte datoen.', code: 'stengt', feil: 'stengt' });
     }
     const ukedag = ukedagFraDato(dato);
     if (ukedag !== null) {
@@ -66,7 +66,7 @@ router.post('/', async (req, res) => {
         [ukedag]
       );
       if (bh && bh.stengt) {
-        return res.status(409).json({ feil: 'stengt' });
+        return res.status(409).json({ error: 'Vi holder dessverre stengt den valgte datoen.', code: 'stengt', feil: 'stengt' });
       }
     }
 
@@ -158,7 +158,7 @@ router.post('/', async (req, res) => {
     });
 
     if (fullt) {
-      return res.status(409).json({ feil: 'fullt' });
+      return res.status(409).json({ error: 'Beklager, det er dessverre fullt paa valgt tidspunkt.', code: 'fullt', feil: 'fullt' });
     }
 
     // Varsle Discord (#general) — fire-and-forget, stopper aldri bookingen

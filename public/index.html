@@ -711,8 +711,16 @@
       fetch('/api/bookings', {
         method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(data)
       })
-        .then(function(r){ if(r.ok){ knapp.style.display='none'; document.getElementById('takk').style.display='block'; } else { throw new Error(r.status); } })
-        .catch(function(){ knapp.disabled=false; knapp.textContent='Send forespørsel'; alert('Beklager - noe gikk galt. Prøv igjen.'); });
+        .then(function(r){
+          if(r.ok){ knapp.style.display='none'; document.getElementById('takk').style.display='block'; return; }
+          return r.json().catch(function(){ return {}; }).then(function(b){
+            var kode = b && (b.code || b.feil);
+            if(kode === 'fullt') throw new Error('Beklager, det er dessverre fullt for valgt dato/tidspunkt. Prøv et annet tidspunkt.');
+            if(kode === 'stengt') throw new Error('Vi holder dessverre stengt den valgte datoen. Velg en annen dag.');
+            throw new Error((b && b.error) || 'Beklager - noe gikk galt. Prøv igjen.');
+          });
+        })
+        .catch(function(err){ knapp.disabled=false; knapp.textContent='Send forespørsel'; alert((err && err.message) || 'Beklager - noe gikk galt. Prøv igjen.'); });
     }
 
     /* Fyll booking-dropdown med ekte aktiviteter fra databasen */
