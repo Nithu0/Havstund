@@ -164,6 +164,11 @@ router.post('/', async (req, res) => {
     // Varsle Discord (#general) — fire-and-forget, stopper aldri bookingen
     discord.bookingVarsel(booking, akt.navn);
 
+    // Kvittering til kunden: "vi har mottatt bookingen din" + .ics-vedlegg.
+    // Fire-and-forget ETTER commit (booking er garantert lagret her) - e-post-
+    // feil skal ALDRI velte bookingen (samme monster som sendStatusEpost).
+    email.sendBookingMottatt(booking.epost, booking.navn, booking, akt.navn);
+
     res.status(201).json({ booking });
   } catch (e) {
     console.error('bookings POST / feilet:', e.message);

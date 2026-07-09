@@ -14,7 +14,9 @@ const email = require('../../lib/email');
 const discord = require('../../lib/discord');
 
 // E-post/discord skal aldri kjore i test — gjor dem til no-op.
+const sendteMottatt = [];
 email.sendStatusEpost = async () => ({ ok: false, simulert: true });
+email.sendBookingMottatt = async (til, navn, info, aktNavn) => { sendteMottatt.push({ til, navn, info, aktNavn }); return { ok: false, simulert: true }; };
 discord.bookingVarsel = () => {};
 
 // Delt state som testene setter per case.
@@ -148,6 +150,7 @@ function reset() {
   state.txInsertParams = null; state.txClientUsed = false;
   state.regnskapViaTx = false; state.regnskapFeiler = false; state.regnskapFinnes = false;
   state.refundBooking = { id: 5, activity_id: 1, navn: 'Kari', belop: 500, bruker_id: 9 };
+  sendteMottatt.length = 0;
 }
 
 // En gyldig fremtidig hverdag (tirsdag 2026-07-07) for caser som ikke tester stengt.
@@ -250,6 +253,34 @@ describe('GET /api/bookings/agenda (#5)', () => {
     const srv = await lytt(lagApp(KUNDE));
     try {
       expect((await reqJson(srv, '/api/bookings/agenda')).status).toBe(403);
+    } finally { srv.close(); }
+  });
+});
+
+describe('POST /api/bookings - mottatt-kvittering (S1A)', () => {
+  it('sender mottatt-kvittering ETTER commit med aktivitetens navn', async () => {
+    reset();
+    const srv = await lytt(lagApp(KUNDE));
+    try {
+      const r = await post(srv, '/api/bookings', { activity_id: 1, navn: 'Kari', epost: 'k@x.no', dato: HVERDAG, tid: '12:00', antall: 2 });
+      expect(r.status).toBe(201);
+      expect(sendteMottatt).toHaveLength(1);
+      expect(sendteMottatt[0].til).toBe('k@x.no');
+      expect(sendteMottatt[0].navn).toBe('Kari');
+      expect(sendteMottatt[0].aktNavn).toBe('Havpadling');
+      expect(sendteMottatt[0].info.id).toBe(99);
+      expect(sendteMottatt[0].info.dato).toBe(HVERDAG);
+    } finally { srv.close(); }
+  });
+
+  it('sender IKKE kvittering naar det er fullt (409)', async () => {
+    reset();
+    state.sum = 8; // fullt (kapasitet 8)
+    const srv = await lytt(lagApp(KUNDE));
+    try {
+      const r = await post(srv, '/api/bookings', { activity_id: 1, navn: 'Kari', epost: 'k@x.no', dato: HVERDAG, tid: '12:00', antall: 1 });
+      expect(r.status).toBe(409);
+      expect(sendteMottatt).toHaveLength(0);
     } finally { srv.close(); }
   });
 });
