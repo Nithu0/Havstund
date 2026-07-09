@@ -390,12 +390,18 @@
       var t = e.target.getAttribute && e.target.getAttribute('data-slett-time');
       if (p) {
         if (!confirm('Slette denne posten?')) return;
-        api('/api/regnskap/poster/' + p, { method: 'DELETE' }).then(function () {
-          lastPoster('inntekt', 'liste-inntekt'); lastPoster('utgift', 'liste-utgift'); lastOversikt();
-        });
+        api('/api/regnskap/poster/' + p, { method: 'DELETE' })
+          .then(function (r) { if (!r.ok) throw new Error('DELETE poster ' + r.status); return r; })
+          .then(function () {
+            lastPoster('inntekt', 'liste-inntekt'); lastPoster('utgift', 'liste-utgift'); lastOversikt();
+          })
+          .catch(function () { alert('Kunne ikke slette posten. Prøv igjen.'); });
       } else if (t) {
         if (!confirm('Slette denne timeføringen?')) return;
-        api('/api/regnskap/timer/' + t, { method: 'DELETE' }).then(function () { lastTimer(); lastLonn(); lastOversikt(); });
+        api('/api/regnskap/timer/' + t, { method: 'DELETE' })
+          .then(function (r) { if (!r.ok) throw new Error('DELETE timer ' + r.status); return r; })
+          .then(function () { lastTimer(); lastLonn(); lastOversikt(); })
+          .catch(function () { alert('Kunne ikke slette timeføringen. Prøv igjen.'); });
       }
     });
 

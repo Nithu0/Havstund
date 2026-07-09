@@ -1,15 +1,22 @@
 /* Havstund — nettside-interaksjon (vanilla JS, ingen avhengigheter) */
 
-// År i footer
-document.getElementById('aar').textContent = new Date().getFullYear();
+// År i footer + mobilmeny. Null-guard hvert element og kjør fra DOMContentLoaded:
+// på sider uten #aar / #navToggle / #navLinks skal ikke resten av skriptet dø.
+function initNav() {
+  const aar = document.getElementById('aar');
+  if (aar) aar.textContent = new Date().getFullYear();
 
-// Mobilmeny
-const toggle = document.getElementById('navToggle');
-const links = document.getElementById('navLinks');
-toggle.addEventListener('click', () => links.classList.toggle('open'));
-links.querySelectorAll('a').forEach(a =>
-  a.addEventListener('click', () => links.classList.remove('open'))
-);
+  const toggle = document.getElementById('navToggle');
+  const links = document.getElementById('navLinks');
+  if (toggle && links) {
+    toggle.addEventListener('click', () => links.classList.toggle('open'));
+    links.querySelectorAll('a').forEach(a =>
+      a.addEventListener('click', () => links.classList.remove('open'))
+    );
+  }
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initNav);
+else initNav();
 
 // Reveal-animasjon ved scroll
 const io = new IntersectionObserver((entries) => {
@@ -26,7 +33,7 @@ const EPOST = 'post@havstund.no';
 
 function openBook(emne) {
   modalTitle.textContent = emne;
-  modalText.textContent = 'Online booking kommer (Acuity + Vipps). Send oss en forespørsel i mellomtiden, så svarer vi raskt.';
+  modalText.textContent = 'Send oss en forespørsel, så finner vi et tidspunkt som passer og svarer deg raskt.';
   const subject = encodeURIComponent('Havstund — ' + emne);
   const body = encodeURIComponent('Hei Havstund!\n\nJeg er interessert i: ' + emne + '\n\nØnsket dato/antall personer:\n\nNavn:\nTelefon:\n\nHilsen');
   modalMail.href = `mailto:${EPOST}?subject=${subject}&body=${body}`;

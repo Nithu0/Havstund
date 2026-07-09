@@ -9,10 +9,26 @@ const { mvaSplitt } = require('../lib/regnskap');
 const discord = require('../lib/discord');
 const email = require('../lib/email');
 const { writeAudit } = require('../lib/audit');
+const { logger } = require('../lib/logger');
 
 const router = express.Router();
 
-const GYLDIG_STATUS = ['forespurt', 'bekreftet', 'avlyst', 'fullfort'];
+// 'ingen_oppmoete' (S3): kunde som ikke moette opp. Distinkt fra 'avlyst' slik at
+// eieren kan male no-show-rate. Utloser INGEN pengehandling — kun status.
+const GYLDIG_STATUS = ['forespurt', 'bekreftet', 'avlyst', 'fullfort', 'ingen_oppmoete'];
+
+// F11: samme e-post-monster som routes/auth.js + routes/staff.js (ikke et nytt).
+const EPOST_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Dato maa vaere ISO ÅÅÅÅ-MM-DD (DATE-kolonnen) og en reell dato.
+const DATO_RE = /^\d{4}-\d{2}-\d{2}$/;
+// Lengdegrenser slik at feltene ikke gaar ubegrenset i DB.
+const MAKS = { navn: 200, tlf: 40, melding: 4000 };
+
+// F11: valideringsfeil bruker samme superset-svarform {error,code,feil} som
+// 409-ene (PR #30) fordi klienten leser ulike nokler — sa 400 ikke brekker frontend.
+function valideringsfeil(res, melding) {
+  return res.status(400).json({ error: melding, code: 'validering', feil: 'validering' });
+}
 
 // business_hours bruker ukedag 0=mandag .. 6=sondag (se db/seed.js).
 // JS Date.getUTCDay() er 0=sondag .. 6=lordag -> konverter.
@@ -40,6 +56,30 @@ router.post('/', async (req, res) => {
   const antallN = Number.parseInt(antall, 10) || 1;
   if (antallN < 1) {
     return res.status(400).json({ error: 'Antall må være minst 1' });
+  }
+
+  // F11: lengdegrenser + format FOR feltene treffer DB.
+  if (typeof navn !== 'string' || navn.length > MAKS.navn) {
+    return valideringsfeil(res, `Navnet er for langt (maks ${MAKS.navn} tegn).`);
+  }
+  if (tlf != null && String(tlf).length > MAKS.tlf) {
+    return valideringsfeil(res, `Telefonnummeret er for langt (maks ${MAKS.tlf} tegn).`);
+  }
+  if (melding != null && String(melding).length > MAKS.melding) {
+    return valideringsfeil(res, `Meldingen er for lang (maks ${MAKS.melding} tegn).`);
+  }
+  if (typeof epost !== 'string' || !EPOST_RE.test(epost)) {
+    return valideringsfeil(res, 'Ugyldig e-postadresse.');
+  }
+  // Round-trip: JS Date ruller f.eks. 2026-02-30 over til mars i stedet for NaN,
+  // sa vi sammenligner den normaliserte UTC-datoen mot input for aa fange
+  // format-gyldige-men-ureelle datoer.
+  const datoObj = typeof dato === 'string' && DATO_RE.test(dato)
+    ? new Date(`${dato}T00:00:00Z`)
+    : null;
+  if (!datoObj || Number.isNaN(datoObj.getTime()) ||
+      datoObj.toISOString().slice(0, 10) !== dato) {
+    return valideringsfeil(res, 'Ugyldig dato — bruk formatet ÅÅÅÅ-MM-DD.');
   }
 
   try {
@@ -283,13 +323,22 @@ router.patch('/:id', requireRole('ansatt', 'admin'), async (req, res) => {
     } catch (msgFeil) {
       console.error('bookings: kunne ikke lagre kundemelding:', msgFeil.message);
     }
-    // E-post (kaster aldri — lib/email er fire-and-forget).
-    email.sendStatusEpost(
+    // F26: e-posten kaster aldri (lib/email er fire-and-forget), men en feilet
+    // utsending returnerer { ok:false, ... }. Uten await forsvant den sporlost.
+    // Vi await-er og logger ved ok===false — men en e-postfeil skal ALDRI velte
+    // statusendringen (status er allerede committet over).
+    const epostRes = await email.sendStatusEpost(
       booking.epost,
       booking.navn,
       { id: booking.id, dato: booking.dato, tid: booking.tid },
       status
     );
+    if (epostRes && epostRes.ok === false) {
+      logger.warn(
+        { bookingId: booking.id, grunn: epostRes.error || epostRes.grunn || 'ukjent' },
+        'bookings: status-e-post ikke sendt'
+      );
+    }
 
     res.json({ booking });
   } catch (e) {

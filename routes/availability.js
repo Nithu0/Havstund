@@ -53,12 +53,22 @@ function validerPut(body) {
     return { ok: false, feil: `for mange slots (maks ${MAX_SLOTS})` };
   }
 
+  // Avvis duplikate tider FOER DB-en ser dem. Med unik-indeksen uq_availability_slot
+  // (activity_id, dato, tid) ville to like tider i samme PUT gitt Postgres-feil 23505,
+  // rullet HELE transaksjonen tilbake, og gitt admin en uforklart 500. Vi velger
+  // eksplisitt 400 med tydelig melding (ikke stille "siste vinner"): to like tider er
+  // nesten alltid en skrivefeil, og aa stille overskrive kapasiteten skjuler feilen.
+  const settTider = new Set();
   const slots = [];
   for (const s of b.slots) {
     const rad = s || {};
     const tid = typeof rad.tid === 'string' ? rad.tid.trim() : '';
     if (!tid) return { ok: false, feil: 'hver slot må ha en ikke-tom tid' };
     if (tid.length > 50) return { ok: false, feil: 'tid er for lang (maks 50)' };
+    if (settTider.has(tid)) {
+      return { ok: false, feil: `duplisert tid «${tid}» — hver tid kan kun oppgis én gang` };
+    }
+    settTider.add(tid);
     // kapasitet valgfri pr. slot — default 8 (jf. schema).
     const kap = rad.kapasitet === undefined || rad.kapasitet === null
       ? 8
@@ -147,6 +157,12 @@ router.put('/', requireRole('ansatt', 'admin'), async (req, res) => {
     // FK-brudd: ukjent activity_id.
     if (e.code === '23503') {
       return res.status(400).json({ error: 'ukjent activity_id' });
+    }
+    // Unik-brudd (uq_availability_slot): validerPut avviser duplikate tider i
+    // samme PUT, saa dette treffer i praksis kun en samtidig PUT paa samme
+    // (activity_id, dato). Gi 409 med forklaring i stedet for uforklart 500.
+    if (e.code === '23505') {
+      return res.status(409).json({ error: 'en lagring paagikk samtidig for samme dato — prov igjen' });
     }
     console.error('availability PUT / feilet:', e.message);
     res.status(500).json({ error: 'Kunne ikke lagre tilgjengelighet' });
