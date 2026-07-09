@@ -14,10 +14,15 @@
    POST /timer                     -> ny timeforing
    DELETE /timer/:id
    GET  /lonn?maaned=YYYY-MM       -> lonnsgrunnlag per ansatt (for lonnskjoring) */
+const crypto = require('crypto');
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const db = require('../db');
 const { requireRole } = require('../lib/auth');
 const fiken = require('../lib/fiken');
+const { logger } = require('../lib/logger');
+const { writeAudit } = require('../lib/audit');
+const { byggRegnskapspakke } = require('../lib/regnskapspakke');
 
 const router = express.Router();
 
@@ -35,6 +40,26 @@ function gyldigMaaned(m) {
 
 const TYPER = ['inntekt', 'utgift'];
 const SATSER = [0, 12, 15, 25];
+
+// Positiv int fra env, ellers fallback (samme monster som lib/security.js:tall).
+function tallEnv(envVerdi, fallback) {
+  const n = Number.parseInt(envVerdi, 10);
+  return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+// Moderat rate-limit KUN paa den tunge pakke-ruta (maneds-sporring + generator).
+// Gated paa samme RATE_LIMIT_ENABLED-bryter som lib/security.js for konsistens,
+// men limiteren er lokal her (vi eier ikke security.js). Av-bryter => no-op.
+const pakkeLimiter = rateLimit({
+  windowMs: tallEnv(process.env.RATE_LIMIT_PAKKE_WINDOW_MS, 15 * 60 * 1000),
+  max: tallEnv(process.env.RATE_LIMIT_PAKKE_MAX, 30),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'For mange pakke-foresporsler. Vent litt og prov igjen.' },
+});
+const pakkeGate = process.env.RATE_LIMIT_ENABLED === 'false'
+  ? (_req, _res, next) => next()
+  : pakkeLimiter;
 
 // ---------- OVERSIKT ----------
 router.get('/oversikt', async (req, res) => {
@@ -388,6 +413,137 @@ router.post('/fiken/send', async (_req, res) => {
   } catch (e) {
     console.error('regnskap /fiken/send feilet:', e.message);
     res.status(500).json({ error: 'Kunne ikke sende til Fiken' });
+  }
+});
+
+// ---------- REGNSKAPSPAKKE (Fase 3b: leverings-ruta) ----------
+// GET /pakke/:maaned  ->  { pakke, manifest }
+// ADMIN-ONLY: router.use(requireRole('ansatt','admin')) over slipper ansatt inn,
+// men denne route-nivaa requireRole('admin') kjorer ETTER og gir ansatt 403.
+// Ruta henter en maneds regnskapsdata, kaller den rene generatoren
+// (lib/regnskapspakke.js), og returnerer en validert, PII-fri, HMAC-signert
+// pakke som JSON. ZIP/vedlegg-streaming er BEVISST utenfor scope (senere fase).
+router.get('/pakke/:maaned', requireRole('admin'), pakkeGate, async (req, res) => {
+  if (!db.isConfigured()) return utilgjengelig(res);
+
+  const maaned = gyldigMaaned(req.params.maaned);
+  if (!maaned) {
+    return res.status(400).json({ error: 'Ugyldig maaned. Bruk formatet YYYY-MM.' });
+  }
+
+  try {
+    // Poster: KUN forretningskolonnene generatoren bruker — IKKE SELECT *, som
+    // ville dratt med kontakt/vedlegg (PII/tung). Reduser PII-flaten allerede i
+    // sporringen (belte-og-seler med generatorens egen whitelist).
+    const poster = (await db.query(
+      `SELECT id, type, dato, beskrivelse, konto, mva_sats,
+              netto_ore, mva_ore, brutto_ore, betalingsmetode, kilde, booking_id
+         FROM regnskap_poster
+        WHERE to_char(dato,'YYYY-MM') = $1
+        ORDER BY dato ASC, id ASC`,
+      [maaned]
+    )).rows;
+
+    // Timegrunnlag: timeforinger for maneden + aktive ansatte (id -> timelonn/konto).
+    const timeforinger = (await db.query(
+      `SELECT id, ansatt_id, dato, timer
+         FROM timeforinger
+        WHERE to_char(dato,'YYYY-MM') = $1
+        ORDER BY dato ASC, id ASC`,
+      [maaned]
+    )).rows;
+
+    const ansatte = (await db.query(
+      `SELECT id, timelonn_ore, konto
+         FROM ansatte
+        WHERE aktiv = true
+        ORDER BY id ASC`
+    )).rows;
+
+    // Dagsoppgjor: tabellen finnes men er trolig TOM til «lukk dagen»-flyten
+    // bygges. Generatoren tar tom liste (invariant 2 hopper over da).
+    const dagsoppgjor = (await db.query(
+      `SELECT dato, brutto_ore, mva_ore, antall_bilag, lukket_tid
+         FROM dagsoppgjor
+        WHERE to_char(dato,'YYYY-MM') = $1
+        ORDER BY dato ASC`,
+      [maaned]
+    )).rows;
+
+    // Generatoren KASTER ved invariant-brudd (ubalansert sum, float, PII, ukjent
+    // type). Det er en DATATILSTAND operatoren maa rette, ikke en serverfeil ->
+    // 422, ikke 500. Date-kallet horer hjemme HER (i kalleren), ikke i den rene
+    // funksjonen.
+    let pakke;
+    try {
+      pakke = byggRegnskapspakke({
+        periode: maaned,
+        poster,
+        dagsoppgjor,
+        timeforinger,
+        ansatte,
+        generert: new Date().toISOString(),
+      });
+    } catch (genFeil) {
+      logger.warn(
+        { maaned, feil: genFeil && genFeil.message },
+        'regnskapspakke: generator avviste manedens data'
+      );
+      return res.status(422).json({
+        error: 'Manedens regnskapsdata kan ikke pakkes: den balanserer ikke eller '
+          + 'inneholder persondata. Rett postene for maneden og prov igjen.',
+        detalj: genFeil && genFeil.message,
+      });
+    }
+
+    // Kanonisk serialisering: NOYAKTIG denne strengen (utf8-bytes) hashes OG
+    // signeres. Del 2 MAA hashe bit-for-bit samme bytes for aa verifisere. Vi
+    // sender `pakke`-objektet uendret i svaret; en klient som gjor
+    // JSON.stringify(body.pakke) reproduserer samme streng (JSON bevarer
+    // innsettingsrekkefolge, og alle belop er heltall — ingen float-formattering).
+    const kanonisk = JSON.stringify(pakke);
+    const sha256 = crypto.createHash('sha256').update(kanonisk, 'utf8').digest('hex');
+
+    const manifest = {
+      algoritme: 'sha256',
+      sha256,
+      signatur_algoritme: 'HMAC-SHA256',
+      periode: pakke.periode,
+      schema_version: pakke.schema_version,
+      antall_bilag: pakke.kontrollsum.antall_bilag,
+      generert: pakke.generert,
+    };
+
+    // Uten secret: IKKE 500. Folg kodebasens degraderingsmonster (jf. e-post ->
+    // "simulert"): pakken leveres USIGNERT, og vi advarer tydelig.
+    const secret = process.env.REGNSKAP_PAKKE_SECRET;
+    if (secret) {
+      manifest.signatur = crypto.createHmac('sha256', secret).update(kanonisk, 'utf8').digest('hex');
+      manifest.signert = true;
+    } else {
+      manifest.signatur = null;
+      manifest.signert = false;
+      logger.warn(
+        { maaned },
+        'REGNSKAP_PAKKE_SECRET mangler — regnskapspakken leveres USIGNERT. '
+        + 'Sett env-en for at del 2 skal kunne verifisere signaturen.'
+      );
+    }
+
+    // Audit hver nedlasting. Fire-and-forget: en audit-feil skal ALDRI velte
+    // svaret (writeAudit svelger allerede egne feil, men vi .catch for sikkerhet).
+    Promise.resolve(
+      writeAudit(req.user, 'regnskap.pakke.hent', {
+        periode: maaned,
+        antall_bilag: pakke.kontrollsum.antall_bilag,
+        signert: manifest.signert,
+      })
+    ).catch(() => {});
+
+    res.json({ pakke, manifest });
+  } catch (e) {
+    logger.error({ feil: e && e.message }, 'regnskap /pakke feilet');
+    res.status(500).json({ error: 'Kunne ikke bygge regnskapspakke' });
   }
 });
 
