@@ -45,9 +45,19 @@ CREATE TABLE IF NOT EXISTS bookings (
   dato        DATE NOT NULL,
   tid         TEXT,
   antall      INTEGER NOT NULL DEFAULT 1,
-  status      TEXT NOT NULL DEFAULT 'forespurt', -- 'forespurt'|'bekreftet'|'avlyst'|'fullfort'
+  status      TEXT NOT NULL DEFAULT 'forespurt', -- 'forespurt'|'bekreftet'|'avlyst'|'fullfort'|'ingen_oppmoete'
   belop       INTEGER NOT NULL DEFAULT 0,         -- antall * pris (kr)
   melding     TEXT,
+  -- Fase 2 (2.3): strukturert kjoperadresse. Alle NULLABLE og additive —
+  -- eksisterende + gjeste-bookinger har ingen adresse; skjemaet fylles senere.
+  -- MERK: paa en EKSISTERENDE db legges disse til via ALTER TABLE ... ADD COLUMN
+  -- IF NOT EXISTS i migrate() (db/index.js). Grunnen: CREATE TABLE IF NOT EXISTS
+  -- hopper over hele tabellen naar den finnes, saa nye kolonner her naar ALDRI
+  -- en levende db. Definisjonen her gjelder derfor kun ferske databaser.
+  adr_gate     TEXT,
+  adr_postnr   TEXT,
+  adr_poststed TEXT,
+  adr_land     TEXT,
   opprettet   TIMESTAMPTZ DEFAULT now()
 );
 
@@ -273,3 +283,41 @@ CREATE INDEX IF NOT EXISTS idx_reset_tokens_user ON reset_tokens(user_id);
 -- ellers paa eksisterende duplikater). init() kjorer schema.sql FOER migrate(), saa
 -- indeksen kan IKKE bli staaende her — den ville da kjort foer dedupen. Derfor er
 -- BEGGE i migrate(): dedupe -> CREATE UNIQUE INDEX -> FK-ene.
+
+-- ===== Fase 2: skjemafundament for dagsoppgjor + persondata-isolat =====
+
+-- dagsoppgjor = ett dagsoppgjor per kalenderdag (2.1). APPEND-ONLY: en rad
+-- opprettes for dagen og oppdateres kun til den LUKKES. Naar lukket_tid er satt
+-- er dagen laast — en refusjon skal da ikke lenger kunne skrive om historikk.
+-- (Selve laase-/append-only-handhevingen ligger i rute-laget i en senere fase;
+-- her definerer vi kun tabellen.) Kontrollsummer lagres i ore for aa matche
+-- regnskap_poster-konvensjonen (ingen flyttall).
+CREATE TABLE IF NOT EXISTS dagsoppgjor (
+  id           SERIAL PRIMARY KEY,
+  dato         DATE NOT NULL UNIQUE,               -- en rad per dag
+  lukket_av    TEXT,                               -- hvem som lukket dagen
+  lukket_tid   TIMESTAMPTZ,                        -- satt = dagen er laast
+  brutto_ore   INTEGER NOT NULL DEFAULT 0,         -- kontrollsum: brutto i ore
+  mva_ore      INTEGER NOT NULL DEFAULT 0,         -- kontrollsum: mva i ore
+  antall_bilag INTEGER NOT NULL DEFAULT 0,         -- kontrollsum: antall bilag
+  opprettet    TIMESTAMPTZ DEFAULT now()
+);
+
+-- salgsdokument_arkiv = persondata-isolat (2.2). Dette er det ENESTE stedet
+-- kjoperens persondata for regnskap skal ligge. ADMIN-ONLY. Skal ALDRI med i
+-- en regnskapspakke-eksport — bilagslaget/Fiken ser kun bilag_ref (saleNumber),
+-- aldri navn/adresse. Bokforingsforskriften §5-1-2 krever kjopers navn + adresse
+-- for salg over 1000 kr; derfor 5-aars lovpalagt bevaring her, isolert fra det
+-- PII-frie bilagslaget. (Tilgangskontrollen bygges i rute-laget i en senere
+-- fase — her definerer vi kun tabellen.)
+CREATE TABLE IF NOT EXISTS salgsdokument_arkiv (
+  id             SERIAL PRIMARY KEY,
+  booking_id     INTEGER REFERENCES bookings(id),
+  kjoper_navn    TEXT,
+  kjoper_gate    TEXT,                             -- strukturert adresse
+  kjoper_postnr  TEXT,
+  kjoper_poststed TEXT,
+  kjoper_land    TEXT DEFAULT 'NO',
+  bilag_ref      TEXT,                             -- kobling til bilagslaget/Fiken saleNumber
+  opprettet      TIMESTAMPTZ DEFAULT now()
+);
