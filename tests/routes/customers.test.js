@@ -45,7 +45,8 @@ async function get(srv, sti) {
   return { status: r.status, data };
 }
 
-const ANSATT = { id: 1, rolle: 'ansatt', navn: 'Ansatt' };
+const ADMIN = { id: 1, rolle: 'admin', navn: 'Admin' };
+const ANSATT = { id: 3, rolle: 'ansatt', navn: 'Ansatt' };
 const KUNDE = { id: 2, rolle: 'kunde', navn: 'Kunde' };
 
 describe('routes/customers — /search parametrisering + tilgang', () => {
@@ -57,7 +58,7 @@ describe('routes/customers — /search parametrisering + tilgang', () => {
   });
 
   it('sender soeketekst som parameter, ALDRI inn i SQL-teksten (ingen injection)', async () => {
-    const srv = await lytt(lagApp(ANSATT));
+    const srv = await lytt(lagApp(ADMIN));
     try {
       // Klassisk injection-forsoek: ville droppet tabellen hvis interpolert.
       const ondsinnet = "x'; DROP TABLE users; --";
@@ -78,7 +79,7 @@ describe('routes/customers — /search parametrisering + tilgang', () => {
   });
 
   it('escaper LIKE-metategn (% _) saa de tolkes bokstavelig', async () => {
-    const srv = await lytt(lagApp(ANSATT));
+    const srv = await lytt(lagApp(ADMIN));
     try {
       const r = await get(srv, '/search?q=' + encodeURIComponent('50%_a'));
       expect(r.status).toBe(200);
@@ -88,7 +89,7 @@ describe('routes/customers — /search parametrisering + tilgang', () => {
   });
 
   it('tom q gir 400 og kjoerer ingen query', async () => {
-    const srv = await lytt(lagApp(ANSATT));
+    const srv = await lytt(lagApp(ADMIN));
     try {
       const r = await get(srv, '/search?q=' + encodeURIComponent('   '));
       expect(r.status).toBe(400);
@@ -96,8 +97,16 @@ describe('routes/customers — /search parametrisering + tilgang', () => {
     } finally { srv.close(); }
   });
 
-  it('kunde-rolle faar 403 (krever ansatt/admin)', async () => {
+  it('kunde-rolle faar 403 (krever admin)', async () => {
     const srv = await lytt(lagApp(KUNDE));
+    try {
+      const r = await get(srv, '/search?q=ola');
+      expect(r.status).toBe(403);
+    } finally { srv.close(); }
+  });
+
+  it('ansatt-rolle faar 403 (kundelister er admin-only)', async () => {
+    const srv = await lytt(lagApp(ANSATT));
     try {
       const r = await get(srv, '/search?q=ola');
       expect(r.status).toBe(403);

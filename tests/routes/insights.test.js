@@ -50,7 +50,8 @@ async function getJson(srv, sti) {
   return { status: r.status, body };
 }
 
-const ANSATT = { id: 1, rolle: 'ansatt', navn: 'Ola' };
+const ADMIN = { id: 1, rolle: 'admin', navn: 'Ola' };
+const ANSATT = { id: 3, rolle: 'ansatt', navn: 'Kari' };
 
 describe('GET /api/insights/activity-stats', () => {
   it('returnerer aggregat per aktivitet; NULL-aktivitet blir "(ukjent aktivitet)"', async () => {
@@ -58,7 +59,7 @@ describe('GET /api/insights/activity-stats', () => {
       { activity_id: 1, aktivitet: 'Kajakk', antall_bookinger: 3, antall_personer: 7, omsetning: '4900' },
       { activity_id: null, aktivitet: null, antall_bookinger: 1, antall_personer: 1, omsetning: '500' },
     ];
-    const srv = await lytt(lagApp(ANSATT));
+    const srv = await lytt(lagApp(ADMIN));
     try {
       const res = await getJson(srv, '/api/insights/activity-stats');
       expect(res.status).toBe(200);
@@ -90,6 +91,14 @@ describe('GET /api/insights/activity-stats', () => {
       expect(res.status).toBe(403);
     } finally { srv.close(); }
   });
+
+  it('403 for ansatt-rolle (innsikt er admin-only)', async () => {
+    const srv = await lytt(lagApp(ANSATT));
+    try {
+      const res = await getJson(srv, '/api/insights/activity-stats');
+      expect(res.status).toBe(403);
+    } finally { srv.close(); }
+  });
 });
 
 describe('GET /api/insights/customer-metrics', () => {
@@ -100,7 +109,7 @@ describe('GET /api/insights/customer-metrics', () => {
       { epost: 'per@x.no', navn: 'Per', antall_bookinger: 1, clv: '800',
         forste_booking: '2026-05-01T00:00:00Z', siste_booking: '2026-05-01T00:00:00Z' },
     ];
-    const srv = await lytt(lagApp(ANSATT));
+    const srv = await lytt(lagApp(ADMIN));
     try {
       const res = await getJson(srv, '/api/insights/customer-metrics');
       expect(res.status).toBe(200);
@@ -113,6 +122,14 @@ describe('GET /api/insights/customer-metrics', () => {
 
   it('403 for kunde-rolle', async () => {
     const srv = await lytt(lagApp({ id: 9, rolle: 'kunde', navn: 'Per' }));
+    try {
+      const res = await getJson(srv, '/api/insights/customer-metrics');
+      expect(res.status).toBe(403);
+    } finally { srv.close(); }
+  });
+
+  it('403 for ansatt-rolle (innsikt er admin-only)', async () => {
+    const srv = await lytt(lagApp(ANSATT));
     try {
       const res = await getJson(srv, '/api/insights/customer-metrics');
       expect(res.status).toBe(403);

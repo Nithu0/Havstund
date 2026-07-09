@@ -1,5 +1,5 @@
 /* Havstund — innsikt / forretningsmetrikker (/api/insights).
-   Kun ansatt/admin. Read-only aggregater over bookings (+ activities).
+   Kun admin. Read-only aggregater over bookings (+ activities).
    belop pa bookings er i HELE kroner (jf. routes/export.js), ikke ore.
 
    GET /activity-stats  -> bookinger + omsetning per aktivitet
@@ -11,8 +11,8 @@ const { requireRole } = require('../lib/auth');
 
 const router = express.Router();
 
-// Alt under /api/insights krever ansatt eller admin
-router.use(requireRole('ansatt', 'admin'));
+// Alt under /api/insights krever admin (kundelister/innsikt = kun admin)
+router.use(requireRole('admin'));
 
 function utilgjengelig(res) {
   return res.status(503).json({ error: 'Innsikt er midlertidig utilgjengelig.' });
