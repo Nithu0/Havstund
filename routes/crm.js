@@ -1,14 +1,14 @@
 /* Havstund — CRM (/api/crm).
-   GET /customers/:id/profile -> samlet kundeprofil for ansatt/admin:
+   GET /customers/:id/profile -> samlet kundeprofil for admin:
      bruker + bookinger (join activities) + meldinger + prosjekter.
-   Alle id-er parametriseres. Kun ansatt/admin. */
+   Alle id-er parametriseres. Kun admin. */
 const express = require('express');
 const db = require('../db');
 const { requireRole } = require('../lib/auth');
 
 const router = express.Router();
 
-router.get('/customers/:id/profile', requireRole('ansatt', 'admin'), async (req, res) => {
+router.get('/customers/:id/profile', requireRole('admin'), async (req, res) => {
   if (!db.isConfigured()) {
     return res.status(503).json({ error: 'Database ikke tilgjengelig' });
   }

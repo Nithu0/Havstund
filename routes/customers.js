@@ -1,6 +1,6 @@
 /* Havstund — kundesøk (/api/customers).
    GET /search?q=  -> søk i users (navn/epost), PARAMETRISERT (ingen SQL-injection).
-   Kun ansatt/admin. Returnerer maks 25 treff. */
+   Kun admin. Returnerer maks 25 treff. */
 const express = require('express');
 const db = require('../db');
 const { requireRole } = require('../lib/auth');
@@ -10,7 +10,7 @@ const router = express.Router();
 // Søk etter kunder på navn eller e-post. Bruker ILIKE med parametrisert
 // wildcard ($1) — søkestrengen havner ALDRI i SQL-teksten, så spesialtegn
 // (', ;, --, %, _) kan ikke endre spørringen eller bryte ut av strengen.
-router.get('/search', requireRole('ansatt', 'admin'), async (req, res) => {
+router.get('/search', requireRole('admin'), async (req, res) => {
   if (!db.isConfigured()) {
     return res.status(503).json({ error: 'Database ikke tilgjengelig' });
   }
