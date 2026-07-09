@@ -4,6 +4,7 @@
 const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
+const sentry = require('../lib/sentry');
 
 const url = process.env.DATABASE_URL;
 let pool = null;
@@ -17,8 +18,18 @@ if (url) {
   pool.on('error', (e) => console.error('PG pool-feil:', e.message));
 }
 
+// Intern degradert-tilstand: settes hvis DB svarer, men skjema/seed-init feilet.
+// Lekkes ALDRI i det offentlige /api/health-svaret (kun generisk "degraded").
+let degradert = false;
+let initFeilmelding = null;
+
 function isConfigured() {
   return !!pool;
+}
+
+// True hvis init() feilet mens DB ellers er pingbar (skjema/seed-feil).
+function isDegraded() {
+  return degradert;
 }
 
 // Ekte helsesjekk: pinger databasen med en triviell SELECT 1.
@@ -77,8 +88,18 @@ async function init() {
     await seed({ query, one });
     console.log('✓ Database klar (skjema + seed)');
   } catch (e) {
-    console.error('✗ DB-init feilet:', e.message);
+    // DB svarer (poolen finnes), men skjema/seed gikk galt. Marker degradert
+    // slik at /api/health kan rapportere det — men appen fortsetter å serve,
+    // og vi utløser IKKE 503/restart-loop for en ren init-detalj.
+    degradert = true;
+    initFeilmelding = e && e.message ? e.message : String(e);
+    console.error('✗ DB-init feilet (DB svarer — degradert drift):', initFeilmelding);
+    try {
+      sentry.captureException(e, { tags: { scope: 'db-init' } });
+    } catch (_) {
+      // Sentry skal aldri velte oppstart
+    }
   }
 }
 
-module.exports = { pool, query, one, init, isConfigured, ping, withTransaction };
+module.exports = { pool, query, one, init, isConfigured, ping, withTransaction, isDegraded };

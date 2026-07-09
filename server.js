@@ -47,8 +47,15 @@ app.use(agentGate);    // agent kun på allowlistede ruter (også handler-rolle-
 app.get('/api/health', async (_req, res) => {
   try {
     await db.ping();
+    // DB svarer. Men init (skjema/seed) kan ha feilet — da er vi i degradert
+    // drift: appen serves, så vi svarer 200 (ingen Railway-restart-loop), men
+    // rapporterer generisk "degraded" (aldri rå initErr.message) for synlighet.
+    if (typeof db.isDegraded === 'function' && db.isDegraded()) {
+      return res.status(200).json({ ok: true, db: 'degraded' });
+    }
     res.json({ ok: true, db: 'up' });
   } catch {
+    // DB er faktisk nede/ikke pingbar -> 503 utløser Railway-restart (ON_FAILURE).
     res.status(503).json({ ok: false, db: 'down' });
   }
 });
