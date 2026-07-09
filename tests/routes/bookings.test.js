@@ -35,6 +35,11 @@ const state = {
   regnskapViaTx: false,   // ble regnskap-INSERT kjort via tx-klienten? (A5)
   regnskapFeiler: false,  // simuler at regnskap-INSERT kaster (A5 rollback)
   regnskapFinnes: false,  // idempotens: regnskapspost finnes allerede
+  // Fase 4 refusjon:
+  refusjonSum: 0,         // SUM(belop_ore) allerede refundert paa bookingen
+  refusjonDup: false,     // idempotens-forhaandssjekk treffer en eksisterende rad
+  refusjoner: [],         // fangede refusjoner-INSERT-params
+  gavekortRader: [],      // fangede gavekort-INSERT-params
 };
 
 db.isConfigured = () => true;
@@ -79,6 +84,30 @@ db.withTransaction = async (fn) => {
   const client = {
     query: async (text, params) => {
       if (/FROM activities WHERE id .* FOR UPDATE/i.test(text)) return { rows: [{ id: state.akt.id }] };
+      // Fase 4 refusjon: booking-laas, idempotens-, sum-, gavekort- og refusjon-SQL.
+      if (/SELECT \* FROM bookings WHERE id .* FOR UPDATE/i.test(text)) {
+        return { rows: state.refundBooking ? [state.refundBooking] : [] };
+      }
+      if (/SELECT id FROM refusjoner WHERE idempotens_nokkel/i.test(text)) {
+        return { rows: state.refusjonDup ? [{ id: 77 }] : [] };
+      }
+      if (/COALESCE\(SUM\(belop_ore\)[\s\S]*FROM refusjoner/i.test(text)) {
+        return { rows: [{ sum: state.refusjonSum }] };
+      }
+      if (/INSERT INTO gavekort/i.test(text)) {
+        state.gavekortRader.push(params);
+        return { rows: [{ id: 42 }] };
+      }
+      if (/INSERT INTO refusjoner/i.test(text)) {
+        state.refusjoner.push(params);
+        return { rows: [{ id: 5 }] };
+      }
+      if (/SELECT navn, mva_sats FROM activities/i.test(text)) {
+        return { rows: [{ navn: state.akt.navn, mva_sats: state.akt.mva_sats }] };
+      }
+      if (/UPDATE bookings\s+SET refund_amount_ore/i.test(text)) {
+        return { rows: [{ ...state.refundBooking, refund_amount_ore: params[0], refund_reason: params[1] }] };
+      }
       if (/FROM availability/i.test(text)) return { rows: state.avail ? [state.avail] : [] };
       if (/COALESCE\(SUM\(antall\)/i.test(text)) return { rows: [{ sum: state.sum }] };
       if (/SELECT id FROM regnskap_poster WHERE booking_id/i.test(text)) {
@@ -149,6 +178,7 @@ function reset() {
   state.regnskap = []; state.meldinger = []; state.agendaRows = [];
   state.txInsertParams = null; state.txClientUsed = false;
   state.regnskapViaTx = false; state.regnskapFeiler = false; state.regnskapFinnes = false;
+  state.refusjonSum = 0; state.refusjonDup = false; state.refusjoner = []; state.gavekortRader = [];
   state.refundBooking = { id: 5, activity_id: 1, navn: 'Kari', belop: 500, bruker_id: 9 };
   sendteMottatt.length = 0;
 }
@@ -285,17 +315,108 @@ describe('POST /api/bookings - mottatt-kvittering (S1A)', () => {
   });
 });
 
-describe('POST /api/bookings/:id/refusjon (#REFUSJON)', () => {
-  it('lager en negativ (reverserende) regnskapspost', async () => {
+describe('POST /api/bookings/:id/refusjon (Fase 4 — refusjons-subsystem)', () => {
+  it('registrerer en refusjon + negativ (reverserende) regnskapspost', async () => {
     reset();
     const srv = await lytt(lagApp(ADMIN));
     try {
       const r = await post(srv, '/api/bookings/5/refusjon', { grunn: 'Avlyst tur' });
       expect(r.status).toBe(200);
+      // Én refusjons-rad skrevet via tx-klienten.
+      expect(state.refusjoner).toHaveLength(1);
+      // ...og den lokale reverserende regnskapsposten (bakoverkompat).
       expect(state.regnskap).toHaveLength(1);
-      // refusjon-INSERT params: [navn, beskr, mvaKode, mva_sats, -netto, -mva, -brutto, id]
+      expect(state.regnskapViaTx).toBe(true);
+      // regnskap-INSERT params: [navn, beskr, mvaKode, mva_sats, -netto, -mva, -brutto, id]
       // brutto_ore = index 6 og skal vaere negativ
       expect(state.regnskap[0][6]).toBeLessThan(0);
+      // uten oppgitt belop refunderes hele booking-beloepet (500 kr = 50000 ore).
+      expect(state.refusjoner[0][1]).toBe(50000); // belop_ore
+    } finally { srv.close(); }
+  });
+
+  it('haandhever invariant: refusjon utover gjenstaende gir 409', async () => {
+    reset();
+    // Booking 500 kr = 50000 ore; allerede 40000 refundert -> 10000 gjenstaar.
+    state.refusjonSum = 40000;
+    const srv = await lytt(lagApp(ADMIN));
+    try {
+      const r = await post(srv, '/api/bookings/5/refusjon', { belop_ore: 20000 });
+      expect(r.status).toBe(409);
+      expect(r.body.code).toBe('refusjon_overstiger');
+      expect(r.body.gjenstaende_ore).toBe(10000);
+      // Ingen refusjon/regnskap skrevet naar invarianten brytes.
+      expect(state.refusjoner).toHaveLength(0);
+      expect(state.regnskap).toHaveLength(0);
+    } finally { srv.close(); }
+  });
+
+  it('godtar delrefusjon innenfor gjenstaende (N delrefusjoner)', async () => {
+    reset();
+    state.refusjonSum = 40000; // 10000 gjenstaar
+    const srv = await lytt(lagApp(ADMIN));
+    try {
+      const r = await post(srv, '/api/bookings/5/refusjon', { belop_ore: 10000 });
+      expect(r.status).toBe(200);
+      expect(state.refusjoner).toHaveLength(1);
+      expect(state.refusjoner[0][1]).toBe(10000);
+      expect(r.body.refusjon.gjenstaende_ore).toBe(0);
+    } finally { srv.close(); }
+  });
+
+  it('idempotens: kjent noekkel gir 200 duplikat uten ny rad', async () => {
+    reset();
+    state.refusjonDup = true;
+    const srv = await lytt(lagApp(ADMIN));
+    try {
+      const r = await post(srv, '/api/bookings/5/refusjon', { belop_ore: 10000, idempotens_nokkel: 'abc' });
+      expect(r.status).toBe(200);
+      expect(r.body.duplikat).toBe(true);
+      expect(state.refusjoner).toHaveLength(0);
+      expect(state.regnskap).toHaveLength(0);
+    } finally { srv.close(); }
+  });
+
+  it('gavekort=true utsteder gavekort i samme tx og returnerer koden', async () => {
+    reset();
+    const srv = await lytt(lagApp(ADMIN));
+    try {
+      const r = await post(srv, '/api/bookings/5/refusjon', { belop_ore: 20000, gavekort: true });
+      expect(r.status).toBe(200);
+      expect(state.gavekortRader).toHaveLength(1);
+      // gavekort-INSERT params: [kode, verdi_ore, utstedt_for_refusjon_av]
+      expect(state.gavekortRader[0][1]).toBe(20000); // verdi_ore = refusjonsbelop
+      expect(r.body.gavekort).not.toBeNull();
+      expect(r.body.gavekort.verdi_ore).toBe(20000);
+      expect(typeof r.body.gavekort.kode).toBe('string');
+      // refusjons-raden er merket gavekort=true (param index 3).
+      expect(state.refusjoner[0][3]).toBe(true);
+    } finally { srv.close(); }
+  });
+
+  it('PII: kundenavn/e-post i grunn saniteres bort fra regnskaps-beskrivelsen', async () => {
+    reset();
+    const srv = await lytt(lagApp(ADMIN));
+    try {
+      const r = await post(srv, '/api/bookings/5/refusjon', { grunn: 'Kontakt kari@x.no om dette' });
+      expect(r.status).toBe(200);
+      // regnskap-INSERT beskrivelse = param index 1.
+      const beskr = state.regnskap[0][1];
+      expect(beskr).not.toContain('kari@x.no');
+      expect(beskr).toContain('[fjernet]');
+      // ...og den sanerte grunn ligger i refusjons-raden (param index 2), uten e-post.
+      expect(state.refusjoner[0][2]).not.toContain('kari@x.no');
+    } finally { srv.close(); }
+  });
+
+  it('404 naar bookingen ikke finnes', async () => {
+    reset();
+    state.refundBooking = null;
+    const srv = await lytt(lagApp(ADMIN));
+    try {
+      const r = await post(srv, '/api/bookings/5/refusjon', { belop_ore: 100 });
+      expect(r.status).toBe(404);
+      expect(state.refusjoner).toHaveLength(0);
     } finally { srv.close(); }
   });
 });

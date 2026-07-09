@@ -2,6 +2,7 @@
    POST /        -> opprett booking (gjest eller innlogget)
    GET  /        -> ansatt/admin: alle; kunde: egne; ellers 401
    PATCH /:id    -> kun ansatt/admin: oppdater status */
+const crypto = require('crypto');
 const express = require('express');
 const db = require('../db');
 const { requireRole } = require('../lib/auth');
@@ -36,6 +37,27 @@ function ukedagFraDato(dato) {
   const d = new Date(`${dato}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return null;
   return (d.getUTCDay() + 6) % 7;
+}
+
+// Fase 4 PII: refusjons-`grunn` er fritekst fra en ansatt/admin. Den skal IKKE
+// kunne baere kunde-PII (navn/e-post/telefon) inn i regnskaps-/bilagslaget.
+// Heuristisk sanitering: fjern e-postadresser og telefon-lignende sifferrekker,
+// kollaps whitespace, kapp lengde. Ikke vanntett anonymisering (en ansatt KAN
+// skrive et navn som fri tekst), men lukker de maskin-gjenkjennelige lekkasjene.
+// Returnerer null for tom/ugyldig input (kolonnen er NULLABLE).
+function saniterGrunn(grunn) {
+  if (grunn == null) return null;
+  let s = String(grunn);
+  s = s.replace(/\S+@\S+\.\S+/g, '[fjernet]');            // e-post
+  s = s.replace(/\+?\d[\d\s().-]{6,}\d/g, '[fjernet]');   // telefon-lignende
+  s = s.replace(/\s+/g, ' ').trim().slice(0, 200);
+  return s.length ? s : null;
+}
+
+// Unik, ugjettbar gavekort-kode. UNIQUE-constrainten paa gavekort.kode er
+// database-backstop mot den (usannsynlige) kollisjonen.
+function lagGavekortKode() {
+  return 'HAV-GK-' + crypto.randomBytes(6).toString('hex').toUpperCase();
 }
 
 // Opprett booking
@@ -347,8 +369,24 @@ router.patch('/:id', requireRole('ansatt', 'admin'), async (req, res) => {
   }
 });
 
-// Fase 3 — Refusjon (kun ansatt/admin): merk booking refundert + reverserende
-// (negativ) regnskapspost. Pengelogikk speiler den opprinnelige inntektsposten.
+// Fase 4 — Refusjon (kun ansatt/admin). Tar N delrefusjoner per booking.
+//
+// Hele operasjonen kjorer i ÉN transaksjon (db.withTransaction), med
+// SELECT ... FOR UPDATE paa bookingen som serialiserings-laas. Det gir:
+//   - Summerings-invarianten Σ(refusjoner) + ny ≤ opprinnelig brutto haandhevet
+//     atomisk: to samtidige delrefusjoner kan ikke begge lese en utdatert sum og
+//     begge passere — den andre blokkerer til den forste committer.
+//   - Idempotens: idempotens_nokkel (fra body/`Idempotency-Key`) forhaandssjekkes
+//     OG er UNIQUE i DB (backstop mot dobbelklikk/retry i en race).
+//   - Atomisitet: refusjons-rad + evt. gavekort + lokal reverserende
+//     regnskapspost + booking-oppdatering committer eller ruller tilbake SAMMEN.
+//
+// Fiken: den GATEDE delete+repost-flyten (versjonert saleNumber + deleted-filter)
+// er bygget som adapter-primitiver i lib/fiken.js (reverserSalg/finnAktivtSalg,
+// begge bak isConfigured()), men BEVISST IKKE koblet inn i denne money-ruten enda
+// — den kan ikke live-verifiseres uten et Fiken test-firma-token, og skal ikke
+// legge uverifisert atferd paa penge-pathen for operatoren kobler Fiken. Lokal
+// regnskaps-speiling (negativ post) beholdes uendret i mellomtiden.
 router.post('/:id/refusjon', requireRole('ansatt', 'admin'), async (req, res) => {
   if (!db.isConfigured()) {
     return res.status(503).json({ error: 'Database ikke tilgjengelig' });
@@ -357,65 +395,161 @@ router.post('/:id/refusjon', requireRole('ansatt', 'admin'), async (req, res) =>
   if (!Number.isInteger(id)) {
     return res.status(400).json({ error: 'Ugyldig id' });
   }
-  const { belop_ore, grunn } = req.body || {};
+  const { belop_ore, grunn, gavekort } = req.body || {};
+  const somGavekort = gavekort === true || gavekort === 'true';
+  const grunnRen = saniterGrunn(grunn);
+  const idem =
+    (req.body && req.body.idempotens_nokkel) || req.get('Idempotency-Key') || null;
 
   try {
-    const booking = await db.one('SELECT * FROM bookings WHERE id = $1', [id]);
-    if (!booking) return res.status(404).json({ error: 'Booking ikke funnet' });
+    const utfall = await db.withTransaction(async (client) => {
+      // Laas bookingen for hele operasjonen (serialiserer samtidige refusjoner).
+      const { rows: bRows } = await client.query(
+        'SELECT * FROM bookings WHERE id = $1 FOR UPDATE',
+        [id]
+      );
+      const booking = bRows[0];
+      if (!booking) return { status: 404, body: { error: 'Booking ikke funnet' } };
 
-    // Refusjonsbeløp i øre: oppgitt beløp, ellers hele booking-beløpet.
-    const fullt = Math.round((booking.belop || 0) * 100);
-    let refundOre = belop_ore != null ? Math.round(Number(belop_ore)) : fullt;
-    if (!Number.isFinite(refundOre) || refundOre <= 0) {
-      return res.status(400).json({ error: 'Ugyldig refusjonsbeløp' });
-    }
-    if (refundOre > fullt) refundOre = fullt;
+      // Idempotens-forhaandssjekk: samme noekkel = samme hendelse -> ingen ny rad.
+      if (idem) {
+        const { rows: dupRows } = await client.query(
+          'SELECT id FROM refusjoner WHERE idempotens_nokkel = $1',
+          [idem]
+        );
+        if (dupRows[0]) {
+          return {
+            status: 200,
+            body: { booking, refusjon_id: dupRows[0].id, duplikat: true },
+          };
+        }
+      }
 
-    const oppdatert = await db.one(
-      `UPDATE bookings
-          SET refund_amount_ore = $1, refund_reason = $2, refunded_at = now()
-        WHERE id = $3
-        RETURNING *`,
-      [refundOre, grunn || null, id]
-    );
+      const fullt = Math.round((booking.belop || 0) * 100);
+      const { rows: sumRows } = await client.query(
+        'SELECT COALESCE(SUM(belop_ore),0)::bigint AS sum FROM refusjoner WHERE booking_id = $1',
+        [id]
+      );
+      const alleredeRefundert = Number(sumRows[0] && sumRows[0].sum) || 0;
+      const gjenstaende = fullt - alleredeRefundert;
 
-    // Reverserende (negativ) regnskapspost — speil aktivitetens MVA-sats.
-    try {
-      const akt = await db.one(
+      // Belop: oppgitt, ellers hele det gjenstaende.
+      let refundOre = belop_ore != null ? Math.round(Number(belop_ore)) : gjenstaende;
+      if (!Number.isFinite(refundOre) || refundOre <= 0) {
+        return { status: 400, body: { error: 'Ugyldig refusjonsbeløp' } };
+      }
+      // Invariant: Σ refusjoner + ny ≤ opprinnelig brutto.
+      if (refundOre > gjenstaende) {
+        return {
+          status: 409,
+          body: {
+            error: 'Refusjonsbeløpet overstiger gjenstående refunderbart beløp.',
+            code: 'refusjon_overstiger',
+            feil: 'refusjon_overstiger',
+            gjenstaende_ore: gjenstaende,
+          },
+        };
+      }
+
+      // Gavekort valgt: utsted i SAMME tx (verdi = refusjonsbelopet). Regnskaps-
+      // messig er et gavekort en FORPLIKTELSE (gjeld) ved utstedelse og INNTEKT
+      // ved innloesning. Konkret gjeldskonto + MVA-tidspunkt avklares med
+      // regnskapsfoerer (docs/proposals/2026-07-09_fase4-...), saa vi POSTERER
+      // IKKE en uverifisert gjeldskonto her enda — vi registrerer forpliktelsen i
+      // gavekort-tabellen. Den lokale reverserende inntektsposten under staar
+      // uansett (inntekten reverseres); gjeldsspeilingen er et aapent punkt.
+      let gavekortId = null;
+      let gavekortKode = null;
+      if (somGavekort) {
+        gavekortKode = lagGavekortKode();
+        const { rows: gkRows } = await client.query(
+          `INSERT INTO gavekort (kode, verdi_ore, utstedt_for_refusjon_av)
+           VALUES ($1,$2,$3) RETURNING id`,
+          [gavekortKode, refundOre, `booking:${id}`]
+        );
+        gavekortId = gkRows[0] && gkRows[0].id;
+      }
+
+      // Refusjons-raden. UNIQUE(idempotens_nokkel) er backstop mot en race der to
+      // like forespoersler passerte forhaandssjekken; da kaster INSERT -> hele tx
+      // ROLLBACK-er (inkl. gavekortet over) -> 500. Sjelden, men trygt.
+      const { rows: rRows } = await client.query(
+        `INSERT INTO refusjoner
+           (booking_id, belop_ore, grunn, gavekort, gavekort_id, idempotens_nokkel, opprettet_av)
+         VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+        [
+          id,
+          refundOre,
+          grunnRen,
+          somGavekort,
+          gavekortId,
+          idem,
+          req.user ? req.user.navn || String(req.user.id) : null,
+        ]
+      );
+      const refusjonId = rRows[0] && rRows[0].id;
+
+      // Lokal reverserende (negativ) regnskapspost — speiler aktivitetens MVA.
+      // Beholdt for bakoverkompat (regnskapspakke leser refusjon som negativ
+      // regnskap_poster). beskrivelse er PII-fri: sanitert grunn, ingen kunde-
+      // navn i fritekst.
+      const { rows: aktRows } = await client.query(
         'SELECT navn, mva_sats FROM activities WHERE id = $1',
         [booking.activity_id]
       );
+      const akt = aktRows[0] || null;
       const sats = akt && akt.mva_sats != null ? Number(akt.mva_sats) : 25;
       const { netto_ore, mva_ore, brutto_ore, mva_sats } = mvaSplitt(refundOre, sats);
       const mvaKode = mva_sats === 0 ? 0 : 3;
-      await db.query(
+      const beskr =
+        `Refusjon: ${(akt && akt.navn) || 'booking'}` +
+        (grunnRen ? ` (${grunnRen})` : '') +
+        (somGavekort ? ' [gavekort]' : '');
+      await client.query(
         `INSERT INTO regnskap_poster
            (type, dato, kontakt, beskrivelse, konto, mva_kode, mva_sats,
             netto_ore, mva_ore, brutto_ore, betalingsmetode, kilde, booking_id)
          VALUES ('inntekt',CURRENT_DATE,$1,$2,3000,$3,$4,$5,$6,$7,NULL,'booking',$8)`,
-        [
-          booking.navn,
-          `Refusjon: ${(akt && akt.navn) || 'booking'}${grunn ? ` (${grunn})` : ''}`,
-          mvaKode,
-          mva_sats,
-          -netto_ore,
-          -mva_ore,
-          -brutto_ore,
-          id,
-        ]
+        [booking.navn, beskr, mvaKode, mva_sats, -netto_ore, -mva_ore, -brutto_ore, id]
       );
-    } catch (regnskapFeil) {
-      console.error('bookings: kunne ikke lagre refusjonspost:', regnskapFeil.message);
-    }
 
-    // Revisjonsspor — fire-and-forget (writeAudit kaster aldri).
-    await writeAudit(req.user, 'refusjon', {
-      booking_id: id,
-      refund_amount_ore: refundOre,
-      grunn: grunn || null,
+      // Booking-feltet beholdt for bakoverkompat: KUMULATIV sum (ikke lenger
+      // kilden til sannhet — det er SUM(refusjoner)). refund_reason = sanitert.
+      const nyttTotal = alleredeRefundert + refundOre;
+      const { rows: oppdRows } = await client.query(
+        `UPDATE bookings
+            SET refund_amount_ore = $1, refund_reason = $2, refunded_at = now()
+          WHERE id = $3
+          RETURNING *`,
+        [nyttTotal, grunnRen, id]
+      );
+
+      return {
+        status: 200,
+        body: {
+          booking: oppdRows[0],
+          refusjon: {
+            id: refusjonId,
+            belop_ore: refundOre,
+            gjenstaende_ore: gjenstaende - refundOre,
+          },
+          gavekort: gavekortKode ? { kode: gavekortKode, verdi_ore: refundOre } : null,
+        },
+      };
     });
 
-    res.json({ booking: oppdatert });
+    // Revisjonsspor — fire-and-forget (writeAudit kaster aldri). Kun for faktiske
+    // refusjoner (ikke 4xx-utfall).
+    if (utfall.status === 200 && !utfall.body.duplikat) {
+      await writeAudit(req.user, 'refusjon', {
+        booking_id: id,
+        refund_amount_ore: utfall.body.refusjon ? utfall.body.refusjon.belop_ore : null,
+        gavekort: somGavekort,
+        grunn: grunnRen,
+      });
+    }
+
+    return res.status(utfall.status).json(utfall.body);
   } catch (e) {
     console.error('bookings POST /:id/refusjon feilet:', e.message);
     res.status(500).json({ error: 'Kunne ikke refundere booking' });

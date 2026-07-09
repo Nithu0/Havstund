@@ -191,6 +191,20 @@ async function migrate(q) {
   await q('ALTER TABLE bookings ADD COLUMN IF NOT EXISTS adr_poststed TEXT');
   await q('ALTER TABLE bookings ADD COLUMN IF NOT EXISTS adr_land TEXT');
 
+  // Fase 4: Fiken-reverserbarhet. Nye kolonner paa EKSISTERENDE tabeller maa
+  // ligge her (ikke i schema.sql) — CREATE TABLE IF NOT EXISTS hopper over hele
+  // tabellen naar den finnes, saa en ny kolonne i definisjonen naar aldri en
+  // levende db. ADD COLUMN IF NOT EXISTS er idempotent uten DO-blokk (pg-mem OK).
+  //   - regnskap_poster.fiken_id: saleId fra Fiken (Location-header ved send).
+  //     Uten persistert saleId kan et bilag ikke reverseres (Fiken-delete krever
+  //     saleId). Kalleren (routes/regnskap.js /fiken/send) lagrer den.
+  //   - bookings.fiken_sale_id / fiken_sale_number: gjeldende aktive bilag +
+  //     versjonert idempotens-noekkel (HAV-booking-<id>-v<n>) for delete+repost.
+  //     Additive og NULLABLE; inerte til Fiken-adapteren aktiveres (isConfigured).
+  await q('ALTER TABLE regnskap_poster ADD COLUMN IF NOT EXISTS fiken_id TEXT');
+  await q('ALTER TABLE bookings ADD COLUMN IF NOT EXISTS fiken_sale_id TEXT');
+  await q('ALTER TABLE bookings ADD COLUMN IF NOT EXISTS fiken_sale_number TEXT');
+
   for (const fk of FK_MIGRASJONER) {
     const { rows } = await q('SELECT 1 FROM pg_constraint WHERE conname = $1', [fk.navn]);
     if (rows.length) continue; // constrainten finnes allerede — hopp over
