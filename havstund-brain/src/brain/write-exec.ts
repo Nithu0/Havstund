@@ -21,6 +21,49 @@ import {
 import type { WebsitePort } from '../port/website-port.js';
 import type { BookingStatus } from '../port/types.js';
 
+// ---- Regnskapspost (Fase 6) ----
+// WebsitePort selv utvides ikke (eierskap: port/-laget røres ikke her). Adapterne
+// implementerer denne kapabiliteten som en ekstra metode, og executeWrite kaster
+// porten til den når verktøyet er opprett_regnskapspost.
+
+/** Det executeWrite sender til porten. brutto_ore er det BEKREFTEDE beløpet fra
+ *  kvitteringen (i øre). Adapteren regner netto/mva selv — modellen gjør det aldri. */
+export interface OpprettRegnskapspostInput {
+  type: 'utgift';
+  dato: string;
+  beskrivelse: string;
+  konto: number;
+  mva_sats: number;
+  brutto_ore: number;
+  betalingsmetode: string | null;
+}
+
+/** Radformen nettsidens /api/regnskap/poster returnerer (RETURNING-kolonnene). */
+export interface RegnskapPost {
+  id: number;
+  type: string;
+  dato: string;
+  kontakt: string | null;
+  beskrivelse: string;
+  konto: number | null;
+  mva_kode: number | null;
+  mva_sats: number;
+  netto_ore: number;
+  mva_ore: number;
+  brutto_ore: number;
+  betalingsmetode: string | null;
+  bilag: string | null;
+  kilde: string;
+  fiken_status: string;
+}
+
+interface RegnskapWritePort {
+  opprettRegnskapspost(input: OpprettRegnskapspostInput): Promise<RegnskapPost>;
+}
+
+const MVA_SATSER = [0, 12, 15, 25];
+const BETALINGSMETODER = ['bank', 'kort', 'kontant'];
+
 // Gyldige statusoverganger (forespurt → bekreftet/avlyst, bekreftet → fullfort/avlyst).
 const TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
   forespurt: ['bekreftet', 'avlyst', 'fullfort'],
@@ -137,6 +180,24 @@ export async function revalidateWrite(
       if (!/^\d{4}-\d{2}-\d{2}$/.test(String(input.dato))) throw new ValidationError('dato må være YYYY-MM-DD');
       return;
     }
+    case 'opprett_regnskapspost': {
+      // Modellen gir brutto + sats; systemet regner mva. Håndhev de harde grensene
+      // strict:true ikke dekker (mot rutas egen validering i routes/regnskap.js).
+      if (input.type !== undefined && input.type !== 'utgift') {
+        throw new ValidationError('type må være "utgift"');
+      }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(input.dato))) throw new ValidationError('dato må være YYYY-MM-DD');
+      if (!String(input.beskrivelse ?? '').trim()) throw new ValidationError('beskrivelse er påkrevd');
+      intGte(input.konto, 0, 'konto');
+      if (!MVA_SATSER.includes(Number(input.mva_sats))) {
+        throw new ValidationError('mva_sats må være 0, 12, 15 eller 25');
+      }
+      intGte(input.brutto_ore, 0, 'brutto_ore');
+      if (input.betalingsmetode != null && !BETALINGSMETODER.includes(String(input.betalingsmetode))) {
+        throw new ValidationError('betalingsmetode må være bank, kort eller kontant');
+      }
+      return;
+    }
     case 'update_site_content': {
       const nokkel = String(input.nokkel ?? '');
       if (!/^[a-z0-9_.-]{1,64}$/.test(nokkel)) throw new ValidationError('Ugyldig nøkkel');
@@ -224,6 +285,17 @@ export async function executeWrite(
         timer: Number(input.timer),
         aktivitet: (input.aktivitet as string) ?? null,
         notat: (input.notat as string) ?? null,
+      });
+    case 'opprett_regnskapspost':
+      // Porten utvides ikke i port/-laget (eierskap); adapterne bærer metoden.
+      return (port as unknown as RegnskapWritePort).opprettRegnskapspost({
+        type: 'utgift',
+        dato: String(input.dato),
+        beskrivelse: String(input.beskrivelse),
+        konto: Number(input.konto),
+        mva_sats: Number(input.mva_sats),
+        brutto_ore: Number(input.brutto_ore),
+        betalingsmetode: (input.betalingsmetode as string) ?? null,
       });
     case 'update_site_content':
       return port.updateSiteContent({ nokkel: String(input.nokkel), verdi: String(input.verdi) });

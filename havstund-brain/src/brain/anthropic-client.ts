@@ -29,7 +29,22 @@ export interface ToolResultBlock {
   is_error?: boolean;
 }
 
-export type UserContent = string | Array<TextBlock | ToolResultBlock>;
+/**
+ * Bilde-blokk i en bruker-melding (Anthropic Messages API `image`-blokk).
+ * Brukes bl.a. av Fase 6: bruker sender et kvitteringsbilde + tekst, og
+ * modellen (claude-opus-4-8, vision-støttet) LESER beløp/dato/leverandør fra
+ * bildet. Kun base64 her — vi laster ikke ned eksterne URL-er i brain-prosessen.
+ */
+export interface ImageBlock {
+  type: 'image';
+  source: {
+    type: 'base64';
+    media_type: string;
+    data: string;
+  };
+}
+
+export type UserContent = string | Array<TextBlock | ImageBlock | ToolResultBlock>;
 
 export interface ConversationMessage {
   role: 'user' | 'assistant';

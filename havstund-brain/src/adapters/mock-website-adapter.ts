@@ -17,6 +17,7 @@ import {
   ValidationError,
 } from '../port/errors.js';
 import type { WebsitePort, ListBookingsFilter } from '../port/website-port.js';
+import type { OpprettRegnskapspostInput, RegnskapPost } from '../brain/write-exec.js';
 import type {
   Activity,
   AvailabilityCheck,
@@ -41,6 +42,8 @@ import type {
 } from '../port/types.js';
 
 const STATUSER: BookingStatus[] = ['forespurt', 'bekreftet', 'avlyst', 'fullfort'];
+const R_SATSER = [0, 12, 15, 25];
+const R_BETALING = ['bank', 'kort', 'kontant'];
 
 function ukedagFraDato(dato: string): number | null {
   const d = new Date(`${dato}T00:00:00Z`);
@@ -57,6 +60,7 @@ export interface MockSeed {
   messages?: CustomerMessage[];
   content?: ContentEntry[];
   staffHours?: StaffHourEntry[];
+  regnskapsposter?: RegnskapPost[];
   users?: Array<{ id: number; navn: string; epost: string; rolle: string }>;
 }
 
@@ -69,9 +73,10 @@ export class MockWebsiteAdapter implements WebsitePort {
   messages: CustomerMessage[];
   content: ContentEntry[];
   staffHours: StaffHourEntry[];
+  regnskapsposter: RegnskapPost[];
   users: Array<{ id: number; navn: string; epost: string; rolle: string }>;
 
-  private seq = { booking: 0, slot: 0, message: 0, activity: 0, staffHour: 0 };
+  private seq = { booking: 0, slot: 0, message: 0, activity: 0, staffHour: 0, regnskapspost: 0 };
 
   constructor(seed: MockSeed = {}) {
     this.activities = (seed.activities ?? []).map((a) => ({ ...a }));
@@ -82,6 +87,7 @@ export class MockWebsiteAdapter implements WebsitePort {
     this.messages = (seed.messages ?? []).map((m) => ({ ...m }));
     this.content = (seed.content ?? []).map((c) => ({ ...c }));
     this.staffHours = (seed.staffHours ?? []).map((s) => ({ ...s }));
+    this.regnskapsposter = (seed.regnskapsposter ?? []).map((r) => ({ ...r }));
     this.users = (seed.users ?? []).map((u) => ({ ...u }));
 
     this.seq.booking = Math.max(0, ...this.bookings.map((b) => b.id));
@@ -89,6 +95,7 @@ export class MockWebsiteAdapter implements WebsitePort {
     this.seq.message = Math.max(0, ...this.messages.map((m) => m.id));
     this.seq.activity = Math.max(0, ...this.activities.map((a) => a.id));
     this.seq.staffHour = Math.max(0, ...this.staffHours.map((s) => s.id));
+    this.seq.regnskapspost = Math.max(0, ...this.regnskapsposter.map((r) => r.id));
   }
 
   // ---- LESE ----
@@ -339,6 +346,43 @@ export class MockWebsiteAdapter implements WebsitePort {
     };
     this.staffHours.push(e);
     return { ...e };
+  }
+
+  async opprettRegnskapspost(input: OpprettRegnskapspostInput): Promise<RegnskapPost> {
+    // Speiler routes/regnskap.js POST /poster: netto → mva → brutto. Ruta tar
+    // netto_ore; AI-en gir bekreftet brutto, så vi baklengs-regner netto først
+    // (samme konvensjon som HttpWebsiteAdapter) og gjenskaper så mva/brutto slik
+    // ruta ville gjort — kontrakt-likhet mock vs. ekte API.
+    if (input.type !== 'utgift') throw new ValidationError('Ugyldig type (kun utgift)');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.dato)) throw new ValidationError('Ugyldig dato');
+    if (!String(input.beskrivelse ?? '').trim()) throw new ValidationError('Beskrivelse er påkrevd');
+    if (input.betalingsmetode != null && !R_BETALING.includes(input.betalingsmetode)) {
+      throw new ValidationError('Ugyldig betalingsmetode');
+    }
+    const sats = R_SATSER.includes(input.mva_sats) ? input.mva_sats : 0;
+    const nettoOre = Math.round((input.brutto_ore * 100) / (100 + sats));
+    if (!Number.isFinite(nettoOre) || nettoOre < 0) throw new ValidationError('Ugyldig beløp');
+    const mvaOre = Math.round((nettoOre * sats) / 100);
+    const bruttoOre = nettoOre + mvaOre;
+    const post: RegnskapPost = {
+      id: ++this.seq.regnskapspost,
+      type: input.type,
+      dato: input.dato,
+      kontakt: null,
+      beskrivelse: String(input.beskrivelse).trim(),
+      konto: Number.isInteger(input.konto) ? input.konto : null,
+      mva_kode: null,
+      mva_sats: sats,
+      netto_ore: nettoOre,
+      mva_ore: mvaOre,
+      brutto_ore: bruttoOre,
+      betalingsmetode: input.betalingsmetode ?? null,
+      bilag: null,
+      kilde: 'agent',
+      fiken_status: 'ikke_sendt',
+    };
+    this.regnskapsposter.push(post);
+    return { ...post };
   }
 
   async updateSiteContent(input: UpdateSiteContentInput): Promise<ContentEntry> {
