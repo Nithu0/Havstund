@@ -196,6 +196,53 @@ describe('PUT /api/availability', () => {
     } finally { srv.close(); }
   });
 
+  it('400 nar to slots har samme tid (duplisert) — ingen rader skrevet', async () => {
+    const srv = await lytt(lagApp(ANSATT));
+    try {
+      const [sti, opts] = put({
+        activity_id: 2,
+        dato: '2026-07-01',
+        // to like tider i samme PUT: ville truffet unik-indeksen og gitt 500.
+        slots: [{ tid: '10:00', kapasitet: 8 }, { tid: '10:00', kapasitet: 5 }],
+      });
+      const res = await reqJson(srv, sti, opts);
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/duplisert/i);
+      // Validering skjer FOER transaksjonen -> ingen DELETE/INSERT ble kjort.
+      expect(state.kall.some((k) => /DELETE|INSERT/i.test(k.text))).toBe(false);
+    } finally { srv.close(); }
+  });
+
+  it('400 pa duplisert tid ogsaa naar bare whitespace skiller dem (trim)', async () => {
+    const srv = await lytt(lagApp(ANSATT));
+    try {
+      const [sti, opts] = put({
+        activity_id: 2,
+        dato: '2026-07-01',
+        slots: [{ tid: '10:00' }, { tid: '  10:00  ' }],
+      });
+      const res = await reqJson(srv, sti, opts);
+      expect(res.status).toBe(400);
+      expect(state.kall.some((k) => /DELETE|INSERT/i.test(k.text))).toBe(false);
+    } finally { srv.close(); }
+  });
+
+  it('unike tider gaar gjennom uendret (dedupe-sjekken slaar ikke inn)', async () => {
+    const srv = await lytt(lagApp(ANSATT));
+    try {
+      const [sti, opts] = put({
+        activity_id: 2,
+        dato: '2026-07-01',
+        slots: [{ tid: '10:00', kapasitet: 8 }, { tid: '12:00', kapasitet: 6 }],
+      });
+      const res = await reqJson(srv, sti, opts);
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(2);
+      const ins = state.kall.filter((k) => /INSERT/i.test(k.text));
+      expect(ins).toHaveLength(2);
+    } finally { srv.close(); }
+  });
+
   it('happy-path: sletter eksisterende og setter inn nye slots', async () => {
     const srv = await lytt(lagApp(ANSATT));
     try {

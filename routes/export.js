@@ -12,7 +12,17 @@ const router = express.Router();
 // linjeskift eller CR; doble fnutter inne i feltet dobles (RFC 4180).
 function csvFelt(verdi) {
   if (verdi == null) return '';
-  const s = String(verdi);
+  let s = String(verdi);
+  // CSV-injection: et felt som starter med =, +, -, @, TAB eller CR tolkes som
+  // formel når CSV-en åpnes i Excel/Sheets (en kunde kan hete «=cmd|...»).
+  // Prefiks med apostrof så det leses som ren tekst — gjøres FØR quoting.
+  // Unntak: er HELE feltet et velformet tall (valgfritt minus, heltall/desimal
+  // med komma eller punktum, t.d. -500 eller -1234,50) er det trygt — Excel
+  // parser det som TALL, ikke formel. Da hopper vi over prefikset, ellers ville
+  // negative beløp bli tekst og bryte SUM-formler i regnearket.
+  if (/^[=+\-@\t\r]/.test(s) && !/^-?\d+([.,]\d+)?$/.test(s)) {
+    s = "'" + s;
+  }
   if (/[",\r\n]/.test(s)) {
     return '"' + s.replace(/"/g, '""') + '"';
   }

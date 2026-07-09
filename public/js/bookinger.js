@@ -40,6 +40,12 @@
     try { return new Date(s).toISOString().slice(0, 10); } catch (_) { return ''; }
   }
 
+  // Sorterings-komparator: nyeste dato først (synkende). localeCompare gir en
+  // gyldig totalordning — 0 ved likhet — så Array.sort er stabil/forutsigbar.
+  function sammenlignBookinger(a, b) {
+    return datoISO(b.dato).localeCompare(datoISO(a.dato));
+  }
+
   function lastBookinger() {
     api('/api/bookings').then(function (r) { return r.ok ? r.json() : Promise.reject(); })
       .then(function (data) {
@@ -89,9 +95,7 @@
   }
 
   function render() {
-    var rader = filtrert().slice().sort(function (a, b) {
-      return datoISO(b.dato) < datoISO(a.dato) ? -1 : 1; // nyeste dato først
-    });
+    var rader = filtrert().slice().sort(sammenlignBookinger);
     if (!rader.length) { $('liste').innerHTML = '<p class="tom">Ingen bookinger som matcher.</p>'; return; }
 
     var html = '<table class="tbl"><thead><tr>' +
@@ -144,14 +148,21 @@
     lastBookinger();
   }
 
-  // Tilgangssjekk (kun ansatt/admin)
-  api('/api/auth/me').then(function (r) {
-    if (r.status === 401) { window.location = '/konto'; return null; }
-    return r.json();
-  }).then(function (data) {
-    if (!data || !data.user) { window.location = '/konto'; return; }
-    if (data.user.rolle !== 'ansatt' && data.user.rolle !== 'admin') { window.location = '/min-side'; return; }
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-    else init();
-  }).catch(function () { window.location = '/konto'; });
+  // Ren komparator eksponeres for enhetstest (node/vitest) uten DOM/nettverk.
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { sammenlignBookinger: sammenlignBookinger };
+  }
+
+  // Tilgangssjekk (kun ansatt/admin) — kun i nettleser, ikke ved require i test.
+  if (typeof document !== 'undefined' && typeof window !== 'undefined') {
+    api('/api/auth/me').then(function (r) {
+      if (r.status === 401) { window.location = '/konto'; return null; }
+      return r.json();
+    }).then(function (data) {
+      if (!data || !data.user) { window.location = '/konto'; return; }
+      if (data.user.rolle !== 'ansatt' && data.user.rolle !== 'admin') { window.location = '/min-side'; return; }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+      else init();
+    }).catch(function () { window.location = '/konto'; });
+  }
 })();

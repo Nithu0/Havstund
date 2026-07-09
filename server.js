@@ -36,7 +36,21 @@ const PORT = process.env.PORT || 3000;
 // Slå på Sentry ved oppstart. No-op uten SENTRY_DSN. Kaster aldri.
 sentry.init(app);
 
-app.use(express.json({ limit: '8mb' }));
+// F52 — body-grenser. Global default er lav (256kb) mot minne-/DoS-misbruk.
+// Kun rutene som faktisk tar store payloads får egen 8mb-parser FORAN den
+// globale. De to som trenger det er base64-bilde-opplastinger (data:image/…,
+// begge kappet på ~7 MB i ruten selv):
+//   - POST /api/projects/:id/media   (prosjekt-media, felt `fil`)
+//   - POST/PATCH /api/regnskap/poster (kvitteringsbilde, felt `vedlegg`)
+// Express markerer req._body=true etter parse, så den globale 256kb-parseren
+// hopper over disse når de allerede er parset. Alt annet (activities.bilde er
+// bare en sti/URL, admin/content kappet på 50k tegn, kvitteringer er tall/tekst)
+// får den lave grensen. Prefiks-nivå er granulariteten auto-mount gir oss;
+// begge prefiks er uansett rolle-beskyttet (ansatt|admin).
+const storBodyParser = express.json({ limit: '8mb' });
+app.use('/api/projects', storBodyParser);
+app.use('/api/regnskap', storBodyParser);
+app.use(express.json({ limit: '256kb' }));
 app.use(cookieParser());
 app.use(agentAuth);    // service-token -> 'agent'-principal (brain). FØR authOptional.
 app.use(authOptional); // setter req.user hvis innlogget (valgfritt)
@@ -68,8 +82,10 @@ if (fs.existsSync(routesDir)) {
     try {
       app.use('/api/' + name, require(path.join(routesDir, f)));
       console.log('  ✓ rute  /api/' + name);
-    } catch (e) {
-      console.error('  ✗ kunne ikke laste rute ' + f + ':', e.message);
+    } catch (err) {
+      // F48 — strukturert logg + Sentry i stedet for rå console.error.
+      logger.error({ err, fil: f }, 'kunne ikke laste REST-rute');
+      sentry.captureException(err);
     }
   }
 }
@@ -84,11 +100,93 @@ if (fs.existsSync(rtDir)) {
     try {
       require(path.join(rtDir, f))(io);
       console.log('  ✓ realtime ' + f);
-    } catch (e) {
-      console.error('  ✗ kunne ikke laste realtime ' + f + ':', e.message);
+    } catch (err) {
+      // F48 — strukturert logg + Sentry i stedet for rå console.error.
+      logger.error({ err, fil: f }, 'kunne ikke laste realtime-handler');
+      sentry.captureException(err);
     }
   }
 }
+
+// ---- S1: rolle-gate for interne HTML-skall (default PÅ) ----
+// De statiske sidene under er interne admin-/intern-skall. API-dataene bak dem
+// er allerede rolle-beskyttet, så uinnlogget tilgang her er skall-eksponering
+// (selve HTML-et lastes), ikke en PII-lekkasje. Middleware kjører FØR
+// express.static og etter authOptional, så req.user er allerede satt.
+// Rollback på 30 sek uten kodeendring: STATIC_AUTH_ENABLED=false.
+// Roller pr. side speiler rolle-kravet på sidens primære API (se routes/*).
+const BESKYTTEDE_SIDER = {
+  'admin-agenda': ['ansatt', 'admin'],
+  'admin-aktiviteter': ['admin'], // /api/activities/admin/all krever admin
+  'admin-innsikt': ['ansatt', 'admin'],
+  'admin-kunder': ['ansatt', 'admin'],
+  'regnskap': ['ansatt', 'admin'],
+  'okonomi': ['admin'], // /api/finance krever admin
+  'intranett': ['ansatt', 'admin'],
+  'chat-innboks': ['ansatt', 'admin'],
+  'bookinger': ['ansatt', 'admin'],
+  'kunde-dialog': ['ansatt', 'admin'],
+};
+
+// Normaliser en rå request-path til NØYAKTIG den oppslagsnøkkelen
+// express.static til slutt slår opp — slik at porten ser det samme som static.
+// Returnerer null for stier vi ikke trygt kan tolke (fail-closed-signal).
+//
+// Hvorfor dette er nødvendig: req.path er RÅ (ikke prosentdekodet), men
+// express.static/send DEKODER én gang før filoppslag. En navne-allowlist på
+// req.path ser derfor '/regnskap%2Ehtml' (ingen treff -> next), mens static
+// dekoder til 'regnskap.html' og serverer siden. Vi lukker hele klassen ved å
+// dekode + normalisere på SAMME måte som static, ikke bare stripe '.html'.
+//
+// Dekoding: KUN én gang. Bekreftet ved probe at express.static single-dekoder
+// ('/regnskap%252Ehtml' serverer IKKE regnskap.html — static leter etter en fil
+// med literal '%2E' i navnet, som ikke finnes). En dekode-LØKKE ville derfor
+// avvike fra static OG er sin egen sårbarhet — vi bruker bevisst ikke while.
+function normaliserForOppslag(raStien) {
+  let sti;
+  try {
+    // decodeURIComponent er samme dekoder som send bruker; kaster på ugyldig
+    // prosentkoding (f.eks. '%ZZ', '%E0%A4%A').
+    sti = decodeURIComponent(raStien);
+  } catch {
+    return null; // udekodbar -> fail-closed
+  }
+  // Null-byte kan trunkere filoppslag på lavere lag — aldri trygt.
+  if (sti.indexOf('\0') !== -1) return null;
+  // Windows bruker '\\' som katalogseparator; normaliser til '/' før traversal-
+  // kollaps slik at '\\..\\'-varianter ikke slipper unna.
+  sti = sti.replace(/\\/g, '/');
+  // Kollaps '.', '..' og duplikat-slash slik path-oppslaget faktisk gjør. Dette
+  // fanger 'foo/../regnskap.html', '/./regnskap.html' og '%5C..%5C'-variantene.
+  sti = path.posix.normalize(sti);
+  // Fjern ledende slash(er), strip '.html' (case-ufølsomt), og lowercase.
+  // Case-ufølsomt oppslag er forsvar i dybden: filsystemet på Windows er
+  // case-ufølsomt (/REGNSKAP.html treffer regnskap.html), mens Linux uansett
+  // gir 404 på feil case.
+  return sti.replace(/^\/+/, '').replace(/\.html$/i, '').toLowerCase();
+}
+
+function beskyttetSideGate(req, res, next) {
+  // Default PÅ: kun eksakt 'false' slår av (rollback-bryter).
+  if (process.env.STATIC_AUTH_ENABLED === 'false') return next();
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  const nøkkel = normaliserForOppslag(req.path);
+  if (nøkkel === null) {
+    // Udekodbar/utrygg sti: vi kan ikke avgjøre hva static ville slått opp, så
+    // vi feiler LUKKET. 400 (ikke redirect): stien er en ugyldig ressurs-
+    // identitet, ikke et innloggingsproblem, og 400 kan aldri servere beskyttet
+    // HTML. Statisk lag ville uansett ikke servert en beskyttet side fra en
+    // sti med samme dekode-feil, så dette divergerer ikke fra static.
+    return res.status(400).type('text/plain').send('Ugyldig forespørsel');
+  }
+  const kreverRoller = BESKYTTEDE_SIDER[nøkkel];
+  if (!kreverRoller) return next();
+  const rolle = req.user && req.user.rolle;
+  if (rolle && kreverRoller.includes(rolle)) return next();
+  // Nettleser-navigasjon: redirect til innlogging (ikke 403-JSON).
+  return res.redirect('/konto');
+}
+app.use(beskyttetSideGate);
 
 // ---- Statiske filer (offentlig side + intern shell) ----
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
@@ -104,7 +202,17 @@ app.get(/^\/(?!api).*/, (_req, res) =>
 // eslint-disable-next-line no-unused-vars
 function errorMiddleware(err, req, res, _next) {
   try {
-    sentry.captureException(err);
+    // F50 — send request-kontekst til Sentry for raskere feilsøking. Kun
+    // ikke-sensitive felt: aldri body/headers/cookies (PII). rolle hentes fra
+    // req.user hvis satt.
+    sentry.captureException(err, {
+      extra: {
+        url: req && req.originalUrl,
+        method: req && req.method,
+        reqId: req && req.id,
+        rolle: (req && req.user && req.user.rolle) || undefined,
+      },
+    });
   } catch {
     /* Sentry skal aldri velte requesten */
   }

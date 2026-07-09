@@ -32,6 +32,11 @@ CREATE TABLE IF NOT EXISTS availability (
 
 CREATE TABLE IF NOT EXISTS bookings (
   id          SERIAL PRIMARY KEY,
+  -- F46: ingen ON DELETE her => Postgres-standard NO ACTION (restriktiv): en
+  -- aktivitet med bookinger kan IKKE slettes. Dette er TILSIKTET. Aktiviteter
+  -- slettes aldri hardt — de deaktiveres via aktiv=false (se routes/activities.js
+  -- DELETE /:id, som gjor UPDATE activities SET aktiv=false). Historiske bookinger
+  -- skal beholde sin aktivitets-referanse for regnskap/rapportering. Ikke endre.
   activity_id INTEGER REFERENCES activities(id),
   bruker_id   INTEGER REFERENCES users(id),     -- NULL hvis gjest
   navn        TEXT NOT NULL,
@@ -87,6 +92,9 @@ CREATE TABLE IF NOT EXISTS finance_scenarios (
 );
 
 CREATE INDEX IF NOT EXISTS idx_bookings_dato ON bookings(dato);
+-- F43: hot-path for kundeportal (mine bookinger) + GDPR-sletting (alle bookinger
+-- for en bruker). Additivt og trygt — ren indeks, ingen atferdsendring.
+CREATE INDEX IF NOT EXISTS idx_bookings_bruker_id ON bookings(bruker_id);
 CREATE INDEX IF NOT EXISTS idx_pageviews_tid ON pageviews(opprettet);
 CREATE INDEX IF NOT EXISTS idx_msg_thread ON chat_messages(thread_id);
 
@@ -249,3 +257,19 @@ ALTER TABLE activities ADD COLUMN IF NOT EXISTS mva_sats SMALLINT DEFAULT 25;
 
 CREATE INDEX IF NOT EXISTS idx_audit_log_tid ON audit_log(tid);
 CREATE INDEX IF NOT EXISTS idx_reset_tokens_user ON reset_tokens(user_id);
+
+-- ===== F44: unik slot i availability =====
+-- Dedupe av availability + CREATE UNIQUE INDEX uq_availability_slot er FLYTTET
+-- ut av dette skjemaet og inn i migrate() i db/index.js (2026-07-09).
+--
+-- Hvorfor flyttet: schema.sql kjores idempotent ved HVER boot (db.init()). En
+-- ubetinget `DELETE FROM availability ...` her kjorer altsaa ved hver oppstart og
+-- rydder kalenderplasser i prod UTEN aa si fra (etter forste kjoring sletter den
+-- 0 rader, saa den er teknisk idempotent — men stille). Prosjektet har lart denne
+-- leksa i PR #31: stille db-init skal vaere hoylytt. I migrate() (JS) kan vi telle
+-- slettede rader via rowCount og logge naar noe faktisk ryddes.
+--
+-- Rekkefolge-krav: dedupe MAA kjore FOER unik-indeksen opprettes (indeksen feiler
+-- ellers paa eksisterende duplikater). init() kjorer schema.sql FOER migrate(), saa
+-- indeksen kan IKKE bli staaende her — den ville da kjort foer dedupen. Derfor er
+-- BEGGE i migrate(): dedupe -> CREATE UNIQUE INDEX -> FK-ene.
