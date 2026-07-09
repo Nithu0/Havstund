@@ -17,6 +17,10 @@ try {
 }
 
 const CHAT_COOKIE = 'havstund_chat';
+// Felles rom for innloggede ansatte/admin. Brukes til innholdslose signaler
+// (f.eks. 'ny_booking') slik at admin-visninger kan re-hente authed data uten
+// at PII kringkastes. Kun ansatt/admin (JWT-handshake) far joine — se erAnsatt.
+const ANSATT_ROM = 'ansatte';
 
 // Parse rå Cookie-header fra socket-handshaken -> { navn: verdi }.
 function parseCookies(header) {
@@ -91,6 +95,15 @@ module.exports = function (io) {
     socket.on('forlat', (thread_id) => {
       const id = tilId(thread_id);
       if (id) socket.leave(rom(id));
+    });
+
+    // Ansatt blir med i det delte ansatt-rommet for innholdslose signaler
+    // (f.eks. 'ny_booking'). Gjenbruker erAnsatt-monsteret: kun en ekte
+    // ansatt/admin (gyldig JWT i handshake-cookien) slipper inn — samme
+    // IDOR-vern som tradene. Ingen PII gaar noensinne over dette rommet.
+    socket.on('bli_med_ansatt', () => {
+      if (erAnsatt(socket)) socket.join(ANSATT_ROM);
+      else socket.emit('nektet', { rom: ANSATT_ROM });
     });
 
     // Ansatt svarer i en tråd — kun ekte ansatt/admin (JWT). Uten denne
