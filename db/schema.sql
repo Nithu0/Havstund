@@ -321,3 +321,49 @@ CREATE TABLE IF NOT EXISTS salgsdokument_arkiv (
   bilag_ref      TEXT,                             -- kobling til bilagslaget/Fiken saleNumber
   opprettet      TIMESTAMPTZ DEFAULT now()
 );
+
+-- ===== Fase 4: refusjons-subsystem + gavekort =====
+-- Nye tabeller (ikke nye kolonner paa eksisterende tabeller), saa CREATE TABLE
+-- IF NOT EXISTS naar OGSAA en levende db her (i motsetning til ADD COLUMN, som
+-- maa ligge i migrate()). Ingen DO-blokk / plpgsql -> pg-mem laster rent.
+
+-- refusjoner = én rad per refusjonshendelse. Taaler N delrefusjoner per booking
+-- (enkeltfeltet bookings.refund_amount_ore holder ikke). Sannheten om hvor mye
+-- en booking er refundert er SUM(belop_ore) her, ikke bookings-feltet (beholdt
+-- for bakoverkompat). belop_ore er ALLTID positivt (fortegnet ligger i typen).
+-- Invarianten Σ(belop_ore) + ny ≤ opprinnelig brutto haandheves i rute-laget
+-- inne i en transaksjon (SELECT booking FOR UPDATE), ikke som DB-constraint.
+-- PII: `grunn` saniteres i rute-laget slik at kunde-navn ikke lekker inn i
+-- regnskaps-/bilagslaget. idempotens_nokkel UNIQUE fanger retry/dobbelklikk.
+-- gavekort_id er en LOES referanse (ingen FK) — det unngaar sirkulaer FK mot
+-- gavekort (som selv peker tilbake via utstedt_for_refusjon_av).
+CREATE TABLE IF NOT EXISTS refusjoner (
+  id                SERIAL PRIMARY KEY,
+  booking_id        INTEGER NOT NULL REFERENCES bookings(id),
+  belop_ore         INTEGER NOT NULL CHECK (belop_ore > 0),  -- alltid positivt
+  grunn             TEXT,                                     -- sanitert, PII-fri
+  gavekort          BOOLEAN NOT NULL DEFAULT false,           -- true = verdi gitt som gavekort
+  gavekort_id       INTEGER,                                  -- loes ref til gavekort(id) hvis valgt
+  fiken_bilag_ref   TEXT,                                     -- saleNumber for det reduserte bilaget (...-v<n>)
+  fiken_sale_id     TEXT,                                     -- saleId for reverstransaksjonen / nytt bilag
+  idempotens_nokkel TEXT UNIQUE,                              -- én rad per refusjonshendelse
+  opprettet         TIMESTAMPTZ DEFAULT now(),
+  opprettet_av      TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_refusjoner_booking ON refusjoner(booking_id);
+
+-- gavekort = utstedt gavekort. Regnskapsmessig en FORPLIKTELSE (gjeld) ved
+-- utstedelse, INNTEKT ved innloesning (gjeldskonto + MVA-tidspunkt avklares med
+-- regnskapsfoerer foer aktivering — dokumentert i docs/proposals/2026-07-09_...).
+-- Minimal innloesnings-modell: innlost BOOLEAN (ikke saldo/delinnloesning enda).
+-- Dobbeltinnloesnings-vern: unik `kode` + betinget UPDATE ... WHERE innlost=false
+-- (andre forsoek treffer 0 rader) + FOR UPDATE paa raden i rute-laget.
+CREATE TABLE IF NOT EXISTS gavekort (
+  id                       SERIAL PRIMARY KEY,
+  kode                     TEXT NOT NULL UNIQUE,             -- unik innloesningskode
+  verdi_ore                INTEGER NOT NULL CHECK (verdi_ore > 0),
+  utstedt_for_refusjon_av  TEXT,                             -- 'refusjon:<id>' | 'booking:<id>' | ...
+  innlost                  BOOLEAN NOT NULL DEFAULT false,
+  innlost_tid              TIMESTAMPTZ,
+  opprettet                TIMESTAMPTZ DEFAULT now()
+);

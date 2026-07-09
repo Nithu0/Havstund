@@ -411,7 +411,12 @@ router.post('/fiken/send', async (_req, res) => {
         ? await fiken.sendSalg(post)
         : await fiken.sendKjop(post);
       if (resultat && resultat.ok) {
-        await db.query(`UPDATE regnskap_poster SET fiken_status = 'sendt' WHERE id = $1`, [post.id]);
+        // Fase 4: persistér saleId (fra Fiken Location-header). Uten den kan
+        // bilaget ikke reverseres senere (Fiken-delete krever saleId).
+        await db.query(
+          `UPDATE regnskap_poster SET fiken_status = 'sendt', fiken_id = $2 WHERE id = $1`,
+          [post.id, resultat.fikenId != null ? String(resultat.fikenId) : null]
+        );
         sendt += 1;
       } else if (resultat && resultat.simulert) {
         simulert += 1;
