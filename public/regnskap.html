@@ -63,6 +63,11 @@
     .tbl .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
     .tbl .belop{font-weight:700;color:var(--sea-deep)}
     .konto-tag{display:inline-block;font-size:11px;font-weight:700;color:var(--teal);background:#e4eef9;padding:2px 8px;border-radius:6px}
+    .laast-tag{display:inline-block;font-size:11px;font-weight:700;color:#1f7a4d;background:#e6f4ec;padding:2px 8px;border-radius:6px}
+    .aapen-tag{display:inline-block;font-size:11px;font-weight:700;color:var(--muted);background:#f1f2f4;padding:2px 8px;border-radius:6px}
+    .lukk-btn{background:var(--turq);color:#fff;border:none;border-radius:8px;padding:6px 13px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer}
+    .lukk-btn:hover{background:var(--sea)}
+    .pakke-note{color:var(--muted);font-size:13px;margin-top:12px}
     .slett{background:none;border:none;color:#b03a2e;cursor:pointer;font-size:13px;font-weight:700;opacity:.7}
     .slett:hover{opacity:1}
     .tom{color:var(--muted);font-size:14px;padding:18px 4px}
@@ -107,6 +112,7 @@
       <button class="fane" data-pane="inntekter">Inntekter</button>
       <button class="fane" data-pane="utgifter">Utgifter</button>
       <button class="fane" data-pane="lonn">Timer &amp; lønn</button>
+      <button class="fane" data-pane="dagsoppgjor">Dagsoppgjør</button>
     </div>
 
     <!-- OVERSIKT -->
@@ -228,6 +234,24 @@
           <div class="felt"><label>Arb.giveravgift % (Vestvågøy = sone IV)</label><input type="number" id="sats-aga" step="0.1" min="0" value="5.1"></div>
         </div>
         <div id="liste-lonn"></div>
+      </div>
+    </section>
+
+    <!-- DAGSOPPGJØR -->
+    <section class="pane" id="pane-dagsoppgjor">
+      <div class="panel">
+        <h3>Lukk dagen</h3>
+        <p class="hint">Lukk hver handelsdag når kassen stemmer. En lukket dag låses og kan ikke endres. Dagens brutto regnes på samme måte som i regnskapspakken (absoluttverdier, refusjoner medregnet).</p>
+        <div class="feil" id="feil-dagsoppgjor"></div>
+        <div id="liste-dagsoppgjor"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Regnskapspakke</h3>
+        <p class="hint">Last ned månedens PII-frie regnskapspakke (JSON) med signert manifest — klar for regnskapsfører eller revisor. Alle dager bør være lukket først, men det er ikke et krav.</p>
+        <div class="feil" id="feil-pakke"></div>
+        <button id="last-pakke" class="btn btn-primary">Last ned regnskapspakke</button>
+        <div id="pakke-status" class="pakke-note"></div>
       </div>
     </section>
   </main>
