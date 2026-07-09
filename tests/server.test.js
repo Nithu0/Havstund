@@ -70,6 +70,28 @@ describe('server.js wiring', () => {
     }
   });
 
+  it('/api/health svarer 200 {ok:true, db:degraded} når db pinger men init var degradert', async () => {
+    // DB svarer, men skjema/seed-init feilet -> degradert drift. Health skal
+    // være 200 (ingen restart-loop) og rapportere generisk "degraded" — aldri
+    // rå intern feilmelding.
+    const origPing = db.ping;
+    const origDegraded = db.isDegraded;
+    db.ping = async () => true;
+    db.isDegraded = () => true;
+    try {
+      const res = await getViaApp('/api/health');
+      expect(res.status).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body.ok).toBe(true);
+      expect(body.db).toBe('degraded');
+      // ingen lekkasje av intern init-feilmelding i det offentlige svaret
+      expect(res.body).not.toMatch(/schema|seed|SELECT/i);
+    } finally {
+      db.ping = origPing;
+      db.isDegraded = origDegraded;
+    }
+  });
+
   it('error-middleware svarer 500 JSON uten å kaste', () => {
     // Tester den faktiske error-handleren som er wiret inn (app.use sist).
     let status = null;
