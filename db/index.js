@@ -179,6 +179,18 @@ async function migrate(q) {
       'ON availability(activity_id, dato, tid)'
   );
 
+  // Fase 2 (2.3): strukturert kjoperadresse paa bookings. Additive og NULLABLE.
+  // Ligger HER og ikke i schema.sql fordi `CREATE TABLE IF NOT EXISTS bookings`
+  // hopper over hele tabellen naar den finnes — nye kolonner i definisjonen naar
+  // dermed aldri en levende db. `ADD COLUMN IF NOT EXISTS` er idempotent i
+  // Postgres (kaster ikke 2. gang) og krever ingen DO-blokk, saa pg-mem takler
+  // det. init() kjorer schema.sql FOER migrate(), saa kolonnene finnes uansett
+  // for ferske databaser (via CREATE TABLE) naar denne kjorer.
+  await q('ALTER TABLE bookings ADD COLUMN IF NOT EXISTS adr_gate TEXT');
+  await q('ALTER TABLE bookings ADD COLUMN IF NOT EXISTS adr_postnr TEXT');
+  await q('ALTER TABLE bookings ADD COLUMN IF NOT EXISTS adr_poststed TEXT');
+  await q('ALTER TABLE bookings ADD COLUMN IF NOT EXISTS adr_land TEXT');
+
   for (const fk of FK_MIGRASJONER) {
     const { rows } = await q('SELECT 1 FROM pg_constraint WHERE conname = $1', [fk.navn]);
     if (rows.length) continue; // constrainten finnes allerede — hopp over
