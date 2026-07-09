@@ -169,6 +169,18 @@ router.post('/', async (req, res) => {
     // feil skal ALDRI velte bookingen (samme monster som sendStatusEpost).
     email.sendBookingMottatt(booking.epost, booking.navn, booking, akt.navn);
 
+    // Sanntidsvarsel til ansatte: en INNHOLDSLOS ping ('ny_booking', ingen
+    // payload/PII) til det ansatt-only rommet. Admin-agendaen lytter og
+    // re-henter /api/bookings/agenda (authed) — sa selve booking-dataene
+    // aldri gaar over den udifferensierte socket-kanalen. Fire-and-forget:
+    // en feil her skal ALDRI velte bookingen (samme monster som discord/e-post).
+    try {
+      const io = req.app && req.app.get && req.app.get('io');
+      if (io) io.to('ansatte').emit('ny_booking');
+    } catch (varselFeil) {
+      console.error('bookings: ny_booking-ping feilet:', varselFeil.message);
+    }
+
     res.status(201).json({ booking });
   } catch (e) {
     console.error('bookings POST / feilet:', e.message);

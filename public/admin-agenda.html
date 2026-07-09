@@ -85,6 +85,8 @@
     </section>
   </main>
 
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/booking-status.js"></script>
   <script>
   (function () {
     'use strict';
@@ -117,7 +119,7 @@
       var v = String(s || '').toLowerCase();
       var kjent = { forespurt: 1, bekreftet: 1, fullfort: 1, avlyst: 1 };
       var kl = kjent[v] ? v : 'forespurt';
-      return '<span class="pill ' + kl + '">' + esc(s || '–') + '</span>';
+      return (window.BookingStatus && window.BookingStatus.pille) ? window.BookingStatus.pille(s) : '<span class="pill ' + kl + '">' + esc(s || '–') + '</span>';
     }
 
     function tegn(rows) {
@@ -188,6 +190,23 @@
           .catch(function () { window.location = '/konto'; });
       });
     }
+
+    // ---- Sanntid: ny booking -> auto-oppdater agendaen ----
+    // Kobler til Socket.IO, joiner det ansatt-only rommet (server autoriserer
+    // via JWT-handshake — samme erAnsatt-monster som chat), og lytter paa det
+    // innholdslose 'ny_booking'-signalet. Ingen PII i pingen; vi re-henter den
+    // authede agendaen for gjeldende dato. Taler at socket.io mangler.
+    (function kobleSanntid() {
+      if (!window.io) return;
+      try {
+        var socket = window.io();
+        // emit ved connect (og reconnect) sa rom-medlemskapet holder seg.
+        socket.on('connect', function () { socket.emit('bli_med_ansatt'); });
+        socket.on('ny_booking', function () { last($('dato').value || idag); });
+      } catch (e) {
+        // uten sanntid virker manuell «Vis» / «I dag» som normalt
+      }
+    })();
 
     last(idag);
   })();
