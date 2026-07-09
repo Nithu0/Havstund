@@ -409,6 +409,26 @@ describe('POST /api/bookings/:id/refusjon (Fase 4 — refusjons-subsystem)', () 
     } finally { srv.close(); }
   });
 
+  it('ReDoS-vern: svaert lang grunn saniteres raskt og kappes til <=200 tegn', async () => {
+    reset();
+    const srv = await lytt(lagApp(ADMIN));
+    try {
+      // 100k tegn uten gyldig e-post -> worst case for `\S+@\S+\.\S+`-regexen.
+      // Uten lengdekapping foerst gir dette polynomisk backtracking (CPU-DoS).
+      const langGrunn = 'a'.repeat(100000);
+      const t0 = Date.now();
+      const r = await post(srv, '/api/bookings/5/refusjon', { grunn: langGrunn });
+      const brukt = Date.now() - t0;
+      expect(r.status).toBe(200);
+      // Skal returnere raskt — ingen ReDoS-blokkering. Rundhaandet grense for
+      // et tregt CI-miljoe; ekte backtracking her ville tatt titalls sekunder.
+      expect(brukt).toBeLessThan(2000);
+      // Sanert grunn (refusjons-rad param index 2) er kappet til <=200 tegn.
+      const lagretGrunn = state.refusjoner[0][2];
+      expect(lagretGrunn.length).toBeLessThanOrEqual(200);
+    } finally { srv.close(); }
+  });
+
   it('404 naar bookingen ikke finnes', async () => {
     reset();
     state.refundBooking = null;

@@ -47,7 +47,12 @@ function ukedagFraDato(dato) {
 // Returnerer null for tom/ugyldig input (kolonnen er NULLABLE).
 function saniterGrunn(grunn) {
   if (grunn == null) return null;
-  let s = String(grunn);
+  // SIKKERHET (ReDoS, js/polynomial-redos): kapp lengden FOER regexene kjorer.
+  // `\S+@\S+\.\S+` gir polynomisk backtracking paa lange strenger uten gyldig
+  // e-post-treff (body-grensen er 256kb) -> CPU-DoS. Med input kappet til <=200
+  // tegn foerst blir begge regexene trivielt raske. Sluttresultatet for legitim
+  // input er uendret: grunn ble uansett kappet til 200 paa slutten.
+  let s = String(grunn).slice(0, 200);
   s = s.replace(/\S+@\S+\.\S+/g, '[fjernet]');            // e-post
   s = s.replace(/\+?\d[\d\s().-]{6,}\d/g, '[fjernet]');   // telefon-lignende
   s = s.replace(/\s+/g, ' ').trim().slice(0, 200);
