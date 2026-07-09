@@ -30,6 +30,7 @@ const SAMPLE_INPUT: Record<string, Record<string, unknown>> = {
   set_activity_status: { id: 1, aktiv: false, idempotency_key: 'k5' },
   reply_to_customer: { bruker_id: 1, tekst: 'Hei', idempotency_key: 'k6' },
   log_staff_hours: { ansatt_id: 1, dato: '2026-07-01', timer: 4, idempotency_key: 'k7' },
+  opprett_regnskapspost: { type: 'utgift', dato: '2026-07-01', beskrivelse: 'Kaffe', konto: 4000, mva_sats: 25, brutto_ore: 12500, betalingsmetode: 'kort', idempotency_key: 'k8' },
   update_site_content: { nokkel: 'forside.tittel', verdi: 'Hei', expected_version: null },
 };
 
@@ -53,6 +54,7 @@ describe('verktøykatalog — struktur', () => {
       [
         'create_booking',
         'log_staff_hours',
+        'opprett_regnskapspost',
         'reply_to_customer',
         'set_activity_status',
         'set_availability',

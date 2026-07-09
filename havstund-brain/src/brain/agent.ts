@@ -21,7 +21,7 @@
  *  - dobbel confirm fanges av markExecuted (atomisk) + idempotency_key-oppslag.
  */
 import { randomUUID } from 'node:crypto';
-import type { AnthropicLike, ConversationMessage, MessageResponse, ToolResultBlock } from './anthropic-client.js';
+import type { AnthropicLike, ConversationMessage, ImageBlock, MessageResponse, ToolResultBlock, UserContent } from './anthropic-client.js';
 import { ALL_TOOLS, getTool, isWriteTool, toolsForApi } from './tools.js';
 import { buildSystemPrompt } from './system-prompt.js';
 import { signConfirmToken, verifyConfirmToken } from '../lib/confirm-token.js';
@@ -88,6 +88,9 @@ export class Agent {
    *  et SKRIVE-forslag som venter på confirm(). */
   async message(input: {
     text: string;
+    /** Valgfrie bilder (f.eks. kvittering) som legges i bruker-meldingen slik at
+     *  modellen kan LESE beløp/dato/leverandør. Tekst kommer etter bildene. */
+    images?: ImageBlock[];
     conversationId?: string;
     transcript?: ConversationMessage[];
   }): Promise<AgentTurn> {
@@ -95,9 +98,14 @@ export class Agent {
     const lessons = this.deps.getLessons ? await this.deps.getLessons() : [];
     const system = buildSystemPrompt({ lessons });
 
+    const userContent: UserContent =
+      input.images && input.images.length > 0
+        ? [...input.images, { type: 'text', text: input.text }]
+        : input.text;
+
     const messages: ConversationMessage[] = [
       ...(input.transcript ?? []),
-      { role: 'user', content: input.text },
+      { role: 'user', content: userContent },
     ];
 
     for (let step = 0; step < MAX_READ_STEPS; step++) {

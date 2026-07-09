@@ -27,6 +27,9 @@
  *   setActivityStatus   DELETE /api/activities/:id (false) | PUT (true)
  *   replyToCustomer     POST /api/meldinger?bruker_id= {tekst,pris}
  *   logStaffHours       POST /api/regnskap/timer
+ *   opprettRegnskapspost POST /api/regnskap/poster {type,dato,beskrivelse,konto,mva_sats,netto_ore,...}
+ *                        (ruta tar netto_ore og regner mva/brutto FRA netto; vi
+ *                         baklengs-regner netto fra bekreftet brutto her)
  *   updateSiteContent   PUT  /api/admin/content/:nokkel {verdi}
  *   health              GET  /api/health
  *
@@ -44,6 +47,7 @@ import {
   WebsiteApiError,
 } from '../port/errors.js';
 import type { WebsitePort, ListBookingsFilter } from '../port/website-port.js';
+import type { OpprettRegnskapspostInput, RegnskapPost } from '../brain/write-exec.js';
 import type {
   Activity,
   AvailabilityCheck,
@@ -353,6 +357,30 @@ export class HttpWebsiteAdapter implements WebsitePort {
     });
     if (status >= 400) this.fail(status, data, 'logStaffHours');
     return data.timeforing;
+  }
+
+  async opprettRegnskapspost(input: OpprettRegnskapspostInput): Promise<RegnskapPost> {
+    // Nettsidens rute (POST /api/regnskap/poster) tar netto_ore og regner
+    //   mva = round(netto * sats/100),  brutto = netto + mva
+    // FRAMOVER fra netto. AI-en bekrefter derimot brutto (det som står på
+    // kvitteringen), så vi baklengs-regner netto her:
+    //   netto = round(brutto * 100 / (100 + sats))
+    // Ruta gjenskaper da ~samme brutto (±1 øre i sjeldne avrundingstilfeller —
+    // iboende i rutas netto→brutto-modell, ikke noe AI-en styrer).
+    const sats = input.mva_sats;
+    const nettoOre = Math.round((input.brutto_ore * 100) / (100 + sats));
+    const { status, data } = await this.call<{ post: RegnskapPost }>('POST', '/api/regnskap/poster', {
+      type: input.type,
+      dato: input.dato,
+      beskrivelse: input.beskrivelse,
+      konto: input.konto,
+      mva_sats: sats,
+      netto_ore: nettoOre,
+      betalingsmetode: input.betalingsmetode ?? undefined,
+      kilde: 'agent',
+    });
+    if (status >= 400) this.fail(status, data, 'opprettRegnskapspost');
+    return data.post;
   }
 
   async updateSiteContent(input: UpdateSiteContentInput): Promise<ContentEntry> {

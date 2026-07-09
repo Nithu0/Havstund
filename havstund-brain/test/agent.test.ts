@@ -268,6 +268,7 @@ describe('META: hvert skrive-verktøy har propose+execute-dekning', () => {
     set_activity_status: { id: 1, aktiv: false, idempotency_key: 'm-sas' },
     reply_to_customer: { bruker_id: 1, tekst: 'Hei, takk for henvendelsen!', idempotency_key: 'm-rtc' },
     log_staff_hours: { ansatt_id: 1, dato: '2026-07-01', timer: 6, idempotency_key: 'm-lsh' },
+    opprett_regnskapspost: { type: 'utgift', dato: '2026-07-01', beskrivelse: 'Kvittering: kaffe', konto: 4000, mva_sats: 25, brutto_ore: 12500, betalingsmetode: 'kort', idempotency_key: 'm-orp' },
     update_site_content: { nokkel: 'forside.tittel', verdi: 'Velkommen til Havstund', expected_version: null },
   };
 

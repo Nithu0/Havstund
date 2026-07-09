@@ -26,6 +26,7 @@
  *    set_activity_status  DELETE/PUT /api/activities/:id
  *    reply_to_customer    POST   /api/meldinger?bruker_id= (idempotency_key)
  *    log_staff_hours      POST   /api/regnskap/timer      (idempotency_key)
+ *    opprett_regnskapspost POST  /api/regnskap/poster     (idempotency_key)
  *    update_site_content  PUT    /api/admin/content/:nokkel (expected_version)
  *
  * MERK: strict:true garanterer kun at JSON-Schema følges (type/required/enum).
@@ -34,7 +35,7 @@
  */
 
 export type ToolKind = 'read' | 'write';
-export type ToolDomain = 'booking' | 'timesheet' | 'calendar' | 'customer' | 'content';
+export type ToolDomain = 'booking' | 'timesheet' | 'calendar' | 'customer' | 'content' | 'finance';
 
 export interface BrainToolDef {
   name: string;
@@ -365,6 +366,34 @@ const WRITE_TOOLS: BrainToolDef[] = [
         idempotency_key: { type: 'string' },
       },
       required: ['ansatt_id', 'dato', 'timer', 'idempotency_key'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'opprett_regnskapspost',
+    kind: 'write',
+    domain: 'finance',
+    guard: 'idempotency_key',
+    description:
+      'Opprett en regnskapspost (utgift) fra et kvitteringsbilde. Du LESER beløp, dato og ' +
+      'leverandør ut av bildet og FORESLÅR konto + mva-sats — men du beregner ALDRI mva eller ' +
+      'totaler selv. Oppgi brutto (det bekreftede beløpet som står på kvitteringen) i øre; ' +
+      'systemet regner ut netto og mva fra brutto og valgt sats. idempotency_key hindrer at ' +
+      'en dobbel bekreftelse posterer bilaget to ganger.',
+    input_schema: {
+      type: 'object',
+      strict: true,
+      properties: {
+        type: { type: 'string', enum: ['utgift'] },
+        dato: { type: 'string', pattern: DATE },
+        beskrivelse: { type: 'string' },
+        konto: { type: 'integer' },
+        mva_sats: { type: 'integer', enum: [0, 12, 15, 25] },
+        brutto_ore: { type: 'integer' },
+        betalingsmetode: { type: 'string', enum: ['bank', 'kort', 'kontant'] },
+        idempotency_key: { type: 'string' },
+      },
+      required: ['dato', 'beskrivelse', 'konto', 'mva_sats', 'brutto_ore', 'idempotency_key'],
       additionalProperties: false,
     },
   },
