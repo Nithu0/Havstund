@@ -38,6 +38,16 @@ function gyldigMaaned(m) {
   return typeof m === 'string' && /^\d{4}-\d{2}$/.test(m) ? m : null;
 }
 
+// Streng YYYY-MM-DD: format OG ekte kalenderdag (avviser 2026-13-40, 2026-02-30).
+// Returnerer den normaliserte strengen eller null.
+function gyldigDato(s) {
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const d = new Date(`${s}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return null;
+  // roundtrip: JS ruller over ugyldige dager (feb 30 -> mar 2), saa mismatch = ugyldig.
+  return d.toISOString().slice(0, 10) === s ? s : null;
+}
+
 const TYPER = ['inntekt', 'utgift'];
 const SATSER = [0, 12, 15, 25];
 
@@ -544,6 +554,108 @@ router.get('/pakke/:maaned', requireRole('admin'), pakkeGate, async (req, res) =
   } catch (e) {
     logger.error({ feil: e && e.message }, 'regnskap /pakke feilet');
     res.status(500).json({ error: 'Kunne ikke bygge regnskapspakke' });
+  }
+});
+
+// ---------- DAGSOPPGJOR (Fase 5: «lukk dagen») ----------
+// POST /dagsoppgjor/:dato  -> lukk en kalenderdag (admin-only, append-only).
+// GET  /dagsoppgjor?maaned=YYYY-MM -> lukkede dager for maneden.
+//
+// KRITISK KOBLING til regnskapspakke-generatoren: dagsoppgjor.brutto_ore MAA
+// regnes med SAMME konvensjon som bilagslaget i lib/regnskapspakke.js, dvs.
+// summen av ABSOLUTTVERDIER (SUM(ABS(brutto_ore))). En refusjon lagres negativt
+// i regnskap_poster, men generatoren baerer den som POSITIVT belop (handling
+// 'kreditering'). Regner vi her uten ABS, ville generatorens invariant 2
+// (Sigma dagsoppgjor.brutto_ore == kontrollsum.brutto_ore) briste og GET
+// /pakke/:maaned kaste 422 paa en lukket dag. Derfor ABS her — samme tall
+// generatoren bruker.
+
+// Admin-only: router.use(requireRole('ansatt','admin')) over slipper ansatt inn,
+// men denne route-nivaa requireRole('admin') kjorer ETTER og gir ansatt 403.
+router.post('/dagsoppgjor/:dato', requireRole('admin'), async (req, res) => {
+  if (!db.isConfigured()) return utilgjengelig(res);
+
+  const dato = gyldigDato(req.params.dato);
+  if (!dato) return res.status(400).json({ error: 'Ugyldig dato. Bruk formatet YYYY-MM-DD.' });
+
+  // Fallback-kjede for hvem som lukket (req.user finnes garantert etter requireRole).
+  const lukketAv = req.user.navn || req.user.epost || String(req.user.id);
+
+  try {
+    // Alt i EN transaksjon: les dagens summer og INSERT sammen, saa to samtidige
+    // lukkinger serialiseres. Race-sikkerheten hviler til slutt paa dato UNIQUE +
+    // ON CONFLICT DO NOTHING (den taperen faar rowCount 0 -> 409), IKKE paa
+    // rekkefolgen av lesning. null tilbake = allerede lukket.
+    const rad = await db.withTransaction(async (client) => {
+      // Dagens kontrollsummer. ABS fordi refusjon lagres negativt — MATCHER
+      // generatorens brutto-gjennomstromning (se blokk-kommentar over).
+      const sum = (await client.query(
+        `SELECT COALESCE(SUM(ABS(brutto_ore)),0)::int AS brutto_ore,
+                COALESCE(SUM(ABS(mva_ore)),0)::int   AS mva_ore,
+                COUNT(*)::int                        AS antall_bilag
+           FROM regnskap_poster
+          WHERE dato = $1::date`,
+        [dato]
+      )).rows[0];
+
+      const ins = await client.query(
+        `INSERT INTO dagsoppgjor (dato, lukket_av, lukket_tid, brutto_ore, mva_ore, antall_bilag)
+         VALUES ($1::date, $2, now(), $3, $4, $5)
+         ON CONFLICT (dato) DO NOTHING
+         RETURNING dato, brutto_ore, mva_ore, antall_bilag, lukket_av, lukket_tid`,
+        [dato, lukketAv, sum.brutto_ore, sum.mva_ore, sum.antall_bilag]
+      );
+      // rowCount 0 = ON CONFLICT slo til (dagen finnes allerede) -> append-only-brudd.
+      return ins.rowCount ? ins.rows[0] : null;
+    });
+
+    if (!rad) {
+      return res.status(409).json({
+        error: 'Dagen er allerede lukket. Et dagsoppgjor er append-only og kan ikke lukkes to ganger.',
+      });
+    }
+
+    // Fire-and-forget audit (writeAudit svelger egne feil; .catch for sikkerhet).
+    Promise.resolve(
+      writeAudit(req.user, 'regnskap.dagsoppgjor.lukk', {
+        dato, brutto_ore: rad.brutto_ore, antall_bilag: rad.antall_bilag,
+      })
+    ).catch(() => {});
+
+    res.status(201).json(rad);
+  } catch (e) {
+    // Belte-og-seler: hvis en DB ikke skulle fange ON CONFLICT og i stedet kaster
+    // unique-violation (23505), oversett ogsaa DET til 409 (ikke 500).
+    if (e && e.code === '23505') {
+      return res.status(409).json({
+        error: 'Dagen er allerede lukket. Et dagsoppgjor er append-only og kan ikke lukkes to ganger.',
+      });
+    }
+    console.error('regnskap /dagsoppgjor POST feilet:', e.message);
+    res.status(500).json({ error: 'Kunne ikke lukke dagen' });
+  }
+});
+
+// GET: lukkede dager for en maned. Rolle: beholder ruterens ansatt+admin (ingen
+// route-nivaa admin-gate). Dette er ren lese av LUKKESTATUS, ikke sensitivt: en
+// ansatt ser allerede maanedens tall via /oversikt og /poster, saa per-dag-summer
+// avslorer ingenting nytt — men lar ansatt se hvilke dager som er ferdig lukket.
+router.get('/dagsoppgjor', async (req, res) => {
+  if (!db.isConfigured()) return utilgjengelig(res);
+  const maaned = gyldigMaaned(req.query.maaned);
+  if (!maaned) return res.status(400).json({ error: 'Mangler gyldig maaned (YYYY-MM)' });
+  try {
+    const { rows } = await db.query(
+      `SELECT dato, brutto_ore, mva_ore, antall_bilag, lukket_av, lukket_tid
+         FROM dagsoppgjor
+        WHERE to_char(dato,'YYYY-MM') = $1
+        ORDER BY dato ASC`,
+      [maaned]
+    );
+    res.json(rows);
+  } catch (e) {
+    console.error('regnskap /dagsoppgjor GET feilet:', e.message);
+    res.status(500).json({ error: 'Kunne ikke hente dagsoppgjor' });
   }
 });
 

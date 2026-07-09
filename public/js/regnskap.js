@@ -323,6 +323,150 @@
     }).catch(function () {});
   }
 
+  // ---- DAGSOPPGJØR («lukk dagen» + regnskapspakke) ----
+  function lastDagsoppgjor() {
+    var m = maaned();
+    visFeil('feil-dagsoppgjor', '');
+    Promise.all([
+      api('/api/regnskap/poster?maaned=' + m).then(function (r) { return r.ok ? r.json() : []; }),
+      api('/api/regnskap/dagsoppgjor?maaned=' + m).then(function (r) { return r.ok ? r.json() : []; })
+    ]).then(function (svar) {
+      var poster = Array.isArray(svar[0]) ? svar[0] : [];
+      var lukkede = Array.isArray(svar[1]) ? svar[1] : [];
+      tegnDagsoppgjor(poster, lukkede);
+    }).catch(function () {
+      $('liste-dagsoppgjor').innerHTML = '<p class="tom">Kunne ikke hente dagsoppgjør.</p>';
+    });
+  }
+
+  function tegnDagsoppgjor(poster, lukkede) {
+    // Lukkede dager: dato (YYYY-MM-DD) -> lagret rad (viser serverens snapshot).
+    var lukket = {};
+    lukkede.forEach(function (d) { lukket[String(d.dato).slice(0, 10)] = d; });
+    // Åpne dager: grupper poster per dag med ABS-brutto — SAMME konvensjon som
+    // serveren bruker når dagen lukkes (SUM(ABS(brutto_ore))), så tallet i
+    // bekreftelsen matcher det som faktisk lagres.
+    var apne = {};
+    poster.forEach(function (p) {
+      var dag = String(p.dato).slice(0, 10);
+      if (lukket[dag]) return; // hører til en allerede lukket dag
+      if (!apne[dag]) apne[dag] = { antall: 0, brutto: 0 };
+      apne[dag].antall += 1;
+      apne[dag].brutto += Math.abs(Number(p.brutto_ore) || 0);
+    });
+
+    // Union av dager, sortert stigende på dato (samme som resten av siden).
+    var sett = {};
+    Object.keys(lukket).forEach(function (k) { sett[k] = true; });
+    Object.keys(apne).forEach(function (k) { sett[k] = true; });
+    var dager = Object.keys(sett).sort();
+
+    if (!dager.length) {
+      $('liste-dagsoppgjor').innerHTML = '<p class="tom">Ingen bilag eller lukkede dager denne måneden ennå.</p>';
+      return;
+    }
+
+    var rader = dager.map(function (dag) {
+      var l = lukket[dag];
+      if (l) {
+        var tid = l.lukket_tid ? String(l.lukket_tid).slice(0, 10) : '';
+        var undertekst = l.lukket_av
+          ? '<br><span style="color:var(--muted);font-size:12px">' + esc(l.lukket_av) + (tid ? ' · ' + esc(tid) : '') + '</span>'
+          : '';
+        return '<tr>' +
+          '<td>' + esc(dag) + '</td>' +
+          '<td class="num">' + (Number(l.antall_bilag) || 0) + '</td>' +
+          '<td class="num belop">' + kr(l.brutto_ore) + '</td>' +
+          '<td><span class="laast-tag">Låst</span>' + undertekst + '</td>' +
+          '<td></td>' +
+          '</tr>';
+      }
+      var a = apne[dag];
+      return '<tr>' +
+        '<td>' + esc(dag) + '</td>' +
+        '<td class="num">' + a.antall + '</td>' +
+        '<td class="num belop">' + kr(a.brutto) + '</td>' +
+        '<td><span class="aapen-tag">Åpen</span></td>' +
+        '<td class="num"><button class="lukk-btn" data-lukk-dag="' + esc(dag) + '" data-lukk-brutto="' + a.brutto + '" data-lukk-antall="' + a.antall + '">Lukk dag</button></td>' +
+        '</tr>';
+    }).join('');
+
+    $('liste-dagsoppgjor').innerHTML =
+      '<table class="tbl"><thead><tr>' +
+      '<th>Dato</th><th class="num">Bilag</th><th class="num">Brutto</th><th>Status</th><th></th>' +
+      '</tr></thead><tbody>' + rader + '</tbody></table>';
+  }
+
+  function lukkDag(dato) {
+    visFeil('feil-dagsoppgjor', '');
+    api('/api/regnskap/dagsoppgjor/' + dato, { method: 'POST' })
+      .then(function (r) {
+        return r.json().then(
+          function (d) { return { ok: r.ok, status: r.status, d: d }; },
+          function () { return { ok: r.ok, status: r.status, d: {} }; }
+        );
+      })
+      .then(function (res) {
+        if (!res.ok) {
+          if (res.status === 403) visFeil('feil-dagsoppgjor', 'Kun admin kan lukke dager.');
+          else if (res.status === 409) visFeil('feil-dagsoppgjor', 'Dagen er allerede lukket.');
+          else visFeil('feil-dagsoppgjor', (res.d && res.d.error) || 'Kunne ikke lukke dagen.');
+        }
+        lastDagsoppgjor(); // refresh uansett (409 → oppdatert låsestatus)
+      })
+      .catch(function () { visFeil('feil-dagsoppgjor', 'Noe gikk galt. Prøv igjen.'); });
+  }
+
+  function lastPakke() {
+    var m = maaned();
+    var el = $('pakke-status');
+    visFeil('feil-pakke', '');
+    if (el) el.textContent = 'Genererer pakke …';
+    api('/api/regnskap/pakke/' + m)
+      .then(function (r) {
+        return r.json().then(
+          function (d) { return { ok: r.ok, status: r.status, d: d }; },
+          function () { return { ok: r.ok, status: r.status, d: {} }; }
+        );
+      })
+      .then(function (res) {
+        if (el) el.textContent = '';
+        if (!res.ok) {
+          if (res.status === 403) { visFeil('feil-pakke', 'Kun admin kan laste ned regnskapspakken.'); return; }
+          if (res.status === 422) {
+            var detalj = (res.d && res.d.detalj) || (res.d && res.d.error) || 'ukjent årsak';
+            visFeil('feil-pakke', 'Månedens data balanserer ikke — ' + detalj + '. Rett før du kan generere pakken.');
+            return;
+          }
+          visFeil('feil-pakke', (res.d && res.d.error) || 'Kunne ikke lage regnskapspakken.');
+          return;
+        }
+        var pakke = res.d && res.d.pakke;
+        var manifest = res.d && res.d.manifest;
+        if (!pakke) { visFeil('feil-pakke', 'Tomt svar fra serveren.'); return; }
+        // Kompakt JSON.stringify — NØYAKTIG bytene serveren hashet/signerte
+        // (manifest.sha256). Pretty-print ville brutt byte-for-byte-verifisering.
+        lastNedJson(pakke, 'regnskapspakke-' + m + '.json');
+        if (el) {
+          el.textContent = (manifest && manifest.signert === false)
+            ? 'Pakke lastet ned. Manifest usignert (mangler serverkonfig).'
+            : 'Pakke lastet ned. Manifest signert.';
+        }
+      })
+      .catch(function () { if (el) el.textContent = ''; visFeil('feil-pakke', 'Noe gikk galt. Prøv igjen.'); });
+  }
+
+  function lastNedJson(obj, filnavn) {
+    var blob = new Blob([JSON.stringify(obj)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filnavn;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 0);
+  }
+
   // ---- Datostandard ----
   function fyllStandardDato() {
     document.querySelectorAll('input[type="date"]').forEach(function (i) { if (!i.value) i.value = iDag(); });
@@ -339,6 +483,7 @@
     else if (navn === 'inntekter') lastPoster('inntekt', 'liste-inntekt');
     else if (navn === 'utgifter') lastPoster('utgift', 'liste-utgift');
     else if (navn === 'lonn') { lastAnsatte().then(function () { lastTimer(); lastLonn(); }); }
+    else if (navn === 'dagsoppgjor') lastDagsoppgjor();
   }
   function aktivFane() {
     var el = document.querySelector('.fane.active');
@@ -388,6 +533,14 @@
     document.addEventListener('click', function (e) {
       var p = e.target.getAttribute && e.target.getAttribute('data-slett-post');
       var t = e.target.getAttribute && e.target.getAttribute('data-slett-time');
+      var ld = e.target.getAttribute && e.target.getAttribute('data-lukk-dag');
+      if (ld) {
+        var brutto = Number(e.target.getAttribute('data-lukk-brutto')) || 0;
+        var antall = Number(e.target.getAttribute('data-lukk-antall')) || 0;
+        if (!confirm('Lukk ' + ld + '? Brutto ' + kr(brutto) + ', ' + antall + ' bilag. Dette kan ikke angres.')) return;
+        lukkDag(ld);
+        return;
+      }
       if (p) {
         if (!confirm('Slette denne posten?')) return;
         api('/api/regnskap/poster/' + p, { method: 'DELETE' })
@@ -432,6 +585,7 @@
     });
 
     if ($('eksporter-excel')) $('eksporter-excel').addEventListener('click', eksporterExcel);
+    if ($('last-pakke')) $('last-pakke').addEventListener('click', lastPakke);
 
     lastOversikt();
   }
