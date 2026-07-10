@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="no">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Min timeføring — Havstund</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    body{background:var(--cream)}
+    .adm-top{background:linear-gradient(100deg,var(--sea-deep),var(--sea));color:#fff;position:sticky;top:0;z-index:60;box-shadow:0 4px 20px rgba(10,39,71,.18)}
+    .adm-top .inner{max-width:1080px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+    .adm-top .logo{display:flex;flex-direction:column;gap:3px}
+    .adm-top .logo img{height:28px;width:auto;filter:drop-shadow(0 1px 4px rgba(0,0,0,.35))}
+    .adm-top .logo small{font-size:10px;font-weight:600;letter-spacing:3px;color:var(--turq-l);text-transform:uppercase}
+    .adm-top nav{margin-left:auto;display:flex;gap:20px;align-items:center}
+    .adm-top nav a{font-size:14px;font-weight:600;color:#cfe2f4;opacity:.9}
+    .adm-top nav a:hover{opacity:1;color:#fff}
+
+    .wrap2{max-width:1080px;margin:0 auto;padding:28px 24px 70px}
+    .topp{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:8px}
+    .topp h1{font-size:30px;color:var(--sea-deep)}
+    .topp .mnd{display:flex;align-items:center;gap:10px}
+    .topp .mnd label{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+    .topp .mnd input{padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:15px;width:auto}
+    .lead{color:var(--muted);margin-bottom:22px;max-width:70ch}
+
+    .panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:22px 24px;box-shadow:var(--shadow);margin-bottom:22px}
+    .panel h3{margin-bottom:4px}
+    .panel .hint{color:var(--muted);font-size:13px;margin-bottom:16px}
+
+    .feil{background:#fdecec;color:#9b2226;border:1px solid #f3c5c5;padding:8px 12px;border-radius:8px;font-size:13px;margin:8px 0;display:none}
+    .feil.vis{display:block}
+    .ok-melding{background:#e6f4ec;color:#1f7a45;border:1px solid #bfe3cd;padding:8px 12px;border-radius:8px;font-size:13px;margin:8px 0;display:none}
+    .ok-melding.vis{display:block}
+
+    /* ---- Blokkert-tilstand (mangler ansatt-kobling) ---- */
+    .blokkert{background:#fff;border:1px dashed var(--line);border-radius:var(--r);padding:40px 30px;text-align:center;color:var(--muted);font-size:16px;box-shadow:var(--shadow)}
+    .blokkert b{color:var(--sea-deep)}
+
+    /* ---- Lønn-kort ---- */
+    .lonn-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .lonn-kort{background:var(--cream);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+    .lonn-kort .label{font-size:12px;text-transform:uppercase;letter-spacing:1.3px;color:var(--muted);font-weight:700}
+    .lonn-kort .val{font-size:24px;font-weight:800;color:var(--sea-deep);margin-top:6px;line-height:1.05}
+
+    /* ---- Kalender-komponent (styles for public/js/kalender.js) ---- */
+    .kal-legende{display:flex;gap:14px;flex-wrap:wrap;margin:2px 0 16px;font-size:12px;color:var(--muted)}
+    .kal-legende span{display:inline-flex;align-items:center;gap:6px}
+    .kal-prikk{width:12px;height:12px;border-radius:4px;display:inline-block;border:1px solid rgba(0,0,0,.08)}
+    .kal-p-utkast{background:#f1f2f4}
+    .kal-p-sendt_inn{background:#dcecfb}
+    .kal-p-godkjent{background:#dff3e6}
+    .kal-p-avvist{background:#fbe0e0}
+    .kal-p-lukket{background:#e7ebef}
+
+    .kal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+    .kal-hoder{margin-bottom:6px}
+    .kal-hode{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);text-align:center;padding:4px 0}
+    .kal-tom{min-height:64px}
+    .kal-dag{position:relative;min-height:64px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;
+      background:#fff;border:1px solid var(--line);border-left:4px solid var(--line);border-radius:10px;padding:8px 9px;
+      font-family:inherit;cursor:pointer;text-align:left;transition:.12s}
+    .kal-dag:hover{border-color:var(--turq);box-shadow:0 4px 14px rgba(10,39,71,.12);transform:translateY(-1px)}
+    .kal-nr{font-size:14px;font-weight:700;color:var(--sea-deep);display:inline-flex;align-items:center;gap:4px}
+    .kal-sum{font-size:12px;font-weight:700;color:var(--teal);font-variant-numeric:tabular-nums}
+    .kal-merk{font-size:11px;color:var(--muted)}
+    .kal-las{opacity:.75}
+    .kal-idag{outline:2px solid var(--turq);outline-offset:1px}
+
+    .kal-utkast{border-left-color:#9aa6b2;background:#f8f9fb}
+    .kal-sendt_inn{border-left-color:#3a86d6;background:#f2f8ff}
+    .kal-godkjent{border-left-color:#1f7a45;background:#f2fbf5}
+    .kal-avvist{border-left-color:#a32a2a;background:#fdf3f3}
+    .kal-laast{border-left-color:#1f7a45;background:#eef7f1}
+    .kal-lukket{background:#eef0f2;border-left-color:#cdd5dd;color:var(--muted);cursor:not-allowed;opacity:.7}
+    .kal-lukket:hover{transform:none;box-shadow:none;border-color:var(--line);border-left-color:#cdd5dd}
+    .kal-feil{color:#9b2226;font-size:14px;padding:18px 4px}
+
+    /* ---- Dag-modal (føringsskjema + eksisterende føringer) ---- */
+    .modal-overlay{position:fixed;inset:0;background:rgba(8,30,52,.55);display:none;align-items:flex-start;justify-content:center;z-index:200;padding:40px 16px;overflow-y:auto}
+    .modal-overlay.vis{display:flex}
+    .modal-kort{background:#fff;border-radius:var(--r);max-width:520px;width:100%;padding:26px 28px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+    .modal-kort .m-topp{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+    .modal-kort h3{font-size:20px;color:var(--sea-deep)}
+    .modal-lukk{background:none;border:none;font-size:24px;line-height:1;color:var(--muted);cursor:pointer;padding:0 4px}
+
+    .foring-rad{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+    .foring-rad:last-of-type{border-bottom:none}
+    .foring-rad .f-timer{font-weight:800;color:var(--sea-deep);min-width:52px;font-variant-numeric:tabular-nums}
+    .foring-rad .f-tekst{flex:1;min-width:120px;color:var(--ink);font-size:14px}
+    .foring-rad .f-tekst small{display:block;color:var(--muted);font-size:12px}
+    .foring-rad .f-handling{display:flex;gap:8px}
+    .knapp-lenke{background:none;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;padding:2px}
+    .knapp-lenke.rediger{color:var(--teal)}
+    .knapp-lenke.slett{color:#b03a2e;opacity:.8}
+    .knapp-lenke.slett:hover{opacity:1}
+
+    .status-merke{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:3px 9px;border-radius:12px;white-space:nowrap}
+    .sm-utkast{background:#f1f2f4;color:#5a6b7d}
+    .sm-sendt_inn{background:#dcecfb;color:#1c5a99}
+    .sm-godkjent{background:#dff3e6;color:#1f7a45}
+    .sm-avvist{background:#fbe0e0;color:#a32a2a}
+    .sm-laast{background:#dff3e6;color:#1f7a45}
+
+    .skjema{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;align-items:end;margin-top:8px}
+    .felt{display:flex;flex-direction:column;gap:5px}
+    .felt.bred{grid-column:1 / -1}
+    .felt label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+    .felt input,.felt textarea{padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:14px;background:#fff;color:var(--ink);width:100%}
+    .felt textarea{resize:vertical;min-height:52px}
+
+    .m-knapper{display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap}
+
+    @media(max-width:640px){.lonn-grid{grid-template-columns:1fr}.kal-dag,.kal-tom{min-height:54px}.skjema{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header class="adm-top">
+    <div class="inner">
+      <a href="/intranett" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.45);color:#fff;font-weight:700;font-size:13px;padding:8px 15px;border-radius:30px;white-space:nowrap">← Tilbake til oversikt</a>
+      <a href="/" class="logo"><img src="bilder/wordmark.png" alt="Havstund"><small>Min timeføring</small></a>
+      <nav>
+        <a href="/intranett">Intranett</a>
+        <a href="/" >Hjem</a>
+        <a href="#" id="logg-ut">Logg ut</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap2">
+    <div class="topp">
+      <div>
+        <h1>Min timeføring</h1>
+      </div>
+      <div class="mnd">
+        <label for="maaned">Måned</label>
+        <input type="month" id="maaned">
+      </div>
+    </div>
+    <p class="lead">Før timene dine rett i kalenderen. Klikk på en dag for å legge til eller endre. Når måneden er klar, sender du den inn til godkjenning.</p>
+
+    <!-- Blokkert: brukeren mangler ansatt-kobling (403 fra /api/min) -->
+    <div id="blokkert" class="blokkert" style="display:none">
+      <b>Din bruker er ikke koblet til en ansatt-profil</b><br>
+      Kontakt admin for å få tilgang til timeføring.
+    </div>
+
+    <!-- Hovedinnhold -->
+    <div id="innhold">
+      <div class="panel">
+        <div class="m-topp" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div>
+            <h3>Kalender</h3>
+            <p class="hint" style="margin-bottom:0">Sum timer per dag. Fargen viser status.</p>
+          </div>
+          <button id="send-inn" class="btn btn-primary" disabled>Send inn måneden</button>
+        </div>
+        <div class="ok-melding" id="ok-melding"></div>
+        <div class="feil" id="feil-topp"></div>
+        <div class="kal-legende" aria-hidden="true">
+          <span><i class="kal-prikk kal-p-utkast"></i> Utkast</span>
+          <span><i class="kal-prikk kal-p-sendt_inn"></i> Sendt inn</span>
+          <span><i class="kal-prikk kal-p-godkjent"></i> Godkjent / låst</span>
+          <span><i class="kal-prikk kal-p-avvist"></i> Avvist</span>
+          <span><i class="kal-prikk kal-p-lukket"></i> Stengt</span>
+        </div>
+        <div id="kalender"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Min lønn denne måneden</h3>
+        <p class="hint">Din egen timelønn og sum for valgt måned.</p>
+        <div class="lonn-grid">
+          <div class="lonn-kort"><div class="label">Timelønn</div><div class="val" id="lonn-sats">–</div></div>
+          <div class="lonn-kort"><div class="label">Timer ført</div><div class="val" id="lonn-timer">–</div></div>
+          <div class="lonn-kort"><div class="label">Sum</div><div class="val" id="lonn-sum">–</div></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Dag-modal: eksisterende føringer + skjema for ny/endre føring -->
+  <div class="modal-overlay" id="dag-modal">
+    <div class="modal-kort" role="dialog" aria-modal="true" aria-labelledby="dag-tittel">
+      <div class="m-topp">
+        <h3 id="dag-tittel">Dag</h3>
+        <button type="button" class="modal-lukk" id="dag-lukk" aria-label="Lukk">×</button>
+      </div>
+      <div class="feil" id="feil-foring"></div>
+      <div id="dag-eksisterende"></div>
+      <form id="form-foring">
+        <div id="rediger-merke" class="hint" style="display:none">Endrer en føring — lagre for å oppdatere.</div>
+        <div class="skjema">
+          <div class="felt"><label for="f-timer">Timer</label><input type="number" id="f-timer" step="0.25" min="0" max="24" required></div>
+          <div class="felt"><label for="f-aktivitet">Aktivitet</label><input type="text" id="f-aktivitet" placeholder="Verksted, kurs …"></div>
+          <div class="felt bred"><label for="f-notat">Notat</label><textarea id="f-notat" placeholder="(valgfritt)"></textarea></div>
+        </div>
+        <div class="m-knapper">
+          <button type="submit" class="btn btn-primary" id="f-lagre">Lagre føring</button>
+          <button type="button" class="btn btn-ghost" id="f-avbryt-rediger" style="display:none">Avbryt endring</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/felles.js"></script>
+  <script src="js/kalender.js"></script>
+  <script src="js/ansatt.js"></script>
+</body>
+</html>
