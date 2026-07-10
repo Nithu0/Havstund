@@ -77,6 +77,9 @@ module.exports = function brainShim(app) {
     try {
       const { status, data } = await proxyTilBrain('/agent/ask', {
         text: req.body && req.body.text,
+        // Kvittering-syn: videresend bilde-blokker uendret. Brain-siden validerer
+        // formen (type/media_type/størrelse/antall) og avviser feil med 400.
+        images: req.body && req.body.images,
         conversationId: req.body && req.body.conversationId,
         transcript: req.body && req.body.transcript,
       });

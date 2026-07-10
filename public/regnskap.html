@@ -170,6 +170,18 @@
 
     <!-- UTGIFTER -->
     <section class="pane" id="pane-utgifter">
+      <!-- AI-forslag fra kvittering (kun synlig for admin med AI-agent påslått; degraderer pent når av) -->
+      <div class="panel" id="ai-kvittering-panel" style="display:none">
+        <h3>AI-forslag fra kvittering</h3>
+        <p class="hint">Last opp et bilde av en kvittering. AI-assistenten leser beløp, dato og leverandør og foreslår en utgiftspost. Ingenting lagres før du bekrefter.</p>
+        <div class="feil" id="feil-ai"></div>
+        <div class="skjema">
+          <div class="felt bred"><label>Kvitteringsbilde (PNG/JPEG/WEBP, maks 5 MB)</label><input type="file" id="ai-fil" accept="image/png,image/jpeg,image/webp"></div>
+          <div class="felt"><label>&nbsp;</label><button type="button" id="ai-foreslaa" class="btn btn-primary">Les kvittering</button></div>
+        </div>
+        <div id="ai-status" style="margin-top:8px;font-size:13px;color:var(--muted)"></div>
+        <div id="ai-forslag" style="display:none;margin-top:8px"></div>
+      </div>
       <div class="panel">
         <h3>Ny utgift</h3>
         <p class="hint">F.eks. leire, glasur, leie, utstyr.</p>

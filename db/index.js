@@ -48,11 +48,26 @@ function isDegraded() {
   return degradert;
 }
 
-// Ekte helsesjekk: pinger databasen med en triviell SELECT 1.
+// Ekte helsesjekk: pinger databasen OG verifiserer at kjerneskjemaet finnes.
 // Kaster ved DB-feil (eller hvis DATABASE_URL mangler), slik at /api/health
-// kan svare 503. Returnerer true når databasen faktisk svarer.
+// kan svare 503. Returnerer true når databasen svarer OG kjernetabellen finnes.
+//
+// F47: `SELECT 1` beviser bare at DB-motoren svarer — den sier INGENTING om at
+// skjemaet er lastet. En db der migrasjonen feilet (ingen tabeller) svarer glatt
+// på SELECT 1, og en shallow helsesjekk ville da rapportert "oppe" mens appen i
+// praksis er ødelagt. Derfor sjekker vi at kjernetabellen `users` finnes via
+// `to_regclass('public.users')`: et billig katalog-oppslag som returnerer NULL
+// (i stedet for å kaste) når tabellen mangler. NULL => skjema ikke initialisert
+// => kast, slik at /api/health kan svare 503. to_regclass er en O(1) systeminfo-
+// oppslag — den skanner ingen data og holder Railway-healthchecken rask.
 async function ping() {
   await pool.query('SELECT 1');
+  const { rows } = await pool.query("SELECT to_regclass('public.users') AS finnes");
+  if (!rows.length || rows[0].finnes == null) {
+    // Generisk feil — ping()-kasteren fanges av /api/health og oversettes til et
+    // generisk offentlig svar; skjema-detaljer lekkes aldri (se linje 38).
+    throw new Error('Kjerneskjema mangler: tabellen users finnes ikke');
+  }
   return true;
 }
 

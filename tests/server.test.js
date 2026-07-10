@@ -31,6 +31,33 @@ function getViaApp(sti) {
   });
 }
 
+// Hjelper: send en POST med JSON-body mot app, returner {status, body}.
+function postViaApp(sti, jsonBody) {
+  const data = Buffer.from(JSON.stringify(jsonBody));
+  return new Promise((resolve, reject) => {
+    const lytter = http.createServer(app);
+    lytter.listen(0, '127.0.0.1', () => {
+      const { port } = lytter.address();
+      const req = http.request(
+        {
+          host: '127.0.0.1',
+          port,
+          path: sti,
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Content-Length': data.length },
+        },
+        (res) => {
+          let body = '';
+          res.on('data', (c) => (body += c));
+          res.on('end', () => lytter.close(() => resolve({ status: res.statusCode, body })));
+        }
+      );
+      req.on('error', (e) => lytter.close(() => reject(e)));
+      req.end(data);
+    });
+  });
+}
+
 describe('server.js wiring', () => {
   it('eksporterer app, http-server og gracefulShutdown', () => {
     expect(typeof app).toBe('function'); // express-app er callable
@@ -71,9 +98,12 @@ describe('server.js wiring', () => {
   });
 
   it('/api/health svarer 200 {ok:true, db:degraded} når db pinger men init var degradert', async () => {
-    // DB svarer, men skjema/seed-init feilet -> degradert drift. Health skal
-    // være 200 (ingen restart-loop) og rapportere generisk "degraded" — aldri
-    // rå intern feilmelding.
+    // DB svarer og kjernetabellen finnes, men seed/migrasjon-init feilet ->
+    // degradert drift. Degradert er en IKKE-fatal init-advarsel: appen serves
+    // videre (PR #31 — db-init-feil skal rope høyt, men IKKE crash-loope
+    // healthchecken og blokkere fremtidige Railway-deploys). Health skal derfor
+    // svare 200 med et synlig degradert-flagg, ikke 503 — men fortsatt rapportere
+    // generisk "degraded", aldri rå intern feilmelding.
     const origPing = db.ping;
     const origDegraded = db.isDegraded;
     db.ping = async () => true;
@@ -84,12 +114,46 @@ describe('server.js wiring', () => {
       const body = JSON.parse(res.body);
       expect(body.ok).toBe(true);
       expect(body.db).toBe('degraded');
-      // ingen lekkasje av intern init-feilmelding i det offentlige svaret
-      expect(res.body).not.toMatch(/schema|seed|SELECT/i);
+      expect(body.degraded).toBe(true);
+      // ingen lekkasje av intern init-/skjema-detalj i det offentlige svaret
+      expect(res.body).not.toMatch(/schema|skjema|seed|migrasjon|SELECT|users|to_regclass/i);
     } finally {
       db.ping = origPing;
       db.isDegraded = origDegraded;
     }
+  });
+
+  it('/api/health svarer 503 {ok:false, db:down} når skjemaet mangler (ping kaster)', async () => {
+    // F47: kjerneuttrykket. Selv om DB-motoren svarer på SELECT 1, kaster ping()
+    // når kjernetabellen mangler (to_regclass NULL). Health må da svare 503, og
+    // aldri lekke at det var *skjemaet* (users-tabellen) som manglet.
+    const origPing = db.ping;
+    db.ping = async () => {
+      throw new Error('Kjerneskjema mangler: tabellen users finnes ikke');
+    };
+    try {
+      const res = await getViaApp('/api/health');
+      expect(res.status).toBe(503);
+      const body = JSON.parse(res.body);
+      expect(body.ok).toBe(false);
+      expect(body.db).toBe('down');
+      // det offentlige svaret avslører verken tabellnavn eller skjema-detalj
+      expect(res.body).not.toMatch(/schema|skjema|users|to_regclass|Kjerneskjema/i);
+    } finally {
+      db.ping = origPing;
+    }
+  });
+
+  it('/api/brain aksepterer body større enn den globale 256kb-grensen (Fase 6 bilde-payload)', async () => {
+    // Fase 6 POST-er base64-foto (1-5 MB) til /api/brain/ask. En egen 8mb-parser
+    // er montert på /api/brain FORAN den globale 256kb-parseren. Uten den ville
+    // en >256kb-body kastet PayloadTooLargeError (status 413) i body-parseren, som
+    // errorMiddleware respekterer (err.status). Med parseren parses bodyen OK og
+    // request går videre til gate/route — så svaret er ALDRI 413.
+    const storBody = { data: 'x'.repeat(400 * 1024) }; // ~400kb > 256kb, < 8mb
+    const res = await postViaApp('/api/brain/ask', storBody);
+    // Kjernet: parseren avviser den ikke som for stor.
+    expect(res.status).not.toBe(413);
   });
 
   it('error-middleware svarer 500 JSON uten å kaste', () => {

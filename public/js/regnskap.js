@@ -472,6 +472,138 @@
     document.querySelectorAll('input[type="date"]').forEach(function (i) { if (!i.value) i.value = iDag(); });
   }
 
+  // ---- AI-forslag fra kvittering (kun admin m/ AI-agent påslått) ----
+  // Kjeden: fil → base64 → POST /api/brain/ask (bilde-blokk) → forslag →
+  // POST /api/brain/confirm. Degraderer pent når brain er av (401/403/404/503).
+  var aiForslag = null;      // sisteproposal (toolUseId + confirmToken + summary)
+  var aiConversationId = null;
+
+  function aiDegrader(melding) {
+    var s = $('ai-status'); if (s) s.textContent = melding || 'AI-assistent ikke tilgjengelig — fyll inn manuelt.';
+    var boks = $('ai-forslag'); if (boks) boks.style.display = 'none';
+    aiForslag = null;
+  }
+
+  function erAvSkrudd(status) {
+    return status === 401 || status === 403 || status === 404 || status === 503;
+  }
+
+  function aiLesKvittering() {
+    visFeil('feil-ai', '');
+    var input = $('ai-fil');
+    var fil = input && input.files ? input.files[0] : null;
+    if (!fil) { visFeil('feil-ai', 'Velg et kvitteringsbilde først.'); return; }
+    var LOV = ['image/png', 'image/jpeg', 'image/webp'];
+    if (LOV.indexOf(fil.type) === -1) { visFeil('feil-ai', 'Kun PNG, JPEG eller WEBP.'); return; }
+    var MAKS = 5 * 1024 * 1024; // 5 MB
+    if (fil.size > MAKS) { visFeil('feil-ai', 'Bildet er for stort — velg et mindre bilde (maks 5 MB).'); return; }
+    var reader = new FileReader();
+    reader.onerror = function () { visFeil('feil-ai', 'Kunne ikke lese bildet. Prøv igjen.'); };
+    reader.onload = function () {
+      // reader.result = "data:<type>;base64,<data>" — send kun base64-delen.
+      var deler = String(reader.result).split(',');
+      var base64 = deler.length > 1 ? deler[1] : '';
+      if (!base64) { visFeil('feil-ai', 'Kunne ikke lese bildet. Prøv igjen.'); return; }
+      aiSend(fil.type, base64);
+    };
+    reader.readAsDataURL(fil);
+  }
+
+  function aiSend(mediaType, data) {
+    var knapp = $('ai-foreslaa');
+    var status = $('ai-status');
+    if (knapp) knapp.disabled = true;
+    if (status) status.textContent = 'Leser kvittering …';
+    var boks = $('ai-forslag'); if (boks) boks.style.display = 'none';
+    api('/api/brain/ask', {
+      method: 'POST',
+      body: JSON.stringify({
+        text: 'Les denne kvitteringen og foreslå en utgiftspost.',
+        images: [{ type: 'image', source: { type: 'base64', media_type: mediaType, data: data } }]
+      })
+    })
+      .then(function (r) {
+        return r.json().then(
+          function (d) { return { ok: r.ok, status: r.status, d: d }; },
+          function () { return { ok: r.ok, status: r.status, d: {} }; }
+        );
+      })
+      .then(function (res) {
+        if (status) status.textContent = '';
+        if (!res.ok) {
+          if (erAvSkrudd(res.status)) { aiDegrader(); return; }
+          if (res.status === 413) { visFeil('feil-ai', 'Bildet er for stort for serveren — velg et mindre/komprimert bilde.'); return; }
+          visFeil('feil-ai', (res.d && res.d.error) || 'Kunne ikke lese kvitteringen. Prøv igjen.');
+          return;
+        }
+        aiVisForslag(res.d || {});
+      })
+      .catch(function () { if (status) status.textContent = ''; aiDegrader('AI-assistent ikke tilgjengelig — fyll inn manuelt.'); })
+      .then(function () { if (knapp) knapp.disabled = false; });
+  }
+
+  function aiVisForslag(turn) {
+    var boks = $('ai-forslag');
+    if (!boks) return;
+    aiConversationId = turn.conversationId || null;
+    var tekst = turn.text ? '<p style="margin-bottom:8px">' + esc(turn.text) + '</p>' : '';
+    if (turn.kind === 'proposal' && turn.proposal) {
+      aiForslag = turn.proposal;
+      boks.innerHTML = '<div class="fiken-note">' + tekst +
+        '<p><b>Forslag:</b> ' + esc(turn.proposal.summary || '') + '</p>' +
+        '<button type="button" id="ai-bekreft" class="btn btn-primary" style="margin-top:10px">Bekreft og lagre</button>' +
+        '<button type="button" id="ai-avvis" class="btn btn-ghost" style="margin-top:10px;margin-left:8px">Avvis</button>' +
+        '</div>';
+      boks.style.display = 'block';
+      $('ai-bekreft').addEventListener('click', aiBekreft);
+      $('ai-avvis').addEventListener('click', function () { boks.style.display = 'none'; aiForslag = null; });
+    } else {
+      // Endelig svar uten skrive-forslag (f.eks. skygge-modus eller uklart bilde).
+      aiForslag = null;
+      boks.innerHTML = '<div class="fiken-note">' + (tekst || esc('Ingen konkret post foreslått — fyll inn manuelt.')) + '</div>';
+      boks.style.display = 'block';
+    }
+  }
+
+  function aiBekreft() {
+    if (!aiForslag) return;
+    visFeil('feil-ai', '');
+    var knapp = $('ai-bekreft');
+    if (knapp) { knapp.disabled = true; knapp.textContent = 'Lagrer …'; }
+    api('/api/brain/confirm', {
+      method: 'POST',
+      body: JSON.stringify({
+        toolUseId: aiForslag.toolUseId,
+        confirmToken: aiForslag.confirmToken,
+        conversationId: aiConversationId || undefined
+      })
+    })
+      .then(function (r) {
+        return r.json().then(
+          function (d) { return { ok: r.ok, status: r.status, d: d }; },
+          function () { return { ok: r.ok, status: r.status, d: {} }; }
+        );
+      })
+      .then(function (res) {
+        if (!res.ok) {
+          if (erAvSkrudd(res.status)) { aiDegrader(); return; }
+          visFeil('feil-ai', (res.d && res.d.error) || 'Kunne ikke lagre forslaget.');
+          if (knapp) { knapp.disabled = false; knapp.textContent = 'Bekreft og lagre'; }
+          return;
+        }
+        var boks = $('ai-forslag');
+        if (boks) boks.innerHTML = '<div class="fiken-note">' + esc((res.d && res.d.text) || 'Utført.') + '</div>';
+        aiForslag = null;
+        // Ny post kan ha blitt opprettet — oppdater listen + oversikten.
+        lastPoster('utgift', 'liste-utgift');
+        lastOversikt();
+      })
+      .catch(function () {
+        visFeil('feil-ai', 'Noe gikk galt. Prøv igjen.');
+        if (knapp) { knapp.disabled = false; knapp.textContent = 'Bekreft og lagre'; }
+      });
+  }
+
   // ---- Faner ----
   function byttFane(navn) {
     document.querySelectorAll('.fane').forEach(function (f) { f.classList.toggle('active', f.getAttribute('data-pane') === navn); });
@@ -491,10 +623,20 @@
   }
 
   // ---- Oppstart ----
+  var brukerRolle = null;
   function init() {
     $('maaned').value = naaMaaned();
     fyllKonti();
     fyllStandardDato();
+
+    // AI-kvittering: kun admin ser panelet (shimen krever admin + AI-agent-flagg).
+    // Ansatt får det aldri; ikke-utvalgt admin får en pen degradering ved bruk.
+    if (brukerRolle === 'admin') {
+      var aiPanel = $('ai-kvittering-panel');
+      if (aiPanel) aiPanel.style.display = 'block';
+      var aiKnapp = $('ai-foreslaa');
+      if (aiKnapp) aiKnapp.addEventListener('click', aiLesKvittering);
+    }
 
     document.querySelectorAll('.fane').forEach(function (f) {
       f.addEventListener('click', function () { byttFane(f.getAttribute('data-pane')); });
@@ -597,6 +739,7 @@
   }).then(function (data) {
     if (!data || !data.user) { window.location = '/konto'; return; }
     if (data.user.rolle !== 'ansatt' && data.user.rolle !== 'admin') { window.location = '/min-side'; return; }
+    brukerRolle = data.user.rolle;
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else init();
   }).catch(function () { window.location = '/konto'; });

@@ -50,26 +50,41 @@ sentry.init(app);
 const storBodyParser = express.json({ limit: '8mb' });
 app.use('/api/projects', storBodyParser);
 app.use('/api/regnskap', storBodyParser);
+// Fase 6: kvittering-opplasting POST-er base64-foto (1-5 MB) til /api/brain/ask.
+// Uten egen parser her ville den globale 256kb-grensen gitt 413 på ekte bilder.
+// Samme mønster som projects/regnskap; brain-rutene er agent-/rolle-beskyttet.
+app.use('/api/brain', storBodyParser);
 app.use(express.json({ limit: '256kb' }));
 app.use(cookieParser());
 app.use(agentAuth);    // service-token -> 'agent'-principal (brain). FØR authOptional.
 app.use(authOptional); // setter req.user hvis innlogget (valgfritt)
 app.use(agentGate);    // agent kun på allowlistede ruter (også handler-rolle-ruter)
 
-// Helsesjekk for Railway — pinger DB med SELECT 1 (db.ping). Svarer 200 når
-// databasen faktisk svarer, ellers 503. Kaster aldri selv (try/catch).
+// Helsesjekk for Railway — verifiserer at DB svarer OG at kjerneskjemaet finnes
+// (db.ping gjør begge, se F47). Svarer 503 kun ved ekte brudd: DB nede ELLER
+// kjernetabell mangler. Degradert (ikke-fatal init-advarsel, skjema OK) gir 200
+// med et synlig degradert-flagg — appen serves videre (PR #31). Kaster aldri
+// selv (try/catch).
 app.get('/api/health', async (_req, res) => {
   try {
     await db.ping();
-    // DB svarer. Men init (skjema/seed) kan ha feilet — da er vi i degradert
-    // drift: appen serves, så vi svarer 200 (ingen Railway-restart-loop), men
-    // rapporterer generisk "degraded" (aldri rå initErr.message) for synlighet.
+    // ping() beviser at DB svarer OG at kjernetabellen finnes. Men init
+    // (seed/migrasjoner) kan ha feilet selv om tabellene ble opprettet — da er
+    // vi i degradert drift. Degradert er en IKKE-fatal init-advarsel: appen kan
+    // fortsatt serve (kjerneskjemaet er OK). Per PR #31 skal en db-init-feil rope
+    // høyt, men IKKE crash-loope healthchecken — derfor svarer vi 200 med et
+    // synlig degradert-flagg (ikke 503). En 503 her ville blokkert alle
+    // fremtidige Railway-deploys hvis en ikke-fatal migrasjons-hikke satte
+    // flagget. Vi rapporterer generisk "degraded" — aldri rå intern feilmelding
+    // (se db/index.js:38) — så skjema-/init-detaljer aldri lekker offentlig.
     if (typeof db.isDegraded === 'function' && db.isDegraded()) {
-      return res.status(200).json({ ok: true, db: 'degraded' });
+      return res.status(200).json({ ok: true, db: 'degraded', degraded: true });
     }
     res.json({ ok: true, db: 'up' });
   } catch {
-    // DB er faktisk nede/ikke pingbar -> 503 utløser Railway-restart (ON_FAILURE).
+    // DB nede/ikke pingbar ELLER kjerneskjema mangler -> 503 (ON_FAILURE). Ved
+    // manglende skjema fikser en restart det ofte (init kjører schema.sql på
+    // nytt). Generisk "down" — ingen skjema-detaljer i det offentlige svaret.
     res.status(503).json({ ok: false, db: 'down' });
   }
 });
