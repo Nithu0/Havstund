@@ -49,8 +49,10 @@
 
   /* ---------- Visninger ---------- */
   function gaaTilRiktigSide(user) {
-    if (user.rolle === 'ansatt' || user.rolle === 'admin') {
+    if (user.rolle === 'admin') {
       window.location = '/intranett';
+    } else if (user.rolle === 'ansatt') {
+      window.location = '/ansatt';
     } else {
       window.location = '/min-side';
     }
@@ -65,9 +67,9 @@
     hent('vis-epost').textContent = user.epost || '—';
     hent('vis-rolle').textContent = user.rolle || 'kunde';
 
-    // Rolle-baserte snarveier.
-    var erAnsattEllerAdmin = user.rolle === 'ansatt' || user.rolle === 'admin';
-    hent('lenke-intranett').style.display = erAnsattEllerAdmin ? 'inline-flex' : 'none';
+    // Rolle-baserte snarveier. Intranett-skallet er admin-only; ansatt bruker
+    // sin egen /ansatt-side og skal ikke ha vei inn i admin-menyen herfra.
+    hent('lenke-intranett').style.display = user.rolle === 'admin' ? 'inline-flex' : 'none';
     hent('lenke-okonomi').style.display = user.rolle === 'admin' ? 'inline-flex' : 'none';
 
     lastBookinger();

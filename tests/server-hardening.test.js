@@ -48,6 +48,10 @@ function kundeCookie() {
   const token = signToken({ id: 2, rolle: 'kunde', navn: 'Test Kunde' });
   return `${COOKIE}=${token}`;
 }
+function ansattCookie() {
+  const token = signToken({ id: 3, rolle: 'ansatt', navn: 'Test Ansatt' });
+  return `${COOKIE}=${token}`;
+}
 
 describe('S1 — rolle-gate foran express.static', () => {
   // Sørg for at bryteren er PÅ (default) uansett hva miljøet hadde.
@@ -199,6 +203,55 @@ describe('S1b — dekode-/normaliserings-bypass foran express.static', () => {
     const res = await viaApp({ path: '/regnskap%2Ehtml' });
     expect(res.status).toBe(200);
     expect(res.body).toMatch(REGNSKAP_MARKØR);
+  });
+});
+
+describe('S1c — ansatt er stengt ute fra admin-skallene, men naar /ansatt', () => {
+  // Operator-krav: en ansatt skal KUN ha /ansatt (timeliste + samtale). Admin-
+  // dashbordet og de andre stab-/admin-skallene skal 302 til /konto for ansatt.
+  let forrige;
+  beforeEach(() => {
+    forrige = process.env.STATIC_AUTH_ENABLED;
+    delete process.env.STATIC_AUTH_ENABLED;
+  });
+  afterEach(() => {
+    if (forrige === undefined) delete process.env.STATIC_AUTH_ENABLED;
+    else process.env.STATIC_AUTH_ENABLED = forrige;
+  });
+
+  // Sider som naa er admin-only: ansatt-cookie skal 302 til /konto (ikke 200).
+  const stengtForAnsatt = [
+    '/intranett',
+    '/bookinger',
+    '/admin-agenda',
+    '/kunde-dialog',
+    '/admin-innsikt',
+    '/admin-kunder',
+    '/chat-innboks',
+  ];
+  for (const p of stengtForAnsatt) {
+    it(`ansatt GET ${p} -> 302 til /konto (admin-only)`, async () => {
+      const res = await viaApp({ path: p, headers: { Cookie: ansattCookie() } });
+      expect(res.status).toBe(302);
+      expect(res.headers.location).toBe('/konto');
+    });
+  }
+
+  it('ansatt GET /ansatt -> 200 (egen side er fortsatt tilgjengelig)', async () => {
+    const res = await viaApp({ path: '/ansatt', headers: { Cookie: ansattCookie() } });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatch(/<html|<!doctype/i);
+  });
+
+  it('admin GET /intranett -> 200 (admin beholder dashbordet)', async () => {
+    const res = await viaApp({ path: '/intranett', headers: { Cookie: adminCookie() } });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatch(/<html|<!doctype/i);
+  });
+
+  it('admin GET /ansatt -> 200 (admin naar ogsaa ansatt-siden)', async () => {
+    const res = await viaApp({ path: '/ansatt', headers: { Cookie: adminCookie() } });
+    expect(res.status).toBe(200);
   });
 });
 
