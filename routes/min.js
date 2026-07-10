@@ -313,4 +313,85 @@ router.get('/kalender', async (req, res) => {
   }
 });
 
+// ---------- GET /vaktplan (DELT arbeidsplan — ALLE ansattes foringer) ----------
+// Bolge 98-justering: en ansatt skal se HVEM som jobber NAAR. Dette er den ENESTE
+// ruta i /api/min der en ansatt leser ANDRES rader — og den er strengt LESE-ONLY.
+//
+// PERSONVERN (blocker-2-fiksen bevart): svaret inneholder ALDRI lonn. SELECT-en er
+// en eksplisitt hvitliste — KUN t.ansatt_id, a.navn, t.dato, t.timer, t.status. Vi
+// rorer ALDRI a.timelonn_ore, ingen SUM/brutto, ingen belop. Poenget med å skille
+// /api/min (ansatt) fra /api/regnskap (admin) er nettopp at ansatt aldri ser
+// andres lonn; denne ruta utvider synligheten til fellesplanen UTEN å apne lonn.
+router.get('/vaktplan', async (req, res) => {
+  if (!db.isConfigured()) return utilgjengelig(res);
+  const maaned = gyldigMaaned(req.query.maaned);
+  if (!maaned) return res.status(400).json({ error: 'Mangler gyldig maaned (YYYY-MM)' });
+  try {
+    // Eksplisitt kolonne-hvitliste — ALDRI SELECT *. JOIN henter kun a.navn.
+    // timelonn_ore/konto fra ansatte naar ALDRI dette svaret.
+    const { rows } = await db.query(
+      `SELECT t.ansatt_id, a.navn, t.dato, t.timer, t.status
+         FROM timeforinger t
+         JOIN ansatte a ON a.id = t.ansatt_id
+        WHERE to_char(t.dato,'YYYY-MM') = $1
+        ORDER BY t.dato ASC, a.navn ASC, t.id ASC`,
+      [maaned]
+    );
+    res.json({ maaned, vaktplan: rows });
+  } catch (e) {
+    console.error('min /vaktplan feilet:', e.message);
+    res.status(500).json({ error: 'Kunne ikke hente vaktplan' });
+  }
+});
+
+// ---------- Ansatt<->admin chat (ansatt-siden) ----------
+const MELDING_MAX = 4000;
+
+// GET /meldinger — egen traad. Markerer admins meldinger som lest (mottakersiden).
+router.get('/meldinger', async (req, res) => {
+  if (!db.isConfigured()) return utilgjengelig(res);
+  const ansattId = req.ansatt.id;
+  try {
+    const { rows } = await db.query(
+      `SELECT id, ansatt_id, avsender, tekst, lest, opprettet
+         FROM personal_meldinger
+        WHERE ansatt_id = $1
+        ORDER BY opprettet ASC, id ASC`,
+      [ansattId]
+    );
+    // Ansatt aapner traaden -> admins meldinger er naa lest.
+    await db.query(
+      "UPDATE personal_meldinger SET lest = true WHERE ansatt_id = $1 AND avsender = 'admin' AND lest = false",
+      [ansattId]
+    );
+    res.json({ meldinger: rows });
+  } catch (e) {
+    console.error('min /meldinger GET feilet:', e.message);
+    res.status(500).json({ error: 'Kunne ikke hente meldinger' });
+  }
+});
+
+// POST /meldinger {tekst} — ny melding i egen traad. avsender='ansatt' (konstant),
+// ansatt_id UTLEDES fra req.ansatt.id — ALDRI fra body. Klienten kan verken sette
+// avsender til 'admin' eller adressere en annens traad.
+router.post('/meldinger', async (req, res) => {
+  if (!db.isConfigured()) return utilgjengelig(res);
+  const tekst = String((req.body && req.body.tekst) || '').trim();
+  if (!tekst) return res.status(400).json({ error: 'Melding kan ikke vaere tom' });
+  if (tekst.length > MELDING_MAX) return res.status(400).json({ error: 'Meldingen er for lang' });
+  const ansattId = req.ansatt.id;
+  try {
+    const melding = await db.one(
+      `INSERT INTO personal_meldinger (ansatt_id, avsender, tekst, lest)
+       VALUES ($1, 'ansatt', $2, false)
+       RETURNING id, ansatt_id, avsender, tekst, lest, opprettet`,
+      [ansattId, tekst]
+    );
+    res.status(201).json({ melding });
+  } catch (e) {
+    console.error('min /meldinger POST feilet:', e.message);
+    res.status(500).json({ error: 'Kunne ikke sende melding' });
+  }
+});
+
 module.exports = router;

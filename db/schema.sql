@@ -367,3 +367,20 @@ CREATE TABLE IF NOT EXISTS gavekort (
   innlost_tid              TIMESTAMPTZ,
   opprettet                TIMESTAMPTZ DEFAULT now()
 );
+
+-- ===== Bolge 98-justering: ansatt<->admin intern chat =====
+-- personal_meldinger = én traad PER ansatt (ansatt_id grupperer traaden). Speiler
+-- customer_messages-moensteret (kunde<->admin), men internt mellom en ansatt og
+-- admin. avsender er ALLTID 'ansatt' | 'admin' og settes server-side i rute-laget
+-- (ALDRI fra klient) — nettopp som customer_messages.avsender. lest markeres av
+-- mottakersiden naar traaden aapnes. Ny tabell (ikke ny kolonne) -> CREATE TABLE
+-- IF NOT EXISTS naar OGSAA en levende db, ingen DO-blokk (pg-mem laster rent).
+CREATE TABLE IF NOT EXISTS personal_meldinger (
+  id         SERIAL PRIMARY KEY,
+  ansatt_id  INTEGER NOT NULL REFERENCES ansatte(id) ON DELETE CASCADE,  -- traaden tilhoerer en ansatt
+  avsender   TEXT NOT NULL,                       -- 'ansatt' | 'admin'
+  tekst      TEXT NOT NULL,
+  lest       BOOLEAN NOT NULL DEFAULT false,
+  opprettet  TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_personal_meldinger_ansatt ON personal_meldinger(ansatt_id);
