@@ -21,6 +21,15 @@
       padding:11px 14px;border-radius:10px;transition:.15s}
     .side-nav a:hover{background:rgba(255,255,255,.10);color:#fff}
     .side-nav a.active{background:rgba(255,255,255,.16);color:#fff}
+
+    /* ---- Grupperte hovedområder ---- */
+    .side-nav .nav-group{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+    .side-nav a.nav-main{font-size:15px;font-weight:800;color:#fff}
+    .side-nav a.nav-sub{font-size:13.5px;font-weight:600;color:#bcd6ea;padding:9px 14px 9px 34px}
+    .side-nav a.nav-sub:hover{color:#fff}
+    .side-nav .nav-sep{height:1px;background:rgba(255,255,255,.14);margin:14px 14px 8px}
+    .side-nav .nav-seklabel{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--turq-l);
+      padding:2px 14px 6px;font-weight:700;opacity:.75}
     .side-foot{margin-top:auto;padding:16px 22px;border-top:1px solid rgba(255,255,255,.12)}
     .side-foot a{color:#9fc6cf;font-size:13px;font-weight:600}
     .side-foot a:hover{color:#fff}
@@ -97,6 +106,9 @@
       .side-label{display:none}
       .side-nav{flex-direction:row;padding:0 10px 0 0;gap:2px}
       .side-nav a{white-space:nowrap;padding:10px 12px;font-size:13px}
+      .side-nav .nav-group{flex-direction:row;margin-top:0;gap:2px}
+      .side-nav a.nav-sub{padding:10px 12px}
+      .side-nav .nav-sep,.side-nav .nav-seklabel{display:none}
       .side-foot{display:none}
       .main-head,.main-body{padding-left:18px;padding-right:18px}
     }
@@ -112,15 +124,34 @@
       <div class="side-label">Administrasjon</div>
       <nav class="side-nav">
         <a href="#oversikt" class="active">Oversikt</a>
-        <a href="/admin-agenda">Agenda</a>
-        <a href="/admin-aktiviteter">Aktiviteter</a>
-        <a href="/admin-kunder">Kunder</a>
+
+        <div class="nav-group">
+          <a href="/bookinger" class="nav-main">Bookinger</a>
+          <a href="/bookinger" class="nav-sub">Bookinger</a>
+          <a href="/admin-agenda" class="nav-sub">Agenda</a>
+          <a href="/admin-aktiviteter" class="nav-sub">Aktiviteter</a>
+        </div>
+
+        <div class="nav-group">
+          <a href="/admin-kunder" class="nav-main">Kunder</a>
+          <a href="/admin-kunder" class="nav-sub">Kunder</a>
+          <a href="/kunde-dialog" class="nav-sub">Meldinger &amp; kunder</a>
+          <a href="/chat-innboks" class="nav-sub">Live chat</a>
+        </div>
+
+        <div class="nav-group">
+          <a href="/regnskap" class="nav-main">Regnskap</a>
+          <a href="/regnskap" class="nav-sub">Regnskap &amp; lønn</a>
+          <a href="/okonomi" id="okonomiLink" class="nav-sub" style="display:none">Økonomi-modell</a>
+        </div>
+
+        <div class="nav-group">
+          <a href="/regnskap#meldinger" class="nav-main">Ansatte</a>
+        </div>
+
+        <div class="nav-sep"></div>
+        <div class="nav-seklabel">Mer</div>
         <a href="/admin-innsikt">Innsikt</a>
-        <a href="/bookinger">Bookinger</a>
-        <a href="/kunde-dialog">Meldinger &amp; kunder</a>
-        <a href="/chat-innboks">Live chat</a>
-        <a href="/regnskap">Regnskap &amp; lønn</a>
-        <a href="/okonomi" id="okonomiLink" style="display:none">Økonomi-modell</a>
         <a href="#innhold">Nettside-innhold</a>
         <a href="/konto">Passordbytte</a>
       </nav>
