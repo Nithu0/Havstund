@@ -36,6 +36,11 @@ const state = {
   lonnParams: null,
   patchParams: null,
   deleteKalt: false,
+  vaktplan: [],            // rader vaktplan-JOIN returnerer
+  vaktplanParams: null,
+  personalMeldinger: [],   // egen traad (GET /meldinger)
+  personalInsertParams: null,
+  personalUpdateLest: null,
 };
 
 function nullstill() {
@@ -46,6 +51,11 @@ function nullstill() {
   state.lonnParams = null;
   state.patchParams = null;
   state.deleteKalt = false;
+  state.vaktplan = [];
+  state.vaktplanParams = null;
+  state.personalMeldinger = [];
+  state.personalInsertParams = null;
+  state.personalUpdateLest = null;
 }
 
 db.isConfigured = () => true;
@@ -68,11 +78,31 @@ db.one = async (text, params) => {
     state.lonnParams = params; // [ansatt_id, maaned]
     return { sum_timer: 12.5 };
   }
+  // POST /meldinger (ansatt-siden) — avsender bindes til 'ansatt' server-side.
+  if (/INSERT INTO personal_meldinger/i.test(text)) {
+    state.personalInsertParams = params; // [ansatt_id, tekst]
+    return { id: 900, ansatt_id: params[0], avsender: 'ansatt', tekst: params[1], lest: false };
+  }
   return null;
 };
 
 db.query = async (text, params) => {
   if (/INSERT INTO audit_log/i.test(text)) return { rows: [] };
+  // GET /vaktplan — JOIN mot ansatte. MAA komme foer den generiske timeforinger-
+  // grenen (den matcher ogsaa "FROM timeforinger t"). Fanger params + returnerer
+  // de forhaandssatte radene (som ALDRI inneholder lonn — det er hele poenget).
+  if (/FROM timeforinger t[\s\S]*JOIN ansatte/i.test(text)) {
+    state.vaktplanParams = params; // [maaned]
+    return { rows: state.vaktplan };
+  }
+  // Ansatt<->admin chat (ansatt-siden)
+  if (/UPDATE personal_meldinger/i.test(text)) {
+    state.personalUpdateLest = params;
+    return { rows: [] };
+  }
+  if (/FROM personal_meldinger/i.test(text)) {
+    return { rows: state.personalMeldinger };
+  }
   // POST /timer/send-inn (UPDATE ... status='sendt_inn' ... RETURNING id)
   if (/UPDATE timeforinger[\s\S]*sendt_inn/i.test(text)) {
     state.sendInnParams = params; // [user_id, ansatt_id, maaned]
@@ -249,6 +279,118 @@ describe('min/* — sikkerhetsmodell (asymmetri)', () => {
     const srv = await lytt(lagApp(UTEN_ANSATT));
     try {
       const res = await reqJson(srv, 'GET', '/api/min/timer?maaned=2026-07');
+      expect(res.status).toBe(403);
+    } finally { srv.close(); }
+  });
+});
+
+// ===================== VAKTPLAN — PERSONVERN (ALDRI lonn) =====================
+
+describe('min/vaktplan — delt arbeidsplan uten lonn', () => {
+  // KJERNE-PERSONVERN: en ansatt ser ALLE ansattes foringer (hvem jobber naar),
+  // men svaret inneholder ALDRI lonn/sats. Negativ assert paa serialisert svar.
+  it('GET /vaktplan -> flere ansatte, INGEN lonn/sats i svaret', async () => {
+    nullstill();
+    // Rader slik ruta faktisk SELECT-er dem: kun ansatt_id/navn/dato/timer/status.
+    state.vaktplan = [
+      { ansatt_id: 100, navn: 'Ola', dato: '2026-07-03', timer: 6, status: 'godkjent' },
+      { ansatt_id: 200, navn: 'Kari', dato: '2026-07-04', timer: 8, status: 'sendt_inn' },
+    ];
+    const srv = await lytt(lagApp(BRUKER_A));
+    try {
+      const res = await reqJson(srv, 'GET', '/api/min/vaktplan?maaned=2026-07');
+      expect(res.status).toBe(200);
+      // Flere ansatte er synlige (delt plan).
+      const idar = res.body.vaktplan.map((r) => r.ansatt_id);
+      expect(idar).toContain(100);
+      expect(idar).toContain(200);
+      // Innhold vi FORVENTER finnes.
+      expect(res.body.vaktplan[0]).toHaveProperty('navn');
+      expect(res.body.vaktplan[0]).toHaveProperty('timer');
+      expect(res.body.vaktplan[0]).toHaveProperty('status');
+      // NEGATIV ASSERT paa hele det serialiserte svaret: ingen lonn lekker.
+      const serialisert = JSON.stringify(res.body);
+      expect(serialisert).not.toMatch(/timelonn/i);
+      expect(serialisert).not.toMatch(/lonn/i);
+      expect(serialisert).not.toMatch(/sats/i);
+      expect(serialisert).not.toMatch(/_ore/i);
+      expect(serialisert).not.toMatch(/belop/i);
+      expect(serialisert).not.toMatch(/brutto/i);
+      // vaktplan-spoerringen ble filtrert paa maaned (ikke paa ansatt_id).
+      expect(state.vaktplanParams[0]).toBe('2026-07');
+    } finally { srv.close(); }
+  });
+
+  it('GET /vaktplan uten maaned -> 400', async () => {
+    nullstill();
+    const srv = await lytt(lagApp(BRUKER_A));
+    try {
+      const res = await reqJson(srv, 'GET', '/api/min/vaktplan');
+      expect(res.status).toBe(400);
+    } finally { srv.close(); }
+  });
+
+  it('kunde-rolle -> 403 paa /vaktplan (requireRole foran hentAnsatt)', async () => {
+    nullstill();
+    const srv = await lytt(lagApp(KUNDE));
+    try {
+      const res = await reqJson(srv, 'GET', '/api/min/vaktplan?maaned=2026-07');
+      expect(res.status).toBe(403);
+    } finally { srv.close(); }
+  });
+});
+
+// ===================== ANSATT-CHAT (ansatt-siden) =====================
+
+describe('min/meldinger — ansattens egen traad', () => {
+  // ansatt_id UTLEDES fra req.ansatt.id; avsender bindes til 'ansatt' server-side.
+  it('POST /meldinger med ansatt_id + avsender i body -> IGNORERES', async () => {
+    nullstill();
+    const srv = await lytt(lagApp(BRUKER_A)); // -> ansatt 100
+    try {
+      const res = await reqJson(srv, 'POST', '/api/min/meldinger', {
+        tekst: 'Hei sjef', ansatt_id: 200, avsender: 'admin',
+      });
+      expect(res.status).toBe(201);
+      // INSERT-param[0] = ansatt_id = req.ansatt.id (100), IKKE body-verdien 200.
+      expect(state.personalInsertParams[0]).toBe(100);
+      // avsender er en SQL-konstant 'ansatt' — den er IKKE i params, og svaret
+      // rapporterer 'ansatt', aldri klientens 'admin'.
+      expect(res.body.melding.avsender).toBe('ansatt');
+      expect(state.personalInsertParams).not.toContain('admin');
+    } finally { srv.close(); }
+  });
+
+  it('POST /meldinger med tom tekst -> 400', async () => {
+    nullstill();
+    const srv = await lytt(lagApp(BRUKER_A));
+    try {
+      const res = await reqJson(srv, 'POST', '/api/min/meldinger', { tekst: '   ' });
+      expect(res.status).toBe(400);
+      expect(state.personalInsertParams).toBeNull();
+    } finally { srv.close(); }
+  });
+
+  it('GET /meldinger -> egen traad + markerer admins meldinger lest', async () => {
+    nullstill();
+    state.personalMeldinger = [
+      { id: 1, ansatt_id: 100, avsender: 'admin', tekst: 'Svar', lest: false, opprettet: 't' },
+    ];
+    const srv = await lytt(lagApp(BRUKER_A));
+    try {
+      const res = await reqJson(srv, 'GET', '/api/min/meldinger');
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.meldinger)).toBe(true);
+      // UPDATE ... lest ble kjort filtrert paa EGEN ansatt_id (100).
+      expect(state.personalUpdateLest[0]).toBe(100);
+    } finally { srv.close(); }
+  });
+
+  it('kunde-rolle -> 403 paa /meldinger', async () => {
+    nullstill();
+    const srv = await lytt(lagApp(KUNDE));
+    try {
+      const res = await reqJson(srv, 'GET', '/api/min/meldinger');
       expect(res.status).toBe(403);
     } finally { srv.close(); }
   });
