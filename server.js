@@ -138,6 +138,7 @@ const BESKYTTEDE_SIDER = {
   'regnskap': ['admin'], // /api/regnskap/* er admin-only (blocker 2, bolge 98)
   'okonomi': ['admin'], // /api/finance krever admin
   'intranett': ['ansatt', 'admin'],
+  'ansatt': ['ansatt', 'admin'], // /api/min/* krever innlogget ansatt/admin (bolge 98, steg 5)
   'chat-innboks': ['ansatt', 'admin'],
   'bookinger': ['ansatt', 'admin'],
   'kunde-dialog': ['ansatt', 'admin'],
