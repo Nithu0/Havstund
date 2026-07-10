@@ -131,17 +131,17 @@ if (fs.existsSync(rtDir)) {
 // Rollback på 30 sek uten kodeendring: STATIC_AUTH_ENABLED=false.
 // Roller pr. side speiler rolle-kravet på sidens primære API (se routes/*).
 const BESKYTTEDE_SIDER = {
-  'admin-agenda': ['ansatt', 'admin'],
+  'admin-agenda': ['admin'], // admin-only: ansatt bruker /ansatt (kun timeliste + samtale)
   'admin-aktiviteter': ['admin'], // /api/activities/admin/all krever admin
-  'admin-innsikt': ['ansatt', 'admin'],
-  'admin-kunder': ['ansatt', 'admin'],
+  'admin-innsikt': ['admin'], // admin-only skall
+  'admin-kunder': ['admin'], // admin-only skall
   'regnskap': ['admin'], // /api/regnskap/* er admin-only (blocker 2, bolge 98)
   'okonomi': ['admin'], // /api/finance krever admin
-  'intranett': ['ansatt', 'admin'],
+  'intranett': ['admin'], // admin-dashbord: ansatt sendes til /ansatt, ikke hit
   'ansatt': ['ansatt', 'admin'], // /api/min/* krever innlogget ansatt/admin (bolge 98, steg 5)
-  'chat-innboks': ['ansatt', 'admin'],
-  'bookinger': ['ansatt', 'admin'],
-  'kunde-dialog': ['ansatt', 'admin'],
+  'chat-innboks': ['admin'], // admin-only skall
+  'bookinger': ['admin'], // admin-only skall
+  'kunde-dialog': ['admin'], // admin-only skall
 };
 
 // Normaliser en rå request-path til NØYAKTIG den oppslagsnøkkelen
