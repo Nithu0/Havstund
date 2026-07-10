@@ -272,6 +272,11 @@ router.get('/lonn', async (req, res) => {
       timelonn_ore: timelonnOre,
       sum_timer: sumTimer,
       brutto_ore: Math.round(sumTimer * timelonnOre),
+      // Kontrakt-aliaser: ansatt-frontenden leser sum_ore/antall_timer. Vi beholder
+      // de gamle noklene (kan ha andre lesere) OG legger til aliasene, saa ingen
+      // konsument brekker uansett hvilket navnesett de forventer.
+      sum_ore: Math.round(sumTimer * timelonnOre),
+      antall_timer: sumTimer,
       tellende_statuser: TELLENDE,
     });
   } catch (e) {
@@ -306,7 +311,10 @@ router.get('/kalender', async (req, res) => {
         ORDER BY dato ASC`,
       [maaned]
     )).rows;
-    res.json({ maaned, foringer, apningstider, stengte_dager: stengteDager });
+    // Responsnokler MATCHER det den delte komponenten public/js/kalender.js leser
+    // (d.timer / d.business_hours / d.closed_dates). Interne variabelnavn beholdt
+    // (foringer/apningstider/stengteDager) — kun output-formen er tilpasset kontrakten.
+    res.json({ maaned, timer: foringer, business_hours: apningstider, closed_dates: stengteDager });
   } catch (e) {
     console.error('min /kalender feilet:', e.message);
     res.status(500).json({ error: 'Kunne ikke hente kalender' });

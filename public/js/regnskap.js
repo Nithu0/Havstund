@@ -604,6 +604,482 @@
       });
   }
 
+  // ---- ADMIN-TIMEKALENDER (bolge 98, steg 7) ----
+  // Gjenbruker den landede kalender-komponenten (window.HavstundKalender) for
+  // "admin selv"-visning (apiBasis '/api/min'), og en manuell grid mot
+  // /api/regnskap/timer for andre ansatte (komponenten stotter ikke ansatt_id).
+  // RUTING (design 5.5): valgt == admin selv -> /api/min ; ellers ->
+  // /api/regnskap/timer med ansatt_id EKSPLISITT. Rettighet handheves ALLTID i
+  // API-et; UI-modus er kun bekvemmelighet.
+  var admMe = null;             // innlogget bruker ({ id, rolle, ... })
+  var admAnsatte = [];          // aktive ansatte (fra /api/regnskap/ansatte)
+  var admAdminAnsattId = null;  // admin sin egen ansatte-rad (user_id === me.id), ellers null
+  var admValgtAnsattId = null;  // valgt i nedtrekket
+  var admModus = 'andre';       // 'selv' | 'andre'
+  var admKalender = null;       // komponent-instans (kun 'selv')
+  var admAndreData = [];        // rader for 'andre' (fra /api/regnskap/timer)
+  var admValgtDato = null;      // dato modalen star pa
+  var admOppsett = false;       // er modal/knapper wiret? (unnga dobbel-wiring)
+
+  var ADM_UKEDAGER = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
+  var ADM_PRESEDENS = ['avvist', 'utkast', 'sendt_inn', 'godkjent', 'laast'];
+  var ADM_STATUS_TEKST = { utkast: 'Utkast', sendt_inn: 'Sendt inn', godkjent: 'Godkjent', avvist: 'Avvist', laast: 'Låst' };
+  var ADM_LAS_SVG = '<svg class="kal-las" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true">' +
+    '<path fill="currentColor" d="M6 10V7a6 6 0 1112 0v3h1a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8a2 2 0 012-2h1zm2 0h8V7a4 4 0 10-8 0v3z"/></svg>';
+
+  function admDatoStr(v) { return v == null ? '' : String(v).slice(0, 10); }
+  function admPad(n) { return String(n).padStart(2, '0'); }
+  function admFeil(t) { visFeil('feil-adm-kal', t); }
+  function admFeilForing(t) { visFeil('feil-adm-foring', t); }
+  function admOk(t) {
+    var el = $('ok-adm-kal'); if (!el) return;
+    el.textContent = t || ''; el.classList.toggle('vis', !!t);
+    if (t) setTimeout(function () { el.classList.remove('vis'); }, 4000);
+  }
+  function admValgtNavn() {
+    var a = admAnsatte.filter(function (x) { return Number(x.id) === Number(admValgtAnsattId); })[0];
+    return a ? a.navn : 'ansatt';
+  }
+  function admRepStatus(statuser) {
+    for (var i = 0; i < ADM_PRESEDENS.length; i++) {
+      if (statuser.indexOf(ADM_PRESEDENS[i]) !== -1) return ADM_PRESEDENS[i];
+    }
+    return '';
+  }
+  function admFormaterDato(dato) {
+    var d = new Date(dato + 'T00:00:00');
+    if (isNaN(d.getTime())) return dato;
+    return d.toLocaleDateString('no-NO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+  }
+
+  // Rader for en dag — leser fra komponentens payload ('selv') eller manuell array ('andre').
+  function admDataForDag(dato) {
+    var rader;
+    if (admModus === 'selv' && admKalender) rader = (admKalender.data().timer) || [];
+    else rader = admAndreData || [];
+    return rader.filter(function (t) { return t && admDatoStr(t.dato) === dato; });
+  }
+
+  // Manuell manedsgrid for 'andre' — samme kal-*-klasser som komponenten.
+  function admRenderManuellGrid(el, m, rader) {
+    if (!el) return;
+    var deler = String(m).split('-');
+    var aar = Number(deler[0]); var mnd = Number(deler[1]);
+    if (!aar || !mnd || mnd < 1 || mnd > 12) { el.innerHTML = ''; return; }
+    var antallDager = new Date(aar, mnd, 0).getDate();
+    var offset = (new Date(aar, mnd - 1, 1).getDay() + 6) % 7; // Man=0 .. Søn=6
+    var perDag = {};
+    rader.forEach(function (t) {
+      var dato = admDatoStr(t && t.dato); if (!dato) return;
+      if (!perDag[dato]) perDag[dato] = { sum: 0, statuser: [] };
+      perDag[dato].sum += Number(t.timer) || 0;
+      var st = t.status || 'utkast';
+      if (perDag[dato].statuser.indexOf(st) === -1) perDag[dato].statuser.push(st);
+    });
+    var iDagStr = iDag();
+    var html = '<div class="kal-grid kal-hoder">';
+    ADM_UKEDAGER.forEach(function (u) { html += '<div class="kal-hode">' + u + '</div>'; });
+    html += '</div><div class="kal-grid kal-dager">';
+    for (var i = 0; i < offset; i++) html += '<div class="kal-tom"></div>';
+    for (var dag = 1; dag <= antallDager; dag++) {
+      var dato = aar + '-' + admPad(mnd) + '-' + admPad(dag);
+      var d = perDag[dato];
+      var rep = d ? admRepStatus(d.statuser) : '';
+      var laast = !!(d && d.statuser.indexOf('laast') !== -1);
+      var klasser = ['kal-dag'];
+      if (rep) klasser.push('kal-' + rep);
+      if (dato === iDagStr) klasser.push('kal-idag');
+      var innhold = '<span class="kal-nr">' + dag + (laast ? ' ' + ADM_LAS_SVG : '') + '</span>';
+      if (d && d.sum > 0) innhold += '<span class="kal-sum">' + esc(timer(d.sum)) + ' t</span>';
+      html += '<button type="button" class="' + klasser.join(' ') + '" data-dato="' + dato + '">' + innhold + '</button>';
+    }
+    html += '</div>';
+    el.innerHTML = html;
+    Array.prototype.forEach.call(el.querySelectorAll('.kal-dag'), function (btn) {
+      btn.addEventListener('click', function () { admAapneDag(btn.getAttribute('data-dato')); });
+    });
+  }
+
+  function admMaanedVerdi() { return maaned(); }
+
+  // Hent + tegn 'andre'-kalenderen. Returnerer promise (for admRefresh-kjeding).
+  function admHentAndre() {
+    var m = admMaanedVerdi();
+    var el = $('adm-kalender');
+    return api('/api/regnskap/timer?ansatt_id=' + encodeURIComponent(admValgtAnsattId) + '&maaned=' + encodeURIComponent(m))
+      .then(function (r) { if (!r.ok) throw new Error('timer ' + r.status); return r.json(); })
+      .then(function (rader) { admAndreData = Array.isArray(rader) ? rader : []; admRenderManuellGrid(el, m, admAndreData); })
+      .catch(function () { if (el) el.innerHTML = '<div class="kal-feil">Kunne ikke laste kalenderen. Prøv igjen.</div>'; });
+  }
+
+  function admLastKalender() {
+    if (admValgtAnsattId == null) return Promise.resolve();
+    admFeil('');
+    var el = $('adm-kalender'); if (!el) return Promise.resolve();
+    if (admModus === 'selv') {
+      if (!admKalender && window.HavstundKalender) {
+        admKalender = window.HavstundKalender({
+          ansattId: admMe && admMe.id,
+          kanGodkjenne: true,
+          kanSeAndre: true,
+          apiBasis: '/api/min',
+          onVelgDag: function (dato) { admAapneDag(dato); },
+          onLastet: function () {},
+          onFeil: function (s) { if (s === 403) admFeil('Din bruker er ikke koblet til en ansatt-profil.'); }
+        });
+      }
+      if (!admKalender) { el.innerHTML = '<div class="kal-feil">Kalenderen kunne ikke lastes.</div>'; return Promise.resolve(); }
+      admKalender.mount(el);
+      return admKalender.setMaaned(admMaanedVerdi()).catch(function () {});
+    }
+    return admHentAndre();
+  }
+
+  function admRefresh() {
+    if (admModus === 'selv' && admKalender) return admKalender.refresh().catch(function () {});
+    return admHentAndre();
+  }
+
+  function admBanner() {
+    var b = $('adm-vegne'); if (!b) return;
+    if (admModus === 'andre') { b.textContent = 'Du fører timer på vegne av ' + admValgtNavn(); b.style.display = ''; }
+    else { b.style.display = 'none'; b.textContent = ''; }
+  }
+
+  function admByttAnsatt(id) {
+    admValgtAnsattId = Number(id);
+    admModus = (admAdminAnsattId != null && admValgtAnsattId === admAdminAnsattId) ? 'selv' : 'andre';
+    admBanner();
+    admLukkModal();
+    admLastKalender();
+  }
+
+  // ----- Dag-modal -----
+  function admLukkModal() {
+    var m = $('adm-dag-modal'); if (m) m.classList.remove('vis');
+    admValgtDato = null;
+    admFeilForing('');
+  }
+
+  function admRadHtml(t) {
+    var st = t.status || 'utkast';
+    var tekst = esc(t.aktivitet || '');
+    var notat = t.notat ? '<small>' + esc(t.notat) + '</small>' : '';
+    var handling = '';
+    if (st === 'laast') {
+      handling += '<button type="button" class="knapp-lenke rediger" data-adm-handling="korriger" data-id="' + esc(t.id) + '">Korriger</button>';
+    } else {
+      if (st !== 'godkjent') handling += '<button type="button" class="knapp-lenke godkjenn" data-adm-handling="godkjenn" data-id="' + esc(t.id) + '">Godkjenn</button>';
+      if (st !== 'avvist') handling += '<button type="button" class="knapp-lenke slett" data-adm-handling="avvis" data-id="' + esc(t.id) + '">Avvis</button>';
+    }
+    return '<div class="foring-rad">' +
+      '<span class="f-timer">' + esc(timer(t.timer)) + ' t</span>' +
+      '<span class="f-tekst">' + (tekst || '<span style="color:var(--muted)">(uten aktivitet)</span>') + notat + '</span>' +
+      '<span class="status-merke sm-' + esc(st) + '">' + esc(ADM_STATUS_TEKST[st] || st) + '</span>' +
+      (handling ? '<span class="f-handling">' + handling + '</span>' : '') +
+      '</div>';
+  }
+
+  function admAapneDag(dato) {
+    admValgtDato = dato;
+    var egne = admDataForDag(dato);
+    var tittel = $('adm-dag-tittel'); if (tittel) tittel.textContent = 'Timer — ' + admFormaterDato(dato);
+    var vb = $('adm-vegne-modal');
+    if (vb) {
+      if (admModus === 'andre') { vb.textContent = 'Du fører timer på vegne av ' + admValgtNavn(); vb.style.display = ''; }
+      else { vb.style.display = 'none'; vb.textContent = ''; }
+    }
+    var liste = $('adm-dag-eksisterende');
+    if (liste) {
+      if (!egne.length) {
+        liste.innerHTML = '<p class="hint" style="margin:4px 0 10px;color:var(--muted);font-size:13px">Ingen føringer denne dagen ennå.</p>';
+      } else {
+        liste.innerHTML = egne.map(admRadHtml).join('');
+        Array.prototype.forEach.call(liste.querySelectorAll('[data-adm-handling]'), function (btn) {
+          btn.addEventListener('click', function () {
+            var id = btn.getAttribute('data-id');
+            var h = btn.getAttribute('data-adm-handling');
+            if (h === 'godkjenn') admGodkjenn(id);
+            else if (h === 'avvis') admAvvis(id);
+            else if (h === 'korriger') admKorriger(id);
+          });
+        });
+      }
+    }
+    admFeilForing('');
+    var f = $('adm-form-foring'); if (f) f.reset();
+    var m = $('adm-dag-modal'); if (m) m.classList.add('vis');
+    var tf = $('adm-f-timer'); if (tf) tf.focus();
+  }
+
+  // ----- Admin-handlinger (alle mot /api/regnskap/timer/*; server handhever) -----
+  function admHandling(url, kropp) {
+    admFeilForing('');
+    return api(url, { method: 'POST', body: JSON.stringify(kropp || {}) })
+      .then(function (r) {
+        return r.json().then(
+          function (d) { return { ok: r.ok, status: r.status, d: d }; },
+          function () { return { ok: r.ok, status: r.status, d: {} }; }
+        );
+      })
+      .then(function (res) {
+        if (!res.ok) {
+          if (res.status === 403) { admFeilForing('Kun admin kan gjøre dette.'); return; }
+          admFeilForing((res.d && res.d.error) || 'Handlingen kunne ikke utføres.'); return;
+        }
+        return admRefresh().then(function () { if (admValgtDato) admAapneDag(admValgtDato); lastLonn(); lastOversikt(); });
+      })
+      .catch(function () { admFeilForing('Noe gikk galt. Prøv igjen.'); });
+  }
+
+  function admGodkjenn(id) {
+    admHandling('/api/regnskap/timer/' + encodeURIComponent(id) + '/godkjenn', {});
+  }
+
+  function admAvvis(id) {
+    var b = prompt('Begrunnelse for avvisning (vises til den ansatte):');
+    if (b === null) return;                         // avbrutt
+    if (!String(b).trim()) { admFeilForing('Avvisning krever en begrunnelse.'); return; }
+    admHandling('/api/regnskap/timer/' + encodeURIComponent(id) + '/avvis', { begrunnelse: String(b).trim() });
+  }
+
+  function admKorriger(id) {
+    var rad = admDataForDag(admValgtDato).filter(function (t) { return String(t.id) === String(id); })[0];
+    var forslag = rad ? String(rad.timer) : '';
+    var tsvar = prompt('Nytt timetall for denne føringen (0–24):', forslag);
+    if (tsvar === null) return;
+    var tverdi = parseFloat(String(tsvar).replace(',', '.'));
+    if (!Number.isFinite(tverdi) || tverdi < 0 || tverdi > 24) { admFeilForing('Oppgi et gyldig timetall (0–24).'); return; }
+    var b = prompt('Begrunnelse for korrigering (valgfritt):', '');
+    if (b === null) return;                         // avbrutt
+    var kropp = { timer: tverdi };
+    if (String(b).trim()) kropp.begrunnelse = String(b).trim();
+    admHandling('/api/regnskap/timer/' + encodeURIComponent(id) + '/korriger', kropp);
+  }
+
+  function admLaasMaaned() {
+    var m = admMaanedVerdi();
+    admFeil('');
+    if (!confirm('Lås alle timer for ' + m + '? Låste rader kan bare endres via «Korriger». Dette kan ikke angres.')) return;
+    // Kontrakt: POST /api/regnskap/timer/laas?maaned= — sender maaned bade i query og body.
+    api('/api/regnskap/timer/laas?maaned=' + encodeURIComponent(m), { method: 'POST', body: JSON.stringify({ maaned: m }) })
+      .then(function (r) {
+        return r.json().then(
+          function (d) { return { ok: r.ok, status: r.status, d: d }; },
+          function () { return { ok: r.ok, status: r.status, d: {} }; }
+        );
+      })
+      .then(function (res) {
+        if (!res.ok) {
+          if (res.status === 403) { admFeil('Kun admin kan låse måneden.'); return; }
+          admFeil((res.d && res.d.error) || 'Kunne ikke låse måneden.'); return;
+        }
+        admOk('Måneden er låst.');
+        admRefresh(); lastLonn();
+      })
+      .catch(function () { admFeil('Noe gikk galt. Prøv igjen.'); });
+  }
+
+  // Ny foring pa vegne av valgt ansatt. ansatt_id sendes ALLTID eksplisitt.
+  function admLagreForing(e) {
+    if (e) e.preventDefault();
+    if (admValgtDato == null || admValgtAnsattId == null) return;
+    admFeilForing('');
+    var tf = $('adm-f-timer');
+    var tverdi = tf ? parseFloat(String(tf.value).replace(',', '.')) : NaN;
+    if (!Number.isFinite(tverdi) || tverdi <= 0 || tverdi > 24) { admFeilForing('Oppgi et gyldig timetall (0–24).'); return; }
+    var aktivitet = ($('adm-f-aktivitet') && $('adm-f-aktivitet').value.trim()) || '';
+    var notat = ($('adm-f-notat') && $('adm-f-notat').value.trim()) || '';
+    var kropp = { ansatt_id: Number(admValgtAnsattId), dato: admValgtDato, timer: tverdi };
+    if (aktivitet) kropp.aktivitet = aktivitet;
+    if (notat) kropp.notat = notat;
+    var lagre = $('adm-f-lagre'); if (lagre) lagre.disabled = true;
+    api('/api/regnskap/timer', { method: 'POST', body: JSON.stringify(kropp) })
+      .then(function (r) {
+        return r.json().then(
+          function (d) { return { ok: r.ok, status: r.status, d: d }; },
+          function () { return { ok: r.ok, status: r.status, d: {} }; }
+        );
+      })
+      .then(function (res) {
+        if (!res.ok) { admFeilForing((res.d && res.d.error) || 'Kunne ikke lagre føringen.'); return; }
+        return admRefresh().then(function () { if (admValgtDato) admAapneDag(admValgtDato); lastLonn(); lastOversikt(); });
+      })
+      .catch(function () { admFeilForing('Noe gikk galt. Prøv igjen.'); })
+      .then(function () { if (lagre) lagre.disabled = false; });
+  }
+
+  // Wires modal/knapper EN gang, henter me + ansatte, setter default-valg.
+  function initAdmKalender() {
+    var panel = $('adm-kal-panel'); if (!panel) return;
+    if (!admOppsett) {
+      admOppsett = true;
+      var lukk = $('adm-dag-lukk'); if (lukk) lukk.addEventListener('click', admLukkModal);
+      var overlay = $('adm-dag-modal');
+      if (overlay) overlay.addEventListener('click', function (e) { if (e.target === overlay) admLukkModal(); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && $('adm-dag-modal') && $('adm-dag-modal').classList.contains('vis')) admLukkModal(); });
+      var form = $('adm-form-foring'); if (form) form.addEventListener('submit', admLagreForing);
+      var laas = $('adm-laas'); if (laas) laas.addEventListener('click', admLaasMaaned);
+    }
+
+    Promise.all([
+      api('/api/auth/me').then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }),
+      api('/api/regnskap/ansatte').then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; })
+    ]).then(function (svar) {
+      admMe = (svar[0] && svar[0].user) ? svar[0].user : svar[0];
+      var alle = Array.isArray(svar[1]) ? svar[1] : [];
+      admAnsatte = alle.filter(function (a) { return a.aktiv; });
+      panel.style.display = '';
+      if (!admAnsatte.length) {
+        var tomEl = $('adm-kalender'); if (tomEl) tomEl.innerHTML = '<p class="tom">Legg til en aktiv ansatt for å føre timer.</p>';
+        var selTom = $('adm-ansatt'); if (selTom) selTom.innerHTML = '';
+        return;
+      }
+      var egen = (admMe && admMe.id != null)
+        ? admAnsatte.filter(function (a) { return Number(a.user_id) === Number(admMe.id); })[0]
+        : null;
+      admAdminAnsattId = egen ? Number(egen.id) : null;
+      var sel = $('adm-ansatt');
+      if (sel) {
+        sel.innerHTML = admAnsatte.map(function (a) {
+          var egenMerke = (admAdminAnsattId != null && Number(a.id) === admAdminAnsattId) ? ' (meg)' : '';
+          return '<option value="' + a.id + '">' + esc(a.navn) + egenMerke + '</option>';
+        }).join('');
+        // Wires KUN her (init kalles en gang via admOppsett-flagget for wiring;
+        // men select fylles hver gang) — bruk onchange for a unnga duplikat-listenere.
+        sel.onchange = function () { admByttAnsatt(sel.value); };
+      }
+      var startId = admAdminAnsattId != null ? admAdminAnsattId : Number(admAnsatte[0].id);
+      if (sel) sel.value = String(startId);
+      admByttAnsatt(startId);
+    });
+  }
+
+  // Kalt ved fane-/maned-bytte NAAR admin-kalenderen alt er initialisert.
+  function admLastHvisKlar() {
+    if (brukerRolle === 'admin' && admValgtAnsattId != null) admLastKalender();
+  }
+
+  // ---- PERSONALMELDINGER (admin-side av ansatt-chatten, /api/personalchat) ----
+  // Speiler kunde-dialogen: venstre liste (ansatte m/ uleste), hoyre samtale +
+  // svar. avsender settes ALLTID server-side; her sendes kun {tekst}. ansatt_id
+  // ligger i URL-en. Rettighet handheves i API-et (admin-only -> 403 ellers).
+  var pmValgtAnsattId = null;
+  var pmOppsett = false;
+
+  function pmTid(v) {
+    if (!v) return '';
+    var d = new Date(v);
+    if (isNaN(d.getTime())) return esc(v);
+    return d.toLocaleString('no-NO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function pmLastOversikt() {
+    var liste = $('pm-liste'); if (!liste) return;
+    api('/api/personalchat').then(function (r) {
+      if (r.status === 403) { liste.innerHTML = '<p class="tom" style="padding:14px">Kun admin.</p>'; return null; }
+      if (!r.ok) throw new Error('personalchat ' + r.status);
+      return r.json();
+    }).then(function (rows) {
+      if (rows === null) return;
+      pmRenderOversikt(Array.isArray(rows) ? rows : []);
+    }).catch(function () { liste.innerHTML = '<p class="tom" style="padding:14px">Kunne ikke hente meldinger.</p>'; });
+  }
+
+  function pmRenderOversikt(rader) {
+    var liste = $('pm-liste'); if (!liste) return;
+    if (!rader.length) { liste.innerHTML = '<p class="tom" style="padding:14px">Ingen ansatte ennå.</p>'; return; }
+    liste.innerHTML = rader.map(function (a) {
+      var uleste = Number(a.uleste) || 0;
+      var aktiv = String(a.ansatt_id) === String(pmValgtAnsattId) ? ' aktiv' : '';
+      var utdrag = a.siste_tekst
+        ? (a.siste_avsender === 'admin' ? 'Du: ' : '') + esc(a.siste_tekst)
+        : 'Ingen meldinger ennå';
+      return '<button type="button" class="pm-rad' + aktiv + '" data-pm-id="' + esc(a.ansatt_id) + '">' +
+        '<span class="pm-navn">' + esc(a.navn) + (a.stilling ? ' <small>' + esc(a.stilling) + '</small>' : '') + '</span>' +
+        '<span class="pm-utdrag">' + utdrag + '</span>' +
+        (uleste ? '<span class="pm-badge">' + uleste + '</span>' : '') +
+        '</button>';
+    }).join('');
+    Array.prototype.forEach.call(liste.querySelectorAll('.pm-rad'), function (b) {
+      b.addEventListener('click', function () { pmVelg(b.getAttribute('data-pm-id')); });
+    });
+  }
+
+  function pmVelg(id) {
+    var n = Number(id);
+    if (!Number.isInteger(n) || n <= 0) return;
+    pmValgtAnsattId = n;
+    pmLastOversikt();   // oppdater aktiv-markering
+    pmLastTraad();
+  }
+
+  function pmLastTraad() {
+    var traad = $('pm-traad'); if (!traad || pmValgtAnsattId == null) return;
+    var skjema = $('pm-svar-skjema'); if (skjema) skjema.style.display = '';
+    visFeil('feil-pm', '');
+    traad.innerHTML = '<p class="tom" style="padding:0">Laster …</p>';
+    api('/api/personalchat/' + encodeURIComponent(pmValgtAnsattId)).then(function (r) {
+      if (r.status === 403) { traad.innerHTML = '<p class="tom" style="padding:0">Kun admin.</p>'; return null; }
+      if (!r.ok) throw new Error('personalchat traad ' + r.status);
+      return r.json();
+    }).then(function (d) {
+      if (d === null) return;
+      var ansatt = (d && d.ansatt) || {};
+      var tittel = $('pm-tittel'); if (tittel) tittel.textContent = ansatt.navn || 'Ansatt';
+      pmRenderTraad((d && Array.isArray(d.meldinger)) ? d.meldinger : []);
+      pmLastOversikt();  // uleste er nullstilt server-side ved GET -> oppdater badge
+    }).catch(function () { traad.innerHTML = '<p class="tom" style="padding:0">Kunne ikke hente samtalen.</p>'; });
+  }
+
+  function pmRenderTraad(meldinger) {
+    var traad = $('pm-traad'); if (!traad) return;
+    if (!meldinger.length) { traad.innerHTML = '<p class="tom" style="padding:0">Ingen meldinger ennå.</p>'; return; }
+    traad.innerHTML = meldinger.map(function (m) {
+      var fraAdmin = m.avsender === 'admin';
+      return '<div class="pm-melding ' + (fraAdmin ? 'fra-oss' : 'fra-ansatt') + '">' +
+        '<div class="pm-meta">' + (fraAdmin ? 'Havstund' : 'Ansatt') + ' · ' + pmTid(m.opprettet) + '</div>' +
+        '<div class="pm-tekst">' + esc(m.tekst || '') + '</div>' +
+        '</div>';
+    }).join('');
+    traad.scrollTop = traad.scrollHeight;
+  }
+
+  function pmSend(e) {
+    if (e) e.preventDefault();
+    if (pmValgtAnsattId == null) return;
+    var tekstEl = $('pm-tekst');
+    var tekst = tekstEl ? tekstEl.value.trim() : '';
+    visFeil('feil-pm', '');
+    if (!tekst) { visFeil('feil-pm', 'Skriv en melding.'); if (tekstEl) tekstEl.focus(); return; }
+    var knapp = $('pm-send'); if (knapp) knapp.disabled = true;
+    api('/api/personalchat/' + encodeURIComponent(pmValgtAnsattId), { method: 'POST', body: JSON.stringify({ tekst: tekst }) })
+      .then(function (r) {
+        return r.json().then(
+          function (d) { return { ok: r.ok, status: r.status, d: d }; },
+          function () { return { ok: r.ok, status: r.status, d: {} }; }
+        );
+      })
+      .then(function (res) {
+        if (!res.ok) {
+          if (res.status === 403) { visFeil('feil-pm', 'Kun admin kan svare.'); return; }
+          visFeil('feil-pm', (res.d && res.d.error) || 'Kunne ikke sende meldingen.'); return;
+        }
+        if (tekstEl) tekstEl.value = '';
+        pmLastTraad(); pmLastOversikt();
+      })
+      .catch(function () { visFeil('feil-pm', 'Noe gikk galt. Prøv igjen.'); })
+      .then(function () { if (knapp) knapp.disabled = false; });
+  }
+
+  // Wires svar-skjema EN gang. Data lastes forst ved fane-bytte (pmLastOversikt).
+  function pmInit() {
+    if (pmOppsett) return;
+    pmOppsett = true;
+    var skjema = $('pm-svar-skjema');
+    if (skjema) skjema.addEventListener('submit', pmSend);
+  }
+
   // ---- Faner ----
   function byttFane(navn) {
     document.querySelectorAll('.fane').forEach(function (f) { f.classList.toggle('active', f.getAttribute('data-pane') === navn); });
@@ -615,6 +1091,8 @@
     else if (navn === 'inntekter') lastPoster('inntekt', 'liste-inntekt');
     else if (navn === 'utgifter') lastPoster('utgift', 'liste-utgift');
     else if (navn === 'lonn') { lastAnsatte().then(function () { lastTimer(); lastLonn(); }); }
+    else if (navn === 'vaktplan') admLastHvisKlar();
+    else if (navn === 'meldinger') pmLastOversikt();
     else if (navn === 'dagsoppgjor') lastDagsoppgjor();
   }
   function aktivFane() {
@@ -636,6 +1114,12 @@
       if (aiPanel) aiPanel.style.display = 'block';
       var aiKnapp = $('ai-foreslaa');
       if (aiKnapp) aiKnapp.addEventListener('click', aiLesKvittering);
+      // Admin-timekalender: ansatt-velger + kalender + godkjenn/avvis/las/korriger.
+      initAdmKalender();
+      // Personalmeldinger: wire svar-skjema (data lastes ved fane-bytte).
+      pmInit();
+      // Vis admin-kun faner (Vaktplan + Personalmeldinger). API håndhever uansett.
+      document.querySelectorAll('.fane-admin').forEach(function (f) { f.style.display = ''; });
     }
 
     document.querySelectorAll('.fane').forEach(function (f) {

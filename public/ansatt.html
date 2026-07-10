@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Min timeføring — Havstund</title>
+  <title>Min side — Havstund</title>
   <link rel="stylesheet" href="css/styles.css">
   <style>
     body{background:var(--cream)}
@@ -22,7 +22,18 @@
     .topp .mnd{display:flex;align-items:center;gap:10px}
     .topp .mnd label{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
     .topp .mnd input{padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:15px;width:auto}
-    .lead{color:var(--muted);margin-bottom:22px;max-width:70ch}
+    .lead{color:var(--muted);margin-bottom:18px;max-width:70ch}
+
+    /* ---- Faner (tab-bar) ---- */
+    .faner{display:flex;gap:6px;border-bottom:2px solid var(--line);margin-bottom:22px;flex-wrap:wrap}
+    .fane-btn{appearance:none;background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;
+      font-family:inherit;font-size:15px;font-weight:700;color:var(--muted);padding:10px 16px;cursor:pointer;transition:.12s;position:relative}
+    .fane-btn:hover{color:var(--sea-deep)}
+    .fane-btn[aria-selected="true"]{color:var(--sea-deep);border-bottom-color:var(--turq)}
+    .fane-btn .prikk{display:none;position:absolute;top:6px;right:6px;width:9px;height:9px;border-radius:50%;background:#d1495b}
+    .fane-btn .prikk.vis{display:inline-block}
+    .fane-panel{display:none}
+    .fane-panel.aktiv{display:block}
 
     .panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:22px 24px;box-shadow:var(--shadow);margin-bottom:22px}
     .panel h3{margin-bottom:4px}
@@ -37,11 +48,12 @@
     .blokkert{background:#fff;border:1px dashed var(--line);border-radius:var(--r);padding:40px 30px;text-align:center;color:var(--muted);font-size:16px;box-shadow:var(--shadow)}
     .blokkert b{color:var(--sea-deep)}
 
-    /* ---- Lønn-kort ---- */
-    .lonn-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
-    .lonn-kort{background:var(--cream);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
-    .lonn-kort .label{font-size:12px;text-transform:uppercase;letter-spacing:1.3px;color:var(--muted);font-weight:700}
-    .lonn-kort .val{font-size:24px;font-weight:800;color:var(--sea-deep);margin-top:6px;line-height:1.05}
+    /* ---- Egen-lønn (diskret stripe, ikke hovedfokus) ---- */
+    .lonn-strip{display:flex;gap:26px;flex-wrap:wrap;align-items:baseline;background:var(--cream);border:1px solid var(--line);border-radius:12px;padding:12px 18px;margin-bottom:22px}
+    .lonn-strip .tit{font-size:12px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:700;margin-right:2px}
+    .lonn-strip .par{display:inline-flex;align-items:baseline;gap:7px}
+    .lonn-strip .par .k{font-size:12px;color:var(--muted);font-weight:600}
+    .lonn-strip .par .v{font-size:16px;font-weight:800;color:var(--sea-deep);font-variant-numeric:tabular-nums}
 
     /* ---- Kalender-komponent (styles for public/js/kalender.js) ---- */
     .kal-legende{display:flex;gap:14px;flex-wrap:wrap;margin:2px 0 16px;font-size:12px;color:var(--muted)}
@@ -75,6 +87,27 @@
     .kal-lukket{background:#eef0f2;border-left-color:#cdd5dd;color:var(--muted);cursor:not-allowed;opacity:.7}
     .kal-lukket:hover{transform:none;box-shadow:none;border-color:var(--line);border-left-color:#cdd5dd}
     .kal-feil{color:#9b2226;font-size:14px;padding:18px 4px}
+
+    /* ---- Delt arbeidsplan (vaktplan, LESE-ONLY, ALDRI lønn) ---- */
+    .vp-topp{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .vp-innhold{margin-top:14px}
+    .vp-dag{border:1px solid var(--line);border-radius:12px;padding:12px 15px;margin-bottom:10px;background:#fff}
+    .vp-dag h4{font-size:14px;color:var(--sea-deep);margin-bottom:8px;text-transform:capitalize}
+    .vp-rad{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+    .vp-rad:first-of-type{border-top:none}
+    .vp-navn{font-weight:700;color:var(--ink);min-width:120px;flex:1}
+    .vp-timer{font-weight:800;color:var(--teal);font-variant-numeric:tabular-nums;min-width:50px}
+    .vp-tom{color:var(--muted);font-size:14px;padding:10px 2px}
+
+    /* ---- Ansatt <-> admin chat ---- */
+    .chat-liste{display:flex;flex-direction:column;gap:12px;max-height:52vh;overflow-y:auto;padding:6px 2px 10px}
+    .chat-boble{max-width:78%;padding:10px 14px;border-radius:14px;font-size:15px;line-height:1.45;word-wrap:break-word;white-space:pre-wrap}
+    .chat-boble .chat-meta{display:block;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;opacity:.75;margin-bottom:3px}
+    .chat-boble.meg{align-self:flex-end;background:var(--sea-deep);color:#fff;border-bottom-right-radius:5px}
+    .chat-boble.dem{align-self:flex-start;background:#eef1f4;color:var(--ink);border-bottom-left-radius:5px}
+    .chat-tom{color:var(--muted);font-size:14px;padding:14px 2px;text-align:center}
+    .chat-skjema{display:flex;gap:10px;align-items:flex-end;margin-top:16px;border-top:1px solid var(--line);padding-top:16px}
+    .chat-skjema textarea{flex:1;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:15px;resize:vertical;min-height:46px;background:#fff;color:var(--ink)}
 
     /* ---- Dag-modal (føringsskjema + eksisterende føringer) ---- */
     .modal-overlay{position:fixed;inset:0;background:rgba(8,30,52,.55);display:none;align-items:flex-start;justify-content:center;z-index:200;padding:40px 16px;overflow-y:auto}
@@ -111,14 +144,14 @@
 
     .m-knapper{display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap}
 
-    @media(max-width:640px){.lonn-grid{grid-template-columns:1fr}.kal-dag,.kal-tom{min-height:54px}.skjema{grid-template-columns:1fr}}
+    @media(max-width:640px){.kal-dag,.kal-tom{min-height:54px}.skjema{grid-template-columns:1fr}.chat-boble{max-width:88%}}
   </style>
 </head>
 <body>
   <header class="adm-top">
     <div class="inner">
       <a href="/intranett" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.45);color:#fff;font-weight:700;font-size:13px;padding:8px 15px;border-radius:30px;white-space:nowrap">← Tilbake til oversikt</a>
-      <a href="/" class="logo"><img src="bilder/wordmark.png" alt="Havstund"><small>Min timeføring</small></a>
+      <a href="/" class="logo"><img src="bilder/wordmark.png" alt="Havstund"><small>Min side</small></a>
       <nav>
         <a href="/intranett">Intranett</a>
         <a href="/" >Hjem</a>
@@ -130,14 +163,14 @@
   <main class="wrap2">
     <div class="topp">
       <div>
-        <h1>Min timeføring</h1>
+        <h1>Min side</h1>
       </div>
-      <div class="mnd">
+      <div class="mnd" id="mnd-boks">
         <label for="maaned">Måned</label>
         <input type="month" id="maaned">
       </div>
     </div>
-    <p class="lead">Før timene dine rett i kalenderen. Klikk på en dag for å legge til eller endre. Når måneden er klar, sender du den inn til godkjenning.</p>
+    <p class="lead">Før timene dine, se hele arbeidsplanen, og hold kontakten med Havstund.</p>
 
     <!-- Blokkert: brukeren mangler ansatt-kobling (403 fra /api/min) -->
     <div id="blokkert" class="blokkert" style="display:none">
@@ -147,35 +180,68 @@
 
     <!-- Hovedinnhold -->
     <div id="innhold">
-      <div class="panel">
-        <div class="m-topp" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
-          <div>
-            <h3>Kalender</h3>
-            <p class="hint" style="margin-bottom:0">Sum timer per dag. Fargen viser status.</p>
-          </div>
-          <button id="send-inn" class="btn btn-primary" disabled>Send inn måneden</button>
-        </div>
-        <div class="ok-melding" id="ok-melding"></div>
-        <div class="feil" id="feil-topp"></div>
-        <div class="kal-legende" aria-hidden="true">
-          <span><i class="kal-prikk kal-p-utkast"></i> Utkast</span>
-          <span><i class="kal-prikk kal-p-sendt_inn"></i> Sendt inn</span>
-          <span><i class="kal-prikk kal-p-godkjent"></i> Godkjent / låst</span>
-          <span><i class="kal-prikk kal-p-avvist"></i> Avvist</span>
-          <span><i class="kal-prikk kal-p-lukket"></i> Stengt</span>
-        </div>
-        <div id="kalender"></div>
+      <div class="faner" role="tablist" aria-label="Min side">
+        <button type="button" class="fane-btn" id="fane-knapp-kalender" role="tab" aria-selected="true" aria-controls="fane-kalender" data-fane="kalender">Kalender</button>
+        <button type="button" class="fane-btn" id="fane-knapp-meldinger" role="tab" aria-selected="false" aria-controls="fane-meldinger" data-fane="meldinger">Meldinger<span class="prikk" id="melding-prikk" aria-hidden="true"></span></button>
       </div>
 
-      <div class="panel">
-        <h3>Min lønn denne måneden</h3>
-        <p class="hint">Din egen timelønn og sum for valgt måned.</p>
-        <div class="lonn-grid">
-          <div class="lonn-kort"><div class="label">Timelønn</div><div class="val" id="lonn-sats">–</div></div>
-          <div class="lonn-kort"><div class="label">Timer ført</div><div class="val" id="lonn-timer">–</div></div>
-          <div class="lonn-kort"><div class="label">Sum</div><div class="val" id="lonn-sum">–</div></div>
+      <!-- ============ FANE: KALENDER ============ -->
+      <section class="fane-panel aktiv" id="fane-kalender" role="tabpanel" aria-labelledby="fane-knapp-kalender">
+        <div class="panel">
+          <div class="m-topp" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <div>
+              <h3>Min timeføring</h3>
+              <p class="hint" style="margin-bottom:0">Klikk på en dag for å legge til eller endre. Fargen viser status.</p>
+            </div>
+            <button id="send-inn" class="btn btn-primary" disabled>Send inn måneden</button>
+          </div>
+          <div class="ok-melding" id="ok-melding"></div>
+          <div class="feil" id="feil-topp"></div>
+          <div class="kal-legende" aria-hidden="true">
+            <span><i class="kal-prikk kal-p-utkast"></i> Utkast</span>
+            <span><i class="kal-prikk kal-p-sendt_inn"></i> Sendt inn</span>
+            <span><i class="kal-prikk kal-p-godkjent"></i> Godkjent / låst</span>
+            <span><i class="kal-prikk kal-p-avvist"></i> Avvist</span>
+            <span><i class="kal-prikk kal-p-lukket"></i> Stengt</span>
+          </div>
+          <div id="kalender"></div>
         </div>
-      </div>
+
+        <!-- Diskret egen-lønn -->
+        <div class="lonn-strip" id="lonn-strip">
+          <span class="tit">Min lønn</span>
+          <span class="par"><span class="k">Timelønn</span><span class="v" id="lonn-sats">–</span></span>
+          <span class="par"><span class="k">Timer</span><span class="v" id="lonn-timer">–</span></span>
+          <span class="par"><span class="k">Sum</span><span class="v" id="lonn-sum">–</span></span>
+        </div>
+
+        <!-- Delt arbeidsplan (LESE-ONLY, ingen lønn) -->
+        <div class="panel">
+          <div class="vp-topp">
+            <div>
+              <h3>Hele arbeidsplanen</h3>
+              <p class="hint" style="margin-bottom:0">Hvem jobber når denne måneden. Kun til visning.</p>
+            </div>
+            <button type="button" class="btn btn-ghost" id="vp-toggle" aria-expanded="false">Vis arbeidsplanen</button>
+          </div>
+          <div class="feil" id="feil-vaktplan"></div>
+          <div class="vp-innhold" id="vaktplan" style="display:none"></div>
+        </div>
+      </section>
+
+      <!-- ============ FANE: MELDINGER ============ -->
+      <section class="fane-panel" id="fane-meldinger" role="tabpanel" aria-labelledby="fane-knapp-meldinger" hidden>
+        <div class="panel">
+          <h3>Meldinger med Havstund</h3>
+          <p class="hint">Skriv til admin. Svaret dukker opp her.</p>
+          <div class="feil" id="feil-chat"></div>
+          <div class="chat-liste" id="chat-liste" aria-live="polite"></div>
+          <form class="chat-skjema" id="chat-skjema">
+            <textarea id="chat-tekst" placeholder="Skriv en melding …" maxlength="4000" required></textarea>
+            <button type="submit" class="btn btn-primary" id="chat-send">Send</button>
+          </form>
+        </div>
+      </section>
     </div>
   </main>
 
