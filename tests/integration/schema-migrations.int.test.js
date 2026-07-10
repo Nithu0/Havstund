@@ -206,4 +206,85 @@ describe('schema-migrasjoner (pg-mem, ekte SQL)', () => {
       await expect(migrate(q)).resolves.toBeUndefined();
     });
   });
+
+  // ── Bolge 98: ansatt-timeforing FUNDAMENT (lonns-sti) ────────────────────────
+  // MERK om unik-indeksen: vi bruker CREATE UNIQUE INDEX (ikke ADD CONSTRAINT
+  // UNIQUE) med vilje. ADD CONSTRAINT UNIQUE er IKKE re-kjorbar i pg-mem (kaster
+  // "relation already exists" 2. gang), og pg_constraint-guarden er inert i
+  // pg-mem — en constraint-variant ville dermed brutt migrate()-2x nedenfor. En
+  // unik-INDEKS er natur-idempotent (IF NOT EXISTS) i bade pg-mem og ekte Postgres.
+  describe('Bolge 98: status-kolonner + unik user_id + epost-kobling', () => {
+    it('status-kolonnen faar DEFAULT godkjent (beskytter eksisterende demorader)', async () => {
+      const mem = nyDb();
+      mem.public.none("INSERT INTO ansatte (navn, timelonn_ore) VALUES ('A', 30000);"); // id 1
+      // Rad satt inn FOER migrate (ingen status-kolonne enda).
+      mem.public.none("INSERT INTO timeforinger (ansatt_id, dato, timer) VALUES (1, '2026-07-01', 5);");
+      await migrate(qFra(mem));
+      // Eksisterende rad har naa status='godkjent' (default), ikke tapt fra lonn.
+      const rader = mem.public.many('SELECT status FROM timeforinger ORDER BY id');
+      expect(rader.map((r) => r.status)).toEqual(['godkjent']);
+      // Status-maskin-kolonnene finnes (skann informasjonsskjemaet indirekte via insert).
+      expect(() =>
+        mem.public.none(
+          "INSERT INTO timeforinger (ansatt_id, dato, timer, status, begrunnelse, godkjent_tid) " +
+            "VALUES (1, '2026-07-02', 3, 'utkast', 'kladd', now());"
+        )
+      ).not.toThrow();
+    });
+
+    it('uq_ansatte_user_id hindrer to ansatte fra aa dele user_id, men tillater flere NULL', async () => {
+      const mem = nyDb();
+      mem.public.none("INSERT INTO users (navn, epost, passord_hash) VALUES ('U1','u1@x.no','h');"); // id 1
+      // To ukoblede ansatte (user_id NULL) — begge NULL skal vaere lov.
+      mem.public.none("INSERT INTO ansatte (navn, timelonn_ore) VALUES ('A', 100), ('B', 200);"); // id 1,2
+      await migrate(qFra(mem));
+      // Flere NULL tillatt (ingen av de to fikk epost, saa de forblir NULL).
+      const nullCount = mem.public.many(
+        'SELECT COUNT(*)::int AS n FROM ansatte WHERE user_id IS NULL'
+      )[0].n;
+      expect(nullCount).toBe(2);
+      // Koble en av dem, forsok deretter aa gi samme user_id til den andre -> avvist.
+      mem.public.none("UPDATE ansatte SET user_id = 1 WHERE navn = 'A'");
+      expect(() =>
+        mem.public.none("UPDATE ansatte SET user_id = 1 WHERE navn = 'B'")
+      ).toThrow();
+    });
+
+    it('engangs-kobling setter user_id ved ENTYDIG epost-match og lar NULL staa ved tvetydig', async () => {
+      const mem = nyDb();
+      // Entydig match: en bruker + en ansatt med samme epost (ulik case).
+      mem.public.none("INSERT INTO users (navn, epost, passord_hash) VALUES ('Kari','Kari@Havstund.no','h');"); // id 1
+      mem.public.none("INSERT INTO ansatte (navn, epost, timelonn_ore) VALUES ('Kari','kari@havstund.no', 30000);"); // id 1
+      // Tvetydig paa users-siden: 0 match (ingen bruker med denne eposten).
+      mem.public.none("INSERT INTO ansatte (navn, epost, timelonn_ore) VALUES ('Uten','ingen@havstund.no', 25000);"); // id 2
+      // Tvetydig paa ansatte-siden: to ansatte deler samme epost, en bruker matcher.
+      mem.public.none("INSERT INTO users (navn, epost, passord_hash) VALUES ('Per','per@havstund.no','h');"); // id 2
+      mem.public.none("INSERT INTO ansatte (navn, epost, timelonn_ore) VALUES ('Per A','per@havstund.no', 20000);"); // id 3
+      mem.public.none("INSERT INTO ansatte (navn, epost, timelonn_ore) VALUES ('Per B','per@havstund.no', 20000);"); // id 4
+
+      await migrate(qFra(mem));
+
+      const etter = mem.public.many('SELECT id, navn, user_id FROM ansatte ORDER BY id');
+      const byNavn = Object.fromEntries(etter.map((r) => [r.navn, r.user_id]));
+      expect(byNavn['Kari']).toBe(1);   // entydig -> koblet
+      expect(byNavn['Uten']).toBeNull(); // 0 users-match -> NULL
+      expect(byNavn['Per A']).toBeNull(); // tvetydig ansatt-side -> NULL
+      expect(byNavn['Per B']).toBeNull(); // tvetydig ansatt-side -> NULL
+    });
+
+    it('migrate() med ansatt/timer-data er trygg aa kjore to ganger (idempotent)', async () => {
+      const mem = nyDb();
+      mem.public.none("INSERT INTO users (navn, epost, passord_hash) VALUES ('Kari','kari@havstund.no','h');");
+      mem.public.none("INSERT INTO ansatte (navn, epost, timelonn_ore) VALUES ('Kari','kari@havstund.no', 30000);");
+      mem.public.none("INSERT INTO timeforinger (ansatt_id, dato, timer) VALUES (1, '2026-07-01', 5);");
+      const q = qFra(mem);
+      await migrate(q);
+      // 2. kjoring: unik-indeks (IF NOT EXISTS), kobling (allerede satt -> hopper),
+      // status-kolonner (IF NOT EXISTS) — ingenting skal kaste.
+      await expect(migrate(q)).resolves.toBeUndefined();
+      // Koblingen bestar (idempotent, ikke omgjort).
+      const a = mem.public.many('SELECT user_id FROM ansatte WHERE id = 1')[0];
+      expect(a.user_id).toBe(1);
+    });
+  });
 });

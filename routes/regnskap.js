@@ -1,4 +1,4 @@
-/* Havstund — regnskap (/api/regnskap). Kun ansatt/admin.
+/* Havstund — regnskap (/api/regnskap). Admin-only (blocker 2, bolge 98).
    Fiken-formet: belop i ore, norsk kontoplan, MVA-koder.
    Tanken: en fremtidig integrasjon henter disse postene og dytter dem
    rett inn i Fikens API (Salg / Kjop / Timeforing / Lonn).
@@ -26,8 +26,10 @@ const { byggRegnskapspakke } = require('../lib/regnskapspakke');
 
 const router = express.Router();
 
-// Alt under /api/regnskap krever ansatt eller admin
-router.use(requireRole('ansatt', 'admin'));
+// Alt under /api/regnskap krever admin. Blocker 2 (bolge 98): en ansatt skal
+// IKKE se alles lonn/timer/poster her. Ansatt far egne data via /api/min/* i en
+// senere runde (bygges ikke naa). Hele ruteren er dermed admin-only.
+router.use(requireRole('admin'));
 
 function utilgjengelig(res) {
   return res.status(503).json({ error: 'Regnskap er midlertidig utilgjengelig.' });
@@ -241,16 +243,28 @@ router.post('/ansatte', async (req, res) => {
   if (!b.navn || !String(b.navn).trim()) return res.status(400).json({ error: 'Navn er pakrevd' });
   const timelonnOre = Math.round(Number(b.timelonn_ore));
   if (!Number.isFinite(timelonnOre) || timelonnOre < 0) return res.status(400).json({ error: 'Ugyldig timelonn' });
+  // Valgfri kobling til en bruker (users.id). Admin kan koble en ansatt-rad til
+  // en innlogget bruker slik at hentAnsatt (lib/ansatt.js) senere finner den via
+  // user_id. Tom/utelatt => null (ukoblet). UNIQUE(user_id) legges av migrate();
+  // en duplikat-kobling fanges som 23505 -> 409 under.
+  let userId = null;
+  if (b.user_id !== undefined && b.user_id !== null && b.user_id !== '') {
+    userId = Number(b.user_id);
+    if (!Number.isInteger(userId)) return res.status(400).json({ error: 'Ugyldig user_id' });
+  }
   try {
     const ansatt = await db.one(
-      `INSERT INTO ansatte (navn, epost, stilling, timelonn_ore, konto)
-       VALUES ($1,$2,$3,$4,$5)
+      `INSERT INTO ansatte (navn, epost, stilling, timelonn_ore, konto, user_id)
+       VALUES ($1,$2,$3,$4,$5,$6)
        RETURNING id, user_id, navn, epost, stilling, timelonn_ore, konto, aktiv`,
       [String(b.navn).trim(), b.epost || null, b.stilling || null, timelonnOre,
-       Number.isInteger(Number(b.konto)) ? Number(b.konto) : 5000]
+       Number.isInteger(Number(b.konto)) ? Number(b.konto) : 5000, userId]
     );
     res.status(201).json({ ansatt });
   } catch (e) {
+    if (e && e.code === '23505') {
+      return res.status(409).json({ error: 'Denne brukeren er allerede koblet til en ansatt.' });
+    }
     console.error('regnskap /ansatte POST feilet:', e.message);
     res.status(500).json({ error: 'Kunne ikke lagre ansatt' });
   }
@@ -268,6 +282,16 @@ router.patch('/ansatte/:id', async (req, res) => {
   if (b.stilling !== undefined) { verdier.push(b.stilling || null); felt.push(`stilling = $${verdier.length}`); }
   if (b.timelonn_ore !== undefined) { verdier.push(Math.round(Number(b.timelonn_ore)) || 0); felt.push(`timelonn_ore = $${verdier.length}`); }
   if (b.aktiv !== undefined) { verdier.push(!!b.aktiv); felt.push(`aktiv = $${verdier.length}`); }
+  // Bruker-kobling kan settes eller nullstilles eksplisitt av admin. Tom/null =>
+  // koble fra. UNIQUE(user_id) (migrate) => duplikat fanges som 23505 -> 409.
+  if (b.user_id !== undefined) {
+    let uid = null;
+    if (b.user_id !== null && b.user_id !== '') {
+      uid = Number(b.user_id);
+      if (!Number.isInteger(uid)) return res.status(400).json({ error: 'Ugyldig user_id' });
+    }
+    verdier.push(uid); felt.push(`user_id = $${verdier.length}`);
+  }
   if (!felt.length) return res.status(400).json({ error: 'Ingen felt aa oppdatere' });
   verdier.push(id);
   try {
@@ -279,6 +303,9 @@ router.patch('/ansatte/:id', async (req, res) => {
     if (!ansatt) return res.status(404).json({ error: 'Ansatt ikke funnet' });
     res.json({ ansatt });
   } catch (e) {
+    if (e && e.code === '23505') {
+      return res.status(409).json({ error: 'Denne brukeren er allerede koblet til en ansatt.' });
+    }
     console.error('regnskap /ansatte PATCH feilet:', e.message);
     res.status(500).json({ error: 'Kunne ikke oppdatere ansatt' });
   }
@@ -433,8 +460,8 @@ router.post('/fiken/send', async (_req, res) => {
 
 // ---------- REGNSKAPSPAKKE (Fase 3b: leverings-ruta) ----------
 // GET /pakke/:maaned  ->  { pakke, manifest }
-// ADMIN-ONLY: router.use(requireRole('ansatt','admin')) over slipper ansatt inn,
-// men denne route-nivaa requireRole('admin') kjorer ETTER og gir ansatt 403.
+// ADMIN-ONLY: hele ruteren er admin-only (router.use over). Denne route-nivaa
+// requireRole('admin') beholdes som belte-og-seler + intensjons-dokumentasjon.
 // Ruta henter en maneds regnskapsdata, kaller den rene generatoren
 // (lib/regnskapspakke.js), og returnerer en validert, PII-fri, HMAC-signert
 // pakke som JSON. ZIP/vedlegg-streaming er BEVISST utenfor scope (senere fase).
@@ -575,8 +602,8 @@ router.get('/pakke/:maaned', requireRole('admin'), pakkeGate, async (req, res) =
 // /pakke/:maaned kaste 422 paa en lukket dag. Derfor ABS her — samme tall
 // generatoren bruker.
 
-// Admin-only: router.use(requireRole('ansatt','admin')) over slipper ansatt inn,
-// men denne route-nivaa requireRole('admin') kjorer ETTER og gir ansatt 403.
+// Admin-only: hele ruteren er admin-only (router.use over). Denne route-nivaa
+// requireRole('admin') beholdes som belte-og-seler + intensjons-dokumentasjon.
 router.post('/dagsoppgjor/:dato', requireRole('admin'), async (req, res) => {
   if (!db.isConfigured()) return utilgjengelig(res);
 
@@ -641,10 +668,9 @@ router.post('/dagsoppgjor/:dato', requireRole('admin'), async (req, res) => {
   }
 });
 
-// GET: lukkede dager for en maned. Rolle: beholder ruterens ansatt+admin (ingen
-// route-nivaa admin-gate). Dette er ren lese av LUKKESTATUS, ikke sensitivt: en
-// ansatt ser allerede maanedens tall via /oversikt og /poster, saa per-dag-summer
-// avslorer ingenting nytt — men lar ansatt se hvilke dager som er ferdig lukket.
+// GET: lukkede dager for en maned. Admin-only via ruterens router.use — som
+// alt annet under /api/regnskap etter blocker-2-fiksen (bolge 98). Lese-ruta
+// trenger ingen egen route-nivaa gate.
 router.get('/dagsoppgjor', async (req, res) => {
   if (!db.isConfigured()) return utilgjengelig(res);
   const maaned = gyldigMaaned(req.query.maaned);
