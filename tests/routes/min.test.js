@@ -270,6 +270,11 @@ describe('min/* — sikkerhetsmodell (asymmetri)', () => {
       expect(state.lonnParams[0]).toBe(100);
       // brutto = 12.5 * 20000 = 250000
       expect(res.body.brutto_ore).toBe(250000);
+      // Kontrakt-aliaser: ansatt-frontenden leser sum_ore/antall_timer. BEGGE
+      // navnesett MAA finnes i svaret slik at ingen konsument brekker.
+      expect(res.body.sum_ore).toBe(250000);       // alias for brutto_ore
+      expect(res.body.antall_timer).toBe(12.5);    // alias for sum_timer
+      expect(res.body.sum_timer).toBe(12.5);       // gammel nokkel beholdt
     } finally { srv.close(); }
   });
 
@@ -516,16 +521,26 @@ describe('min/* — rolle-gate og normalflyt', () => {
     } finally { srv.close(); }
   });
 
-  it('GET /kalender -> egne foringer + apningstider + stengte dager', async () => {
+  // Kontrakt-fiks: responsnoklene MAA matche det den delte komponenten
+  // public/js/kalender.js leser (d.timer / d.business_hours / d.closed_dates).
+  // Tidligere svarte ruta { foringer, apningstider, stengte_dager } — feltnavn
+  // som IKKE matchet komponenten, saa ansatt-kalenderen aldri viste foringer.
+  // Denne testen laaser den nye, korrekte kontrakten.
+  it('GET /kalender -> nokler matcher kalender.js (timer/business_hours/closed_dates)', async () => {
     nullstill();
     const srv = await lytt(lagApp(BRUKER_A));
     try {
       const res = await reqJson(srv, 'GET', '/api/min/kalender?maaned=2026-07');
       expect(res.status).toBe(200);
       expect(res.body.maaned).toBe('2026-07');
-      expect(Array.isArray(res.body.apningstider)).toBe(true);
-      expect(Array.isArray(res.body.stengte_dager)).toBe(true);
-      expect(Array.isArray(res.body.foringer)).toBe(true);
+      // Nye nokler — det public/js/kalender.js faktisk leser.
+      expect(Array.isArray(res.body.timer)).toBe(true);
+      expect(Array.isArray(res.body.business_hours)).toBe(true);
+      expect(Array.isArray(res.body.closed_dates)).toBe(true);
+      // De gamle, feilnavngitte noklene skal IKKE lenger finnes (kontrakten er ren).
+      expect(res.body).not.toHaveProperty('foringer');
+      expect(res.body).not.toHaveProperty('apningstider');
+      expect(res.body).not.toHaveProperty('stengte_dager');
     } finally { srv.close(); }
   });
 

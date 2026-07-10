@@ -79,6 +79,94 @@
 
     @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.felt.bred{grid-column:auto}}
     @media(max-width:560px){.kpis{grid-template-columns:1fr}}
+
+    /* ---- Admin-timekalender (bolge 98, steg 7) ---- */
+    .ok-melding{background:#e6f4ec;color:#1f7a45;border:1px solid #bfe3cd;padding:8px 12px;border-radius:8px;font-size:13px;margin:8px 0;display:none}
+    .ok-melding.vis{display:block}
+    .m-topp{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .vegne-banner{background:#fff4e0;border:1px solid #f0d59a;color:#8a5a00;font-weight:700;font-size:14px;padding:10px 14px;border-radius:10px;margin:6px 0 14px}
+
+    /* kalender-komponent (public/js/kalender.js) + manuell admin-grid */
+    .kal-legende{display:flex;gap:14px;flex-wrap:wrap;margin:2px 0 16px;font-size:12px;color:var(--muted)}
+    .kal-legende span{display:inline-flex;align-items:center;gap:6px}
+    .kal-prikk{width:12px;height:12px;border-radius:4px;display:inline-block;border:1px solid rgba(0,0,0,.08)}
+    .kal-p-utkast{background:#f1f2f4}
+    .kal-p-sendt_inn{background:#dcecfb}
+    .kal-p-godkjent{background:#dff3e6}
+    .kal-p-avvist{background:#fbe0e0}
+    .kal-p-lukket{background:#e7ebef}
+    .kal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+    .kal-hoder{margin-bottom:6px}
+    .kal-hode{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);text-align:center;padding:4px 0}
+    .kal-tom{min-height:64px}
+    .kal-dag{position:relative;min-height:64px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;
+      background:#fff;border:1px solid var(--line);border-left:4px solid var(--line);border-radius:10px;padding:8px 9px;
+      font-family:inherit;cursor:pointer;text-align:left;transition:.12s}
+    .kal-dag:hover{border-color:var(--turq);box-shadow:0 4px 14px rgba(10,39,71,.12);transform:translateY(-1px)}
+    .kal-nr{font-size:14px;font-weight:700;color:var(--sea-deep);display:inline-flex;align-items:center;gap:4px}
+    .kal-sum{font-size:12px;font-weight:700;color:var(--teal);font-variant-numeric:tabular-nums}
+    .kal-merk{font-size:11px;color:var(--muted)}
+    .kal-las{opacity:.75}
+    .kal-idag{outline:2px solid var(--turq);outline-offset:1px}
+    .kal-utkast{border-left-color:#9aa6b2;background:#f8f9fb}
+    .kal-sendt_inn{border-left-color:#3a86d6;background:#f2f8ff}
+    .kal-godkjent{border-left-color:#1f7a45;background:#f2fbf5}
+    .kal-avvist{border-left-color:#a32a2a;background:#fdf3f3}
+    .kal-laast{border-left-color:#1f7a45;background:#eef7f1}
+    .kal-lukket{background:#eef0f2;border-left-color:#cdd5dd;color:var(--muted);cursor:not-allowed;opacity:.7}
+    .kal-lukket:hover{transform:none;box-shadow:none;border-color:var(--line);border-left-color:#cdd5dd}
+    .kal-feil{color:#9b2226;font-size:14px;padding:18px 4px}
+
+    /* dag-modal (foringer + admin-handlinger) */
+    .modal-overlay{position:fixed;inset:0;background:rgba(8,30,52,.55);display:none;align-items:flex-start;justify-content:center;z-index:200;padding:40px 16px;overflow-y:auto}
+    .modal-overlay.vis{display:flex}
+    .modal-kort{background:#fff;border-radius:var(--r);max-width:540px;width:100%;padding:26px 28px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+    .modal-kort h3{font-size:20px;color:var(--sea-deep)}
+    .modal-lukk{background:none;border:none;font-size:24px;line-height:1;color:var(--muted);cursor:pointer;padding:0 4px}
+    .modal-kort .felt textarea{padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:14px;background:#fff;color:var(--ink);width:100%;resize:vertical;min-height:52px}
+    .foring-rad{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+    .foring-rad:last-of-type{border-bottom:none}
+    .foring-rad .f-timer{font-weight:800;color:var(--sea-deep);min-width:52px;font-variant-numeric:tabular-nums}
+    .foring-rad .f-tekst{flex:1;min-width:120px;color:var(--ink);font-size:14px}
+    .foring-rad .f-tekst small{display:block;color:var(--muted);font-size:12px}
+    .foring-rad .f-handling{display:flex;gap:8px}
+    .knapp-lenke{background:none;border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;padding:2px}
+    .knapp-lenke.godkjenn{color:#1f7a45}
+    .knapp-lenke.rediger{color:var(--teal)}
+    .knapp-lenke.slett{color:#b03a2e;opacity:.8}
+    .knapp-lenke.slett:hover{opacity:1}
+    .status-merke{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:3px 9px;border-radius:12px;white-space:nowrap}
+    .sm-utkast{background:#f1f2f4;color:#5a6b7d}
+    .sm-sendt_inn{background:#dcecfb;color:#1c5a99}
+    .sm-godkjent{background:#dff3e6;color:#1f7a45}
+    .sm-avvist{background:#fbe0e0;color:#a32a2a}
+    .sm-laast{background:#dff3e6;color:#1f7a45}
+    .m-knapper{display:flex;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap}
+    @media(max-width:640px){.kal-dag,.kal-tom{min-height:54px}}
+
+    /* ---- Personalmeldinger (admin-side av ansatt-chatten) ---- */
+    .pm-layout{display:grid;grid-template-columns:280px 1fr;gap:18px;margin-top:8px}
+    .pm-sidebar{border:1px solid var(--line);border-radius:12px;overflow:hidden;max-height:520px;overflow-y:auto;background:#fbfdff}
+    .pm-rad{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--line);padding:12px 14px;cursor:pointer;font-family:inherit;position:relative;transition:.12s}
+    .pm-rad:last-child{border-bottom:none}
+    .pm-rad:hover{background:#eef5fc}
+    .pm-rad.aktiv{background:#e4eef9}
+    .pm-rad .pm-navn{display:block;font-weight:700;color:var(--sea-deep);font-size:14px;padding-right:26px}
+    .pm-rad .pm-navn small{font-weight:600;color:var(--muted);font-size:12px}
+    .pm-rad .pm-utdrag{display:block;color:var(--muted);font-size:12px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .pm-rad .pm-badge{position:absolute;top:12px;right:12px;background:var(--turq);color:#fff;font-size:11px;font-weight:800;min-width:20px;height:20px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;padding:0 6px}
+    .pm-samtale{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;overflow:hidden;min-height:360px}
+    .pm-samtale-topp{padding:12px 16px;border-bottom:1px solid var(--line);background:#f6faff}
+    .pm-samtale-topp h4{font-size:16px;color:var(--sea-deep);margin:0}
+    .pm-traad{flex:1;padding:16px;overflow-y:auto;max-height:420px;display:flex;flex-direction:column;gap:10px}
+    .pm-melding{max-width:80%;padding:10px 13px;border-radius:12px;font-size:14px}
+    .pm-melding .pm-meta{font-size:11px;color:var(--muted);margin-bottom:4px}
+    .pm-melding .pm-tekst{white-space:pre-wrap;word-break:break-word;color:var(--ink)}
+    .pm-melding.fra-oss{align-self:flex-end;background:#e4eef9;border:1px solid var(--turq-l)}
+    .pm-melding.fra-ansatt{align-self:flex-start;background:#f4f6f8;border:1px solid var(--line)}
+    .pm-svar{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line);align-items:flex-end}
+    .pm-svar textarea{flex:1;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:14px;background:#fff;color:var(--ink);resize:vertical;min-height:40px}
+    @media(max-width:720px){.pm-layout{grid-template-columns:1fr}.pm-sidebar{max-height:240px}}
   </style>
 </head>
 <body>
@@ -112,6 +200,8 @@
       <button class="fane" data-pane="inntekter">Inntekter</button>
       <button class="fane" data-pane="utgifter">Utgifter</button>
       <button class="fane" data-pane="lonn">Timer &amp; lønn</button>
+      <button class="fane fane-admin" data-pane="vaktplan" style="display:none">Vaktplan</button>
+      <button class="fane fane-admin" data-pane="meldinger" style="display:none">Personalmeldinger</button>
       <button class="fane" data-pane="dagsoppgjor">Dagsoppgjør</button>
     </div>
 
@@ -249,6 +339,56 @@
       </div>
     </section>
 
+    <!-- VAKTPLAN (admin-timekalender — flyttet fra «Timer & lønn») -->
+    <section class="pane" id="pane-vaktplan">
+      <!-- ADMIN-TIMEKALENDER (bolge 98, steg 7) — kun synlig for admin -->
+      <div class="panel" id="adm-kal-panel" style="display:none">
+        <div class="m-topp">
+          <div>
+            <h3>Vaktplan / timekalender</h3>
+            <p class="hint" style="margin-bottom:0">Oversikt over alle vakter. Velg ansatt for å se, føre, endre og bytte vakter på vegne av dem, og godkjenn/avvis/lås. Klikk en dag for detaljer.</p>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+            <div class="felt"><label for="adm-ansatt">Ansatt</label><select id="adm-ansatt"></select></div>
+            <button type="button" id="adm-laas" class="btn btn-ghost">Lås måneden</button>
+          </div>
+        </div>
+        <div class="feil" id="feil-adm-kal"></div>
+        <div class="ok-melding" id="ok-adm-kal"></div>
+        <div id="adm-vegne" class="vegne-banner" style="display:none"></div>
+        <div class="kal-legende" aria-hidden="true">
+          <span><i class="kal-prikk kal-p-utkast"></i> Utkast</span>
+          <span><i class="kal-prikk kal-p-sendt_inn"></i> Sendt inn</span>
+          <span><i class="kal-prikk kal-p-godkjent"></i> Godkjent / låst</span>
+          <span><i class="kal-prikk kal-p-avvist"></i> Avvist</span>
+          <span><i class="kal-prikk kal-p-lukket"></i> Stengt</span>
+        </div>
+        <div id="adm-kalender"></div>
+      </div>
+    </section>
+
+    <!-- PERSONALMELDINGER (admin-side av ansatt-chatten) -->
+    <section class="pane" id="pane-meldinger">
+      <div class="panel">
+        <h3>Personalmeldinger</h3>
+        <p class="hint">Interne meldinger mellom deg og de ansatte. Velg en ansatt i listen for å lese og svare.</p>
+        <div class="pm-layout">
+          <div class="pm-sidebar" id="pm-liste"><p class="tom" style="padding:14px">Laster …</p></div>
+          <div class="pm-samtale">
+            <div class="pm-samtale-topp"><h4 id="pm-tittel">Velg en ansatt</h4></div>
+            <div class="pm-traad" id="pm-traad"><p class="tom" style="padding:0">Velg en ansatt for å se meldingene.</p></div>
+            <div class="feil" id="feil-pm" style="margin:0 16px"></div>
+            <form id="pm-svar-skjema" style="display:none">
+              <div class="pm-svar">
+                <textarea id="pm-tekst" rows="2" placeholder="Skriv et svar …" required></textarea>
+                <button type="submit" class="btn btn-primary" id="pm-send">Send</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- DAGSOPPGJØR -->
     <section class="pane" id="pane-dagsoppgjor">
       <div class="panel">
@@ -268,6 +408,31 @@
     </section>
   </main>
 
+  <!-- Dag-modal (admin): foringer + admin-handlinger + ny foring pa vegne av -->
+  <div class="modal-overlay" id="adm-dag-modal">
+    <div class="modal-kort" role="dialog" aria-modal="true" aria-labelledby="adm-dag-tittel">
+      <div class="m-topp">
+        <h3 id="adm-dag-tittel">Dag</h3>
+        <button type="button" class="modal-lukk" id="adm-dag-lukk" aria-label="Lukk">×</button>
+      </div>
+      <div id="adm-vegne-modal" class="vegne-banner" style="display:none;margin:0 0 12px"></div>
+      <div class="feil" id="feil-adm-foring"></div>
+      <div id="adm-dag-eksisterende"></div>
+      <form id="adm-form-foring">
+        <div class="skjema">
+          <div class="felt"><label for="adm-f-timer">Timer</label><input type="number" id="adm-f-timer" step="0.25" min="0" max="24" required></div>
+          <div class="felt"><label for="adm-f-aktivitet">Aktivitet</label><input type="text" id="adm-f-aktivitet" placeholder="Verksted, kurs …"></div>
+          <div class="felt bred"><label for="adm-f-notat">Notat</label><textarea id="adm-f-notat" placeholder="(valgfritt)"></textarea></div>
+        </div>
+        <div class="m-knapper">
+          <button type="submit" class="btn btn-primary" id="adm-f-lagre">Legg til føring</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/felles.js"></script>
+  <script src="js/kalender.js"></script>
   <script src="js/regnskap.js"></script>
 </body>
 </html>

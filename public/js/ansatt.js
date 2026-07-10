@@ -1,10 +1,14 @@
-/* Havstund — ansatt-modus av selvbetjeningen (bolge 98, steg 5).
-   Ny side: månedsvelger, gjenbrukbar kalender i ANSATT-modus, "Send inn
-   måneden", og egen lønn-visning. Kaller KUN /api/min/* (den andre agentens
-   backend). Klienten sender ALDRI ansatt_id eller status — status settes
-   server-side, og rettighet håndheves i API-et.
+/* Havstund — «Min side» for ansatte (bolge 98, innstramming).
+   Fokusert side med KUN det en ansatt trenger:
+     Fane 1 «Kalender»  — egen timeføring (gjenbruk HavstundKalender i
+                          ansatt-modus), «Send inn måneden», delt arbeidsplan
+                          (LESE-ONLY, ALDRI lønn), og en diskret egen-lønn.
+     Fane 2 «Meldinger» — chat-tråd med admin.
 
-   Degraderer pent: 403 fra /api/min -> "ikke koblet til ansatt-profil".
+   Kaller KUN /api/min/*. Klienten sender ALDRI ansatt_id, status eller avsender —
+   de settes server-side, og rettighet håndheves i API-et.
+
+   Degraderer pent: 403 fra /api/min -> «ikke koblet til ansatt-profil».
    Bruker felles.js (window.Havstund) + kalender.js (window.HavstundKalender).
 */
 (function () {
@@ -23,6 +27,9 @@
   var valgtDato = null;   // dato som modalen står på
   var redigerId = null;   // id vi PATCH-er, eller null = ny (POST)
   var blokkert = false;   // 403 sett -> stopp videre kall
+  var aktivFane = 'kalender';
+  var vaktplanApen = false;   // «Hele arbeidsplanen» utvidet?
+  var chatTimer = null;       // poll-intervall mens Meldinger er aktiv
 
   var STATUS_TEKST = {
     utkast: 'Utkast', sendt_inn: 'Sendt inn', godkjent: 'Godkjent', avvist: 'Avvist', laast: 'Låst'
@@ -39,6 +46,23 @@
     blokkert = true;
     var b = $('blokkert'); if (b) b.style.display = '';
     var innhold = $('innhold'); if (innhold) innhold.style.display = 'none';
+  }
+
+  /* ---------- Faner ---------- */
+  function byttFane(navn) {
+    aktivFane = navn;
+    var faner = ['kalender', 'meldinger'];
+    faner.forEach(function (f) {
+      var panel = $('fane-' + f);
+      var knapp = $('fane-knapp-' + f);
+      var aktiv = (f === navn);
+      if (panel) { panel.classList.toggle('aktiv', aktiv); if (aktiv) panel.removeAttribute('hidden'); else panel.setAttribute('hidden', ''); }
+      if (knapp) knapp.setAttribute('aria-selected', aktiv ? 'true' : 'false');
+    });
+    // Månedsvelgeren hører til Kalender-fanen.
+    var mndBoks = $('mnd-boks'); if (mndBoks) mndBoks.style.visibility = (navn === 'kalender') ? '' : 'hidden';
+    if (navn === 'meldinger') { lastMeldinger(); startChatPoll(); }
+    else { stoppChatPoll(); }
   }
 
   /* ---------- Send inn-knapp ---------- */
@@ -73,7 +97,9 @@
     });
   }
 
-  /* ---------- Lønn ---------- */
+  /* ---------- Egen lønn (diskret) ---------- */
+  // Defensiv felt-lesing: bakenden kan svare med enten {antall_timer,sum_ore}
+  // eller {sum_timer,brutto_ore}. Vi viser ALDRI andres tall — /lonn er egen-only.
   function lastLonn() {
     if (blokkert) return Promise.resolve();
     return api(API_BASIS + '/lonn?maaned=' + encodeURIComponent(gjeldendeMaaned()))
@@ -83,10 +109,137 @@
         return r.json();
       }).then(function (d) {
         d = d || {};
+        var antallTimer = (d.antall_timer != null) ? d.antall_timer : d.sum_timer;
+        var sumOre = (d.sum_ore != null) ? d.sum_ore : d.brutto_ore;
         var sats = $('lonn-sats'); if (sats) sats.textContent = d.timelonn_ore != null ? kr(d.timelonn_ore) : '–';
-        var timer = $('lonn-timer'); if (timer) timer.textContent = d.antall_timer != null ? fmtTimer(d.antall_timer) + ' t' : '–';
-        var sum = $('lonn-sum'); if (sum) sum.textContent = d.sum_ore != null ? kr(d.sum_ore) : '–';
+        var timer = $('lonn-timer'); if (timer) timer.textContent = antallTimer != null ? fmtTimer(antallTimer) + ' t' : '–';
+        var sum = $('lonn-sum'); if (sum) sum.textContent = sumOre != null ? kr(sumOre) : '–';
       }).catch(function () { /* stille: kalenderen er hovedflaten */ });
+  }
+
+  /* ---------- Delt arbeidsplan (vaktplan — LESE-ONLY, ALDRI lønn) ---------- */
+  function settVpToggleTekst() {
+    var t = $('vp-toggle');
+    if (t) { t.textContent = vaktplanApen ? 'Skjul arbeidsplanen' : 'Vis arbeidsplanen'; t.setAttribute('aria-expanded', vaktplanApen ? 'true' : 'false'); }
+  }
+
+  function vekslVaktplan() {
+    vaktplanApen = !vaktplanApen;
+    var boks = $('vaktplan'); if (boks) boks.style.display = vaktplanApen ? '' : 'none';
+    settVpToggleTekst();
+    if (vaktplanApen) lastVaktplan();
+  }
+
+  function lastVaktplan() {
+    if (blokkert || !vaktplanApen) return Promise.resolve();
+    feil('feil-vaktplan', '');
+    return api(API_BASIS + '/vaktplan?maaned=' + encodeURIComponent(gjeldendeMaaned()))
+      .then(function (r) {
+        if (r.status === 403) { visBlokkert(); throw new Error('403'); }
+        if (!r.ok) throw new Error('vaktplan ' + r.status);
+        return r.json();
+      }).then(function (d) {
+        renderVaktplan((d && Array.isArray(d.vaktplan)) ? d.vaktplan : []);
+      }).catch(function (e) {
+        if (String(e && e.message) !== '403') feil('feil-vaktplan', 'Kunne ikke hente arbeidsplanen.');
+      });
+  }
+
+  // Grupper per dag -> vis navn + timer + status for ALLE ansatte. INGEN lønn:
+  // endepunktet returnerer ingen sats/beløp, og vi leser aldri slike felt.
+  function renderVaktplan(rader) {
+    var boks = $('vaktplan');
+    if (!boks) return;
+    if (!rader.length) {
+      boks.innerHTML = '<p class="vp-tom">Ingen registrerte vakter denne måneden ennå.</p>';
+      return;
+    }
+    var perDag = {};
+    var rekkefolge = [];
+    rader.forEach(function (r) {
+      var dato = String(r && r.dato != null ? r.dato : '').slice(0, 10);
+      if (!dato) return;
+      if (!perDag[dato]) { perDag[dato] = []; rekkefolge.push(dato); }
+      perDag[dato].push(r);
+    });
+    var html = rekkefolge.map(function (dato) {
+      var linjer = perDag[dato].map(function (r) {
+        var st = r.status || '';
+        return '<div class="vp-rad">' +
+          '<span class="vp-navn">' + esc(r.navn || '(ukjent)') + '</span>' +
+          '<span class="vp-timer">' + esc(fmtTimer(r.timer)) + ' t</span>' +
+          '<span class="status-merke sm-' + esc(st) + '">' + esc(STATUS_TEKST[st] || st) + '</span>' +
+          '</div>';
+      }).join('');
+      return '<div class="vp-dag"><h4>' + esc(formaterDato(dato)) + '</h4>' + linjer + '</div>';
+    }).join('');
+    boks.innerHTML = html;
+  }
+
+  /* ---------- Meldinger (chat med admin) ---------- */
+  function lastMeldinger() {
+    if (blokkert) return Promise.resolve();
+    return api(API_BASIS + '/meldinger')
+      .then(function (r) {
+        if (r.status === 403) { visBlokkert(); throw new Error('403'); }
+        if (!r.ok) throw new Error('meldinger ' + r.status);
+        return r.json();
+      }).then(function (d) {
+        renderMeldinger((d && Array.isArray(d.meldinger)) ? d.meldinger : []);
+      }).catch(function (e) {
+        if (String(e && e.message) !== '403') feil('feil-chat', 'Kunne ikke hente meldinger.');
+      });
+  }
+
+  function renderMeldinger(meldinger) {
+    var liste = $('chat-liste');
+    if (!liste) return;
+    // Admins uleste meldinger -> prikk på fanen (kun når vi IKKE står i fanen).
+    var uleste = meldinger.filter(function (m) { return m && m.avsender === 'admin' && !m.lest; }).length;
+    var prikk = $('melding-prikk');
+    if (prikk) prikk.classList.toggle('vis', uleste > 0 && aktivFane !== 'meldinger');
+
+    if (!meldinger.length) {
+      liste.innerHTML = '<p class="chat-tom">Ingen meldinger ennå. Skriv den første.</p>';
+      return;
+    }
+    liste.innerHTML = meldinger.map(function (m) {
+      var fraMeg = (m.avsender === 'ansatt');
+      var navn = fraMeg ? 'Du' : 'Havstund';
+      return '<div class="chat-boble ' + (fraMeg ? 'meg' : 'dem') + '">' +
+        '<span class="chat-meta">' + esc(navn) + ' · ' + esc(formaterTid(m.opprettet)) + '</span>' +
+        esc(m.tekst || '') +
+        '</div>';
+    }).join('');
+    liste.scrollTop = liste.scrollHeight;
+  }
+
+  // POST /meldinger {tekst}. Sender ALDRI ansatt_id/avsender — server setter dem.
+  function sendMelding(e) {
+    if (e) e.preventDefault();
+    if (blokkert) return;
+    var ta = $('chat-tekst');
+    var tekst = ta ? String(ta.value).trim() : '';
+    if (!tekst) return;
+    feil('feil-chat', '');
+    var knapp = $('chat-send'); if (knapp) knapp.disabled = true;
+    api(API_BASIS + '/meldinger', { method: 'POST', body: JSON.stringify({ tekst: tekst }) })
+      .then(function (r) {
+        if (r.status === 403) { visBlokkert(); throw new Error('403'); }
+        if (!r.ok) throw new Error('send-melding ' + r.status);
+        if (ta) ta.value = '';
+        return lastMeldinger();   // refresh ved sending
+      })
+      .catch(function (e2) { if (String(e2 && e2.message) !== '403') feil('feil-chat', 'Kunne ikke sende meldingen.'); })
+      .then(function () { if (knapp) knapp.disabled = false; });
+  }
+
+  function startChatPoll() {
+    stoppChatPoll();
+    chatTimer = setInterval(function () { if (aktivFane === 'meldinger' && !blokkert) lastMeldinger(); }, 15000);
+  }
+  function stoppChatPoll() {
+    if (chatTimer) { clearInterval(chatTimer); chatTimer = null; }
   }
 
   /* ---------- Dag-modal ---------- */
@@ -219,12 +372,21 @@
     return d.toLocaleDateString('no-NO', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
   }
 
+  function formaterTid(ts) {
+    if (!ts) return '';
+    var d = new Date(ts);
+    if (isNaN(d.getTime())) return String(ts);
+    return d.toLocaleDateString('no-NO', { day: '2-digit', month: 'short' }) + ' ' +
+      d.toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit' });
+  }
+
   /* ---------- Lasting ---------- */
   function lastAlt() {
     if (blokkert || !kalender) return Promise.resolve();
     return Promise.all([
       kalender.setMaaned(gjeldendeMaaned()).catch(function () {}),
-      lastLonn()
+      lastLonn(),
+      lastVaktplan()
     ]);
   }
 
@@ -251,6 +413,17 @@
 
   function init() {
     settOppLoggUt();
+
+    // Faner.
+    Array.prototype.forEach.call(document.querySelectorAll('.fane-btn'), function (btn) {
+      btn.addEventListener('click', function () { byttFane(btn.getAttribute('data-fane')); });
+    });
+
+    // Delt arbeidsplan-toggle.
+    var vpToggle = $('vp-toggle'); if (vpToggle) vpToggle.addEventListener('click', vekslVaktplan);
+
+    // Chat-skjema.
+    var chatSkjema = $('chat-skjema'); if (chatSkjema) chatSkjema.addEventListener('submit', sendMelding);
 
     // Modal-lukking (kryss, backdrop, ESC).
     var lukk = $('dag-lukk'); if (lukk) lukk.addEventListener('click', lukkModal);
@@ -283,6 +456,7 @@
       });
       var kalEl = $('kalender');
       if (kalEl) kalender.mount(kalEl);
+      settVpToggleTekst();
       lastAlt();
     });
   }
