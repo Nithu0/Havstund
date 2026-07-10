@@ -311,19 +311,69 @@ router.patch('/ansatte/:id', async (req, res) => {
   }
 });
 
-// ---------- TIMER ----------
+// ---------- TIMER (bolge 98 steg 6: admin forer/redigerer/godkjenner PAA VEGNE AV ansatte) ----------
+// Motsatsen til /api/min/* (ansatt selvbetjening, der ansatt_id UTLEDES fra
+// req.ansatt.id). HER er ansatt_id ALLTID EKSPLISITT i body/query — admin handler
+// paa vegne av en navngitt ansatt, aldri implisitt. Dette er en SKRIVESTI til
+// ANDRES lonnsgrunnlag: hver skriving revideres (writeAudit).
+//
+// Statusmaskin (samme kolonner som /api/min/*, lagt av db/index.js:migrate):
+//   utkast -> sendt_inn -> godkjent -> laast   (normalflyt)
+//   avvist = sidespor (sendt_inn -> avvist, rettes og sendes paa nytt)
+// Admin oppretter foringer som 'sendt_inn' (IKKE 'godkjent' — 2-stegs, design
+// Sec 5.2.1: godkjenning er en egen, revidert handling). Overganger settes ALLTID
+// server-side; en status i klient-body ignoreres. En LAAST rad er urorlig: ingen
+// UPDATE/DELETE naar den (-> 409). Eneste vei "inn i" en laast rad er en
+// korreksjonsrad (POST /timer/:id/korriger) som lar originalen staa uroert.
+
+const TIMER_KOLONNER =
+  'id, ansatt_id, dato, timer, aktivitet, notat, status, ' +
+  'godkjent_av, godkjent_tid, begrunnelse, laast_tid, korrigerer_id, ' +
+  'opprettet_av, endret_av, endret_tid, opprettet';
+
+const TIMER_STATUSER = ['utkast', 'sendt_inn', 'godkjent', 'avvist', 'laast'];
+
+// Timetall > 0 og <= 24 (samme som /api/min/*). Returnerer tallet eller null.
+function gyldigTimer(v) {
+  const t = Number(v);
+  if (!Number.isFinite(t) || t <= 0 || t > 24) return null;
+  return t;
+}
+
+// Korreksjonstimer: KAN vaere negativt (trekke fra en laast rad) — men ikke 0 og
+// innen +/- 24. Returnerer tallet eller null.
+function gyldigKorreksjonstimer(v) {
+  const t = Number(v);
+  if (!Number.isFinite(t) || t === 0 || t < -24 || t > 24) return null;
+  return t;
+}
+
+// Fire-and-forget audit. writeAudit svelger allerede egne feil; .catch for
+// sikkerhet slik at en audit-feil ALDRI velter selve skrivehandlingen. Kalles
+// SYNKRONT i handleren (foer res) — revisjonssporet henger ikke etter svaret.
+function auditTimer(user, handling, detaljer) {
+  Promise.resolve(writeAudit(user, handling, detaljer)).catch(() => {});
+}
+
+// GET /timer?ansatt_id=&maaned=&status=  — alles foringer, filtrerbart. ansatt_id
+// er VALGFRITT her: dette er LESING (admin ser alt). Skriving krever alltid
+// eksplisitt ansatt_id (se POST).
 router.get('/timer', async (req, res) => {
   if (!db.isConfigured()) return utilgjengelig(res);
   const maaned = gyldigMaaned(req.query.maaned);
   const ansattId = Number(req.query.ansatt_id);
+  const status = TIMER_STATUSER.includes(req.query.status) ? req.query.status : null;
   const vilkaar = [];
   const verdier = [];
   if (maaned) { verdier.push(maaned); vilkaar.push(`to_char(t.dato,'YYYY-MM') = $${verdier.length}`); }
   if (Number.isInteger(ansattId)) { verdier.push(ansattId); vilkaar.push(`t.ansatt_id = $${verdier.length}`); }
+  if (status) { verdier.push(status); vilkaar.push(`t.status = $${verdier.length}`); }
   const where = vilkaar.length ? 'WHERE ' + vilkaar.join(' AND ') : '';
   try {
     const { rows } = await db.query(
-      `SELECT t.id, t.ansatt_id, a.navn AS ansatt_navn, t.dato, t.timer, t.aktivitet, t.notat
+      `SELECT t.id, t.ansatt_id, a.navn AS ansatt_navn, t.dato, t.timer, t.aktivitet,
+              t.notat, t.status, t.godkjent_av, t.godkjent_tid, t.begrunnelse,
+              t.laast_tid, t.korrigerer_id, t.opprettet_av, t.endret_av, t.endret_tid
          FROM timeforinger t JOIN ansatte a ON a.id = t.ansatt_id
          ${where}
         ORDER BY t.dato DESC, t.id DESC`,
@@ -336,21 +386,31 @@ router.get('/timer', async (req, res) => {
   }
 });
 
+// POST /timer  — ny foring PAA VEGNE AV en ansatt. ansatt_id PAAKREVD (400 hvis
+// mangler — aldri implisitt). status settes SERVER-side til 'sendt_inn': admin maa
+// fortsatt godkjenne i et eget steg (design Sec 5.2.1, 2-stegs). opprettet_av =
+// den innloggede admin. Revideres.
 router.post('/timer', async (req, res) => {
   if (!db.isConfigured()) return utilgjengelig(res);
   const b = req.body || {};
   const ansattId = Number(b.ansatt_id);
-  if (!Number.isInteger(ansattId)) return res.status(400).json({ error: 'Velg en ansatt' });
-  if (!b.dato || !/^\d{4}-\d{2}-\d{2}$/.test(b.dato)) return res.status(400).json({ error: 'Ugyldig dato' });
-  const timer = Number(b.timer);
-  if (!Number.isFinite(timer) || timer <= 0 || timer > 24) return res.status(400).json({ error: 'Ugyldig timetall' });
+  if (!Number.isInteger(ansattId)) return res.status(400).json({ error: 'ansatt_id er pakrevd' });
+  const dato = gyldigDato(b.dato);
+  if (!dato) return res.status(400).json({ error: 'Ugyldig dato (YYYY-MM-DD)' });
+  const timer = gyldigTimer(b.timer);
+  if (timer == null) return res.status(400).json({ error: 'Ugyldig timetall (> 0 og <= 24)' });
   try {
+    // status bindes til konstanten 'sendt_inn' i SQL-teksten — den kan ikke settes
+    // fra klient (selv om b.status finnes, roeres den aldri).
     const t = await db.one(
-      `INSERT INTO timeforinger (ansatt_id, dato, timer, aktivitet, notat)
-       VALUES ($1,$2,$3,$4,$5)
-       RETURNING id, ansatt_id, dato, timer, aktivitet, notat`,
-      [ansattId, b.dato, timer, b.aktivitet || null, b.notat || null]
+      `INSERT INTO timeforinger (ansatt_id, dato, timer, aktivitet, notat, status, opprettet_av)
+       VALUES ($1,$2,$3,$4,$5,'sendt_inn',$6)
+       RETURNING ${TIMER_KOLONNER}`,
+      [ansattId, dato, timer, b.aktivitet || null, b.notat || null, req.user.id]
     );
+    auditTimer(req.user, 'regnskap.timer.opprett', {
+      id: t.id, ansatt_id: ansattId, dato, timer, status: 'sendt_inn',
+    });
     res.status(201).json({ timeforing: t });
   } catch (e) {
     console.error('regnskap /timer POST feilet:', e.message);
@@ -358,16 +418,237 @@ router.post('/timer', async (req, res) => {
   }
 });
 
+// POST /timer/laas?maaned=YYYY-MM  — laas maanedens godkjente foringer:
+// godkjent -> laast + laast_tid. En laast rad er urorlig etterpaa (PATCH/DELETE
+// -> 409). Enkelt-statement UPDATE er atomisk, saa ingen per-rad transaksjon er
+// noedvendig. Revideres samlet (antall + maaned). Distinkt 2-segments sti — kolliderer
+// ikke med POST /timer/:id/* (3 segmenter).
+router.post('/timer/laas', async (req, res) => {
+  if (!db.isConfigured()) return utilgjengelig(res);
+  const maaned = gyldigMaaned(req.query.maaned);
+  if (!maaned) return res.status(400).json({ error: 'Mangler gyldig maaned (YYYY-MM)' });
+  try {
+    const { rows } = await db.query(
+      `UPDATE timeforinger
+          SET status = 'laast', laast_tid = now()
+        WHERE status = 'godkjent'
+          AND to_char(dato,'YYYY-MM') = $1
+        RETURNING id`,
+      [maaned]
+    );
+    const ids = rows.map((r) => r.id);
+    auditTimer(req.user, 'regnskap.timer.laas', { maaned, antall: ids.length, ids });
+    res.json({ laast: ids.length, ids, maaned });
+  } catch (e) {
+    console.error('regnskap /timer laas feilet:', e.message);
+    res.status(500).json({ error: 'Kunne ikke laase timer' });
+  }
+});
+
+// PATCH /timer/:id  — rediger enhver IKKE-LAAST foring. En laast rad er urorlig
+// (-> 409). endret_av/endret_tid settes. status og ansatt_id ROERES ALDRI her
+// (status via godkjenn/avvis; en foring flyttes ikke mellom ansatte). Les-sjekk-
+// skriv i EN transaksjon med FOR UPDATE saa to samtidige admin-endringer paa samme
+// rad serialiseres (tilstands-sjekken kan ikke omgaas av et race).
+router.patch('/timer/:id', async (req, res) => {
+  if (!db.isConfigured()) return utilgjengelig(res);
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Ugyldig id' });
+  const b = req.body || {};
+  const felt = [];
+  const verdier = [];
+  if (b.dato !== undefined) {
+    const dato = gyldigDato(b.dato);
+    if (!dato) return res.status(400).json({ error: 'Ugyldig dato (YYYY-MM-DD)' });
+    verdier.push(dato); felt.push(`dato = $${verdier.length}`);
+  }
+  if (b.timer !== undefined) {
+    const timer = gyldigTimer(b.timer);
+    if (timer == null) return res.status(400).json({ error: 'Ugyldig timetall (> 0 og <= 24)' });
+    verdier.push(timer); felt.push(`timer = $${verdier.length}`);
+  }
+  if (b.aktivitet !== undefined) { verdier.push(b.aktivitet || null); felt.push(`aktivitet = $${verdier.length}`); }
+  if (b.notat !== undefined) { verdier.push(b.notat || null); felt.push(`notat = $${verdier.length}`); }
+  if (!felt.length) return res.status(400).json({ error: 'Ingen felt aa oppdatere' });
+  verdier.push(req.user.id); felt.push(`endret_av = $${verdier.length}`);
+  felt.push('endret_tid = now()');
+  try {
+    const utfall = await db.withTransaction(async (client) => {
+      const rad = (await client.query(
+        'SELECT id, status FROM timeforinger WHERE id = $1 FOR UPDATE',
+        [id]
+      )).rows[0];
+      if (!rad) return { kode: 404 };
+      if (rad.status === 'laast') return { kode: 409 };
+      verdier.push(id);
+      const oppdatert = (await client.query(
+        `UPDATE timeforinger SET ${felt.join(', ')} WHERE id = $${verdier.length}
+         RETURNING ${TIMER_KOLONNER}`,
+        verdier
+      )).rows[0];
+      return { kode: 200, timeforing: oppdatert };
+    });
+    if (utfall.kode === 404) return res.status(404).json({ error: 'Foring ikke funnet' });
+    if (utfall.kode === 409) {
+      return res.status(409).json({ error: 'Foringen er laast og kan ikke endres. Bruk korriger.' });
+    }
+    auditTimer(req.user, 'regnskap.timer.rediger', { id });
+    res.json({ timeforing: utfall.timeforing });
+  } catch (e) {
+    console.error('regnskap /timer PATCH feilet:', e.message);
+    res.status(500).json({ error: 'Kunne ikke oppdatere foring' });
+  }
+});
+
+// DELETE /timer/:id  — KUN en 'utkast'-rad kan slettes (annet -> 409). Innsendte/
+// godkjente/laaste rader er del av lonnshistorikken og slettes aldri. FOR UPDATE
+// saa tilstands-sjekken ikke omgaas av et race.
 router.delete('/timer/:id', async (req, res) => {
   if (!db.isConfigured()) return utilgjengelig(res);
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Ugyldig id' });
   try {
-    await db.query('DELETE FROM timeforinger WHERE id = $1', [id]);
+    const utfall = await db.withTransaction(async (client) => {
+      const rad = (await client.query(
+        'SELECT id, status FROM timeforinger WHERE id = $1 FOR UPDATE',
+        [id]
+      )).rows[0];
+      if (!rad) return { kode: 404 };
+      if (rad.status !== 'utkast') return { kode: 409 };
+      await client.query('DELETE FROM timeforinger WHERE id = $1', [id]);
+      return { kode: 200 };
+    });
+    if (utfall.kode === 404) return res.status(404).json({ error: 'Foring ikke funnet' });
+    if (utfall.kode === 409) {
+      return res.status(409).json({ error: 'Kun utkast kan slettes. Innsendte/laaste foringer bevares.' });
+    }
+    auditTimer(req.user, 'regnskap.timer.slett', { id });
     res.json({ ok: true });
   } catch (e) {
     console.error('regnskap /timer DELETE feilet:', e.message);
     res.status(500).json({ error: 'Kunne ikke slette' });
+  }
+});
+
+// POST /timer/:id/godkjenn  — sendt_inn -> godkjent. godkjent_av/godkjent_tid.
+// Feil utgangstilstand (ikke sendt_inn) -> 409. FOR UPDATE serialiserer mot en
+// samtidig avvis/godkjenn paa samme rad.
+router.post('/timer/:id/godkjenn', async (req, res) => {
+  if (!db.isConfigured()) return utilgjengelig(res);
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Ugyldig id' });
+  try {
+    const utfall = await db.withTransaction(async (client) => {
+      const rad = (await client.query(
+        'SELECT id, status FROM timeforinger WHERE id = $1 FOR UPDATE',
+        [id]
+      )).rows[0];
+      if (!rad) return { kode: 404 };
+      if (rad.status !== 'sendt_inn') return { kode: 409 };
+      const oppdatert = (await client.query(
+        `UPDATE timeforinger
+            SET status = 'godkjent', godkjent_av = $1, godkjent_tid = now()
+          WHERE id = $2
+         RETURNING ${TIMER_KOLONNER}`,
+        [req.user.id, id]
+      )).rows[0];
+      return { kode: 200, timeforing: oppdatert };
+    });
+    if (utfall.kode === 404) return res.status(404).json({ error: 'Foring ikke funnet' });
+    if (utfall.kode === 409) {
+      return res.status(409).json({ error: 'Bare en innsendt foring kan godkjennes.' });
+    }
+    auditTimer(req.user, 'regnskap.timer.godkjenn', { id, godkjent_av: req.user.id });
+    res.json({ timeforing: utfall.timeforing });
+  } catch (e) {
+    console.error('regnskap /timer godkjenn feilet:', e.message);
+    res.status(500).json({ error: 'Kunne ikke godkjenne foring' });
+  }
+});
+
+// POST /timer/:id/avvis  (body: begrunnelse PAAKREVD) — sendt_inn -> avvist +
+// begrunnelse. Feil utgangstilstand -> 409. Begrunnelse er obligatorisk (400)
+// slik at en avvisning alltid er sporbar for den ansatte.
+router.post('/timer/:id/avvis', async (req, res) => {
+  if (!db.isConfigured()) return utilgjengelig(res);
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Ugyldig id' });
+  const b = req.body || {};
+  const begrunnelse = typeof b.begrunnelse === 'string' ? b.begrunnelse.trim() : '';
+  if (!begrunnelse) return res.status(400).json({ error: 'Begrunnelse er pakrevd ved avvisning' });
+  try {
+    const utfall = await db.withTransaction(async (client) => {
+      const rad = (await client.query(
+        'SELECT id, status FROM timeforinger WHERE id = $1 FOR UPDATE',
+        [id]
+      )).rows[0];
+      if (!rad) return { kode: 404 };
+      if (rad.status !== 'sendt_inn') return { kode: 409 };
+      const oppdatert = (await client.query(
+        `UPDATE timeforinger
+            SET status = 'avvist', begrunnelse = $1, endret_av = $2, endret_tid = now()
+          WHERE id = $3
+         RETURNING ${TIMER_KOLONNER}`,
+        [begrunnelse, req.user.id, id]
+      )).rows[0];
+      return { kode: 200, timeforing: oppdatert };
+    });
+    if (utfall.kode === 404) return res.status(404).json({ error: 'Foring ikke funnet' });
+    if (utfall.kode === 409) {
+      return res.status(409).json({ error: 'Bare en innsendt foring kan avvises.' });
+    }
+    auditTimer(req.user, 'regnskap.timer.avvis', { id, begrunnelse });
+    res.json({ timeforing: utfall.timeforing });
+  } catch (e) {
+    console.error('regnskap /timer avvis feilet:', e.message);
+    res.status(500).json({ error: 'Kunne ikke avvise foring' });
+  }
+});
+
+// POST /timer/:id/korriger  (body: timer PAAKREVD, begrunnelse VALGFRI) — ENESTE
+// vei "inn i" en laast foring. Oppretter en NY rad med korrigerer_id = original.id
+// (kan ha NEGATIVE timer for aa trekke fra), status='sendt_inn', opprettet_av =
+// admin. Den LAASTE originalen er UROERT — historikken staar. Den nye raden maa
+// selv godkjennes/laases. FOR UPDATE paa originalen serialiserer mot samtidige
+// korreksjoner. Korreksjon gjelder KUN en laast rad (ellers 409 — en ulaast
+// foring redigeres direkte via PATCH).
+router.post('/timer/:id/korriger', async (req, res) => {
+  if (!db.isConfigured()) return utilgjengelig(res);
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ error: 'Ugyldig id' });
+  const b = req.body || {};
+  const timer = gyldigKorreksjonstimer(b.timer);
+  if (timer == null) return res.status(400).json({ error: 'Ugyldig korreksjons-timetall (ikke 0, innen +/- 24)' });
+  const begrunnelse = typeof b.begrunnelse === 'string' && b.begrunnelse.trim() ? b.begrunnelse.trim() : null;
+  try {
+    const utfall = await db.withTransaction(async (client) => {
+      const orig = (await client.query(
+        'SELECT id, ansatt_id, dato, aktivitet, status FROM timeforinger WHERE id = $1 FOR UPDATE',
+        [id]
+      )).rows[0];
+      if (!orig) return { kode: 404 };
+      if (orig.status !== 'laast') return { kode: 409 };
+      const ny = (await client.query(
+        `INSERT INTO timeforinger
+           (ansatt_id, dato, timer, aktivitet, notat, status, korrigerer_id, opprettet_av, begrunnelse)
+         VALUES ($1,$2,$3,$4,$5,'sendt_inn',$6,$7,$8)
+         RETURNING ${TIMER_KOLONNER}`,
+        [orig.ansatt_id, orig.dato, timer, orig.aktivitet,
+          `Korreksjon av foring #${orig.id}`, orig.id, req.user.id, begrunnelse]
+      )).rows[0];
+      return { kode: 201, timeforing: ny, ansatt_id: orig.ansatt_id };
+    });
+    if (utfall.kode === 404) return res.status(404).json({ error: 'Foring ikke funnet' });
+    if (utfall.kode === 409) {
+      return res.status(409).json({ error: 'Bare en laast foring korrigeres. Rediger en ulaast foring direkte.' });
+    }
+    auditTimer(req.user, 'regnskap.timer.korriger', {
+      original_id: id, ny_id: utfall.timeforing.id, ansatt_id: utfall.ansatt_id, timer,
+    });
+    res.status(201).json({ timeforing: utfall.timeforing });
+  } catch (e) {
+    console.error('regnskap /timer korriger feilet:', e.message);
+    res.status(500).json({ error: 'Kunne ikke opprette korreksjon' });
   }
 });
 
