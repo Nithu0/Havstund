@@ -9,6 +9,8 @@ const express = require('express');
 const db = require('../db');
 const { requireRole } = require('../lib/auth');
 const discord = require('../lib/discord');
+const email = require('../lib/email');
+const { logger } = require('../lib/logger');
 
 const router = express.Router();
 
@@ -127,7 +129,7 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: 'Mangler gyldig bruker_id' });
       }
 
-      const kunde = await db.one('SELECT id FROM users WHERE id = $1', [brukerId]);
+      const kunde = await db.one('SELECT id, navn, epost FROM users WHERE id = $1', [brukerId]);
       if (!kunde) return res.status(404).json({ error: 'Kunde ikke funnet' });
 
       let pris = null;
@@ -144,6 +146,25 @@ router.post('/', async (req, res) => {
          RETURNING id, bruker_id, avsender, tekst, pris, lest, opprettet`,
         [brukerId, tekst, pris]
       );
+
+      // F27: varsle kunden om at et svar/tilbud venter på Min side. Innholdslost —
+      // selve teksten leses innlogget. Fire-and-forget ETTER lagring: e-posten
+      // kaster aldri (lib/email), men en feilet utsending returnerer { ok:false }.
+      // Vi await-er og logger ved ok===false — en e-postfeil skal ALDRI velte svaret.
+      if (kunde.epost) {
+        const epostRes = await email.sendNyMelding(kunde.epost, {
+          navn: kunde.navn,
+          harTilbud: pris != null,
+          pris,
+        });
+        if (epostRes && epostRes.ok === false) {
+          logger.warn(
+            { meldingId: melding.id, brukerId, grunn: epostRes.error || epostRes.grunn || 'ukjent' },
+            'meldinger: ny-melding-e-post ikke sendt'
+          );
+        }
+      }
+
       return res.status(201).json({ melding });
     }
 
