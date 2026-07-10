@@ -228,12 +228,16 @@ describe('GET /api/regnskap/dagsoppgjor?maaned=YYYY-MM', () => {
     } finally { srv.close(); }
   });
 
-  it('ansatt kan lese lukkestatus (ruterens ansatt+admin) -> 200', async () => {
+  // Blocker 2 (bolge 98): hele /api/regnskap/* ble strammet til admin-only.
+  // FOR ble ansatt sluppet inn her (ren lese av lukkestatus). Etter fiksen far
+  // ansatt 403 ogsaa paa denne — det er selve poenget: ansatt skal ikke naa
+  // regnskaps-API-et i det hele tatt (far egne data via /api/min/* senere).
+  it('ansatt -> 403 (ruteren er admin-only etter blocker-2-fiksen)', async () => {
     nullstill();
     const srv = await lytt(lagApp(ANSATT));
     try {
       const res = await reqJson(srv, 'GET', '/api/regnskap/dagsoppgjor?maaned=2026-07');
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(403);
     } finally { srv.close(); }
   });
 

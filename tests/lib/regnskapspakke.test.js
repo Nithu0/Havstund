@@ -313,6 +313,77 @@ describe('byggRegnskapspakke — timegrunnlag (PII-fritt, nøklet på ansatt_id)
   });
 });
 
+describe('byggTimegrunnlag — status-filter (PENGESTI-INVARIANT, bølge 98)', () => {
+  const ansatte = [
+    { id: 10, navn: 'Kari Ansatt', epost: 'kari@havstund.no', timelonn_ore: 30000, konto: 5000 },
+  ];
+
+  // KJERNE-INVARIANT (skal feile HØYT hvis brutt): en `utkast`-føring skal ALDRI
+  // dukke opp i timegrunnlag. En ugodkjent time må ALDRI nå Fiken-lønn.
+  it('en utkast-føring når ALDRI timegrunnlag (ugodkjent time = ikke lønn)', () => {
+    const pakke = byggRegnskapspakke({
+      periode: '2026-07',
+      poster: [],
+      timeforinger: [{ ansatt_id: 10, dato: '2026-07-01', timer: 5, status: 'utkast' }],
+      ansatte,
+      generert: GENERERT,
+    });
+    // Ingen lønnsklare timer -> tomt grunnlag. utkast telte IKKE.
+    expect(pakke.timegrunnlag).toEqual([]);
+  });
+
+  it('godkjent OG laast telles; utkast/sendt_inn/avvist ekskluderes', () => {
+    const pakke = byggRegnskapspakke({
+      periode: '2026-07',
+      poster: [],
+      timeforinger: [
+        { ansatt_id: 10, dato: '2026-07-01', timer: 3, status: 'godkjent' }, // med
+        { ansatt_id: 10, dato: '2026-07-02', timer: 2, status: 'laast' },    // med
+        { ansatt_id: 10, dato: '2026-07-03', timer: 4, status: 'utkast' },   // ute
+        { ansatt_id: 10, dato: '2026-07-04', timer: 8, status: 'sendt_inn' },// ute
+        { ansatt_id: 10, dato: '2026-07-05', timer: 6, status: 'avvist' },   // ute
+      ],
+      ansatte,
+      generert: GENERERT,
+    });
+    // Kun 3 + 2 = 5 timer teller. 30000 øre/t -> 150000 øre.
+    expect(pakke.timegrunnlag).toEqual([
+      { ansatt_id: 10, timer: 5, timelonn_ore: 30000, konto: 5000, sum_ore: 150000 },
+    ]);
+  });
+
+  it('rad UTEN status-felt behandles som godkjent (bakoverkomp med eldre kall)', () => {
+    const pakke = byggRegnskapspakke({
+      periode: '2026-07',
+      poster: [],
+      // Ingen status-nøkkel (som eldre kall / rader fra før status-kolonnen).
+      timeforinger: [{ ansatt_id: 10, dato: '2026-07-01', timer: 4 }],
+      ansatte,
+      generert: GENERERT,
+    });
+    expect(pakke.timegrunnlag).toEqual([
+      { ansatt_id: 10, timer: 4, timelonn_ore: 30000, konto: 5000, sum_ore: 120000 },
+    ]);
+  });
+
+  it('en blanding: kun de godkjente/låste bidrar til sum_ore', () => {
+    const pakke = byggRegnskapspakke({
+      periode: '2026-07',
+      poster: [],
+      timeforinger: [
+        { ansatt_id: 10, dato: '2026-07-01', timer: 10, status: 'utkast' }, // skal IKKE påvirke sum
+        { ansatt_id: 10, dato: '2026-07-02', timer: 2.5, status: 'godkjent' },
+      ],
+      ansatte,
+      generert: GENERERT,
+    });
+    // Kun 2.5 t teller -> 2.5 * 30000 = 75000. utkast-timene (10) er borte.
+    expect(pakke.timegrunnlag).toEqual([
+      { ansatt_id: 10, timer: 2.5, timelonn_ore: 30000, konto: 5000, sum_ore: 75000 },
+    ]);
+  });
+});
+
 describe('vatTypeFraSats', () => {
   it('kartlegger satsene som lib/fiken.js', () => {
     expect(vatTypeFraSats(25)).toBe('HIGH');

@@ -135,7 +135,7 @@ const BESKYTTEDE_SIDER = {
   'admin-aktiviteter': ['admin'], // /api/activities/admin/all krever admin
   'admin-innsikt': ['ansatt', 'admin'],
   'admin-kunder': ['ansatt', 'admin'],
-  'regnskap': ['ansatt', 'admin'],
+  'regnskap': ['admin'], // /api/regnskap/* er admin-only (blocker 2, bolge 98)
   'okonomi': ['admin'], // /api/finance krever admin
   'intranett': ['ansatt', 'admin'],
   'chat-innboks': ['ansatt', 'admin'],

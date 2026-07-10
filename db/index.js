@@ -229,6 +229,134 @@ async function migrate(q) {
         `FOREIGN KEY (${fk.kolonne}) REFERENCES ${fk.referanse} ON DELETE ${fk.onDelete}`
     );
   }
+
+  // ===== Bolge 98: ansatt-timeforing FUNDAMENT (lonns-sti) =====
+  // Lukker 2 av 3 verifiserte blockere: (1) entydig bruker<->ansatt-kobling,
+  // (3) status-maskin paa timeforinger slik at en UGODKJENT time ALDRI naar
+  // Fiken-lonn. Alt additivt/idempotent; INGEN eksisterende demorad forsvinner.
+
+  // --- Blocker 3 (del): status-maskin-kolonner paa timeforinger.
+  // Rekkefolge: kolonnene FORST (kjerne-pengesti), deretter unik-indeks +
+  // epost-kobling. ADD COLUMN IF NOT EXISTS kan ikke feile paa skitne data, saa
+  // en uventet feil i kobling-loopen under blokkerer aldri disse.
+  //
+  // Tilstander (status-maskin):
+  //   utkast -> sendt_inn -> godkjent -> laast   (normalflyt)
+  //   avvist = sidespor tilbake til utkast (avvist foring redigeres og sendes paa nytt)
+  // Kun 'godkjent' og 'laast' teller i lonnsgrunnlaget (se byggTimegrunnlag).
+  //
+  // KRITISK default: status DEFAULT 'godkjent'. Eksisterende demorader har ingen
+  // status; med default 'utkast' ville de FORSVINNE ut av lonnsgrunnlaget etter
+  // at filteret i regnskapspakke slaar til. 'godkjent' beskytter historikken —
+  // nye foringer settes eksplisitt til 'utkast' av rute-laget (annen agent).
+  await q("ALTER TABLE timeforinger ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'godkjent'");
+  await q('ALTER TABLE timeforinger ADD COLUMN IF NOT EXISTS godkjent_av INTEGER REFERENCES users(id)');
+  await q('ALTER TABLE timeforinger ADD COLUMN IF NOT EXISTS godkjent_tid TIMESTAMPTZ');
+  await q('ALTER TABLE timeforinger ADD COLUMN IF NOT EXISTS begrunnelse TEXT');
+  await q('ALTER TABLE timeforinger ADD COLUMN IF NOT EXISTS laast_tid TIMESTAMPTZ');
+  await q('ALTER TABLE timeforinger ADD COLUMN IF NOT EXISTS korrigerer_id INTEGER REFERENCES timeforinger(id)');
+  await q('ALTER TABLE timeforinger ADD COLUMN IF NOT EXISTS opprettet_av INTEGER REFERENCES users(id)');
+  await q('ALTER TABLE timeforinger ADD COLUMN IF NOT EXISTS endret_av INTEGER REFERENCES users(id)');
+  await q('ALTER TABLE timeforinger ADD COLUMN IF NOT EXISTS endret_tid TIMESTAMPTZ');
+  await q('CREATE INDEX IF NOT EXISTS idx_timer_status ON timeforinger(status)');
+
+  // --- Blocker 1 (del): unik ansatte.user_id.
+  // VALG: CREATE UNIQUE INDEX (ikke ADD CONSTRAINT ... UNIQUE). Begrunnelse:
+  //   * Enforcement-ekvivalent i Postgres — hindrer to ansatte fra aa dele samme
+  //     user_id, og tillater flere NULL (Postgres teller NULL som DISTINCT i unik-
+  //     indeks; ukoblede rader forblir NULL). Verifisert i pg-mem.
+  //   * Natur-idempotent via IF NOT EXISTS — trenger INGEN pg_constraint-guard.
+  //     VIKTIG: `ADD CONSTRAINT ... UNIQUE` er IKKE re-kjorbar i pg-mem (kaster
+  //     "relation already exists" ved 2. kjoring, siden UNIQUE lager en backing-
+  //     indeks-relasjon), og pg_constraint-guarden er inert i pg-mem (returnerer
+  //     0). En ADD CONSTRAINT her ville dermed brutt migrate()-2x-idempotensen
+  //     som hele int-testsuiten hviler paa. (FK-ene taaler re-add i pg-mem; UNIQUE
+  //     gjor det ikke — derfor avviker denne fra F45-monsteret med vilje.)
+  //   * Samme monster som F44 uq_availability_slot rett over.
+  //
+  // DEFENSIVT (lonns-sti, konservativt): hvis levende data ALLEREDE har duplikate
+  // ikke-NULL user_id, ville CREATE UNIQUE INDEX KASTE og velte hele migrate()
+  // (=> degradert drift). Vi deduper IKKE ansatte automatisk (aa slette/omskrive
+  // en lonnsmottaker er destruktivt og feil). I stedet: oppdag, LOGG hoylytt, og
+  // hopp over indeksen. Operator rydder manuelt. Ingen stille auto-handling.
+  // Dup-deteksjon UTEN `HAVING` (pg-mem stotter ikke HAVING): sammenlign antall
+  // ikke-NULL user_id mot antall DISTINCT user_id. total > distinct => duplikater.
+  // Subquery-med-GROUP-BY-monsteret speiler availability-dedupen over og virker i
+  // bade pg-mem og ekte Postgres.
+  const totalRes = await q(
+    'SELECT COUNT(*)::int AS n FROM ansatte WHERE user_id IS NOT NULL'
+  );
+  const distinctRes = await q(
+    'SELECT COUNT(*)::int AS n FROM ' +
+      '(SELECT user_id FROM ansatte WHERE user_id IS NOT NULL GROUP BY user_id) g'
+  );
+  const total = (totalRes.rows[0] && totalRes.rows[0].n) || 0;
+  const distinct = (distinctRes.rows[0] && distinctRes.rows[0].n) || 0;
+  if (total > distinct) {
+    logger.warn(
+      { total, distinct, tabell: 'ansatte' },
+      'ansatte.user_id har duplikate ikke-NULL verdier — uq_ansatte_user_id IKKE opprettet. Operator maa rydde manuelt.'
+    );
+  } else {
+    await q('CREATE UNIQUE INDEX IF NOT EXISTS uq_ansatte_user_id ON ansatte(user_id)');
+  }
+
+  // --- Blocker 1 (del): engangs-kobling ansatte.user_id via ENTYDIG epost-match.
+  // Kjorer ETTER unik-indeksen. For hver ukoblet ansatt (user_id IS NULL) med
+  // epost: sett user_id til den ENE users-raden med samme epost (case-insensitivt)
+  // — men KUN naar treffet er entydig i BEGGE retninger:
+  //   (a) noyaktig 1 users-rad matcher eposten, OG
+  //   (b) noyaktig 1 ukoblet ansatt har den eposten (ellers ville to ansatte
+  //       kjempe om samme user_id og bryte unik-indeksen), OG
+  //   (c) den brukeren er ikke allerede koblet til en annen ansatt.
+  // Tvetydige (0 eller >1 match) GJETTES ALDRI — NULL staar, og antall uklarte
+  // logges. Idempotent: 2. kjoring finner faerre ukoblede (allerede-satte har
+  // user_id != NULL) og setter samme resultat. JS-loop (ikke UPDATE...FROM) for
+  // eksplisitt entydighets-kontroll og forutsigbar oppforsel mot levende data.
+  const ukoblede = await q(
+    "SELECT id, epost FROM ansatte WHERE user_id IS NULL AND epost IS NOT NULL AND epost <> ''"
+  );
+  let koblet = 0;
+  let uklare = 0;
+  for (const rad of (ukoblede && ukoblede.rows) || []) {
+    const epostLower = String(rad.epost).toLowerCase();
+    // (b) entydig paa ansatte-siden: ingen annen ukoblet ansatt deler eposten.
+    const ansattTreff = await q(
+      'SELECT COUNT(*)::int AS n FROM ansatte WHERE user_id IS NULL AND LOWER(epost) = $1',
+      [epostLower]
+    );
+    if (((ansattTreff.rows[0] && ansattTreff.rows[0].n) || 0) !== 1) {
+      uklare++;
+      continue;
+    }
+    // (a) entydig paa users-siden: noyaktig 1 bruker med denne eposten.
+    const brukerTreff = await q('SELECT id FROM users WHERE LOWER(epost) = $1', [epostLower]);
+    if (!brukerTreff.rows || brukerTreff.rows.length !== 1) {
+      uklare++;
+      continue;
+    }
+    const uid = brukerTreff.rows[0].id;
+    // (c) brukeren maa ikke allerede vaere koblet (verner unik-indeksen).
+    const alt = await q('SELECT 1 FROM ansatte WHERE user_id = $1', [uid]);
+    if (alt.rows && alt.rows.length) {
+      uklare++;
+      continue;
+    }
+    await q('UPDATE ansatte SET user_id = $1 WHERE id = $2 AND user_id IS NULL', [uid, rad.id]);
+    koblet++;
+  }
+  if (koblet > 0) {
+    logger.info(
+      { koblet, tabell: 'ansatte' },
+      'Bolge98 engangs-kobling: satte ansatte.user_id via entydig epost-match'
+    );
+  }
+  if (uklare > 0) {
+    logger.warn(
+      { uklare, tabell: 'ansatte' },
+      'Bolge98 engangs-kobling: uklare epost-treff (0 eller >1) — user_id forblir NULL, ingen gjetting'
+    );
+  }
 }
 
 async function init() {
