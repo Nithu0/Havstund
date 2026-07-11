@@ -145,7 +145,13 @@ router.post('/', async (req, res) => {
     //    Deretter leser vi slot-kapasitet (availability-rad ellers activities)
     //    og SUM(antall) med SAMME client, slik at låsen holder hele veien.
     const belop = antallN * akt.pris;
-    const brukerId = req.user ? req.user.id : null;
+    // Innlogget booker -> knytt til req.user.id (uendret). Gjest -> vi slaar opp
+    // eller oppretter en passordloes konto INNE i transaksjonen under, og setter
+    // brukerId + magicToken der. `let` fordi tx-callbacken reassigner den.
+    let brukerId = req.user ? req.user.id : null;
+    // Engangs-token for magisk innlogging (kun gjeste-flyten). Settes i tx.
+    // Brukes ETTER commit til aa sende innloggingslenke-e-posten.
+    let magicToken = null;
 
     let fullt = false;
     const booking = await db.withTransaction(async (client) => {
@@ -174,6 +180,43 @@ router.post('/', async (req, res) => {
           fullt = true;
           return null; // COMMIT av tom tx; låsen slippes
         }
+      }
+
+      // Gjeste-booking: opprett/knytt konto + engangs-token INNE i tx (samme
+      // monster som routes/staff.js /invite). Ligger her — etter at kapasitets-
+      // sjekken passerte — saa vi aldri lager en konto for en booking som blir
+      // avvist (fullt) eller ruller tilbake (regnskap-feil). Gjenbruker den
+      // eksisterende tx-laasen; ingen egen transaksjon.
+      if (!req.user) {
+        // Slaa opp paa LOWER(epost) — case-insensitiv, saa "Kari@x.no" og
+        // "kari@x.no" er samme konto.
+        const { rows: eksRows } = await client.query(
+          'SELECT id FROM users WHERE LOWER(epost) = LOWER($1)',
+          [epost]
+        );
+        if (eksRows[0]) {
+          brukerId = eksRows[0].id;
+        } else {
+          // Passordloes konto: tilfeldig plassholder-hash (aldri tom). Kunden
+          // logger inn via magisk lenke og kan sette eget passord senere.
+          const plassholder = crypto.randomBytes(32).toString('hex');
+          const { rows: nyeRows } = await client.query(
+            `INSERT INTO users (navn, epost, passord_hash, rolle)
+             VALUES ($1,$2,$3,'kunde')
+             RETURNING id`,
+            [navn, epost, plassholder]
+          );
+          brukerId = nyeRows[0].id;
+        }
+        // Lag ALLTID et engangs-token — uansett om kontoen fantes fra foer eller
+        // ble opprettet. Svaret ser dermed likt ut i begge tilfeller (ingen
+        // e-post-enumerering: en angriper kan ikke se om en konto finnes).
+        magicToken = crypto.randomBytes(32).toString('hex');
+        const tokenUtloper = new Date(Date.now() + 7 * 24 * 3600 * 1000); // 7 dager
+        await client.query(
+          'INSERT INTO reset_tokens (token, user_id, utloper) VALUES ($1,$2,$3)',
+          [magicToken, brukerId, tokenUtloper]
+        );
       }
 
       const { rows: insRows } = await client.query(
@@ -248,7 +291,39 @@ router.post('/', async (req, res) => {
       console.error('bookings: ny_booking-ping feilet:', varselFeil.message);
     }
 
-    res.status(201).json({ booking });
+    // Gjeste-booking: send magisk innloggingslenke til kunden. ETTER commit
+    // (bookingen + kontoen + token er garantert lagret her). Vi await-er fordi
+    // svaret avhenger av om e-posten faktisk kunne sendes (se under) — men
+    // e-posten kaster ALDRI (fire-and-forget-kontrakt), saa await er trygt.
+    let innloggingslenke = null;
+    if (magicToken) {
+      const base = (process.env.POST_BASE_URL || '').replace(/\/+$/, '');
+      // Base fra env hvis satt, ellers relativ sti (fungerer bak samme domene).
+      const lenkeUrl = `${base}/api/auth/magic/${magicToken}`;
+      const lenkeRes = await email.sendInnloggingslenke(booking.epost, {
+        navn: booking.navn,
+        lenke: lenkeUrl,
+      });
+      if (lenkeRes && lenkeRes.ok === false) {
+        logger.warn(
+          { bookingId: booking.id, simulert: !!lenkeRes.simulert, grunn: lenkeRes.error || lenkeRes.grunn || 'ukjent' },
+          'bookings: innloggingslenke ikke sendt'
+        );
+        // DEMO-TRYGT: lenken eksponeres i svaret KUN naar e-posten IKKE kan
+        // sendes fordi SMTP ikke er konfigurert (simulert=true) — slik at
+        // operator kan teste flyten uten e-postserver. I NORMAL DRIFT (ekte
+        // utsending -> ok:true) utelates lenken helt fra svaret, og ved en ekte
+        // send-feil (ok:false uten simulert) eksponeres den heller ikke (kan
+        // vaere en forbigaaende prod-feil — lenken skal ikke lekke i svaret da).
+        if (lenkeRes.simulert) {
+          innloggingslenke = lenkeUrl;
+        }
+      }
+    }
+
+    const svar = { booking };
+    if (innloggingslenke) svar.innloggingslenke = innloggingslenke;
+    res.status(201).json(svar);
   } catch (e) {
     console.error('bookings POST / feilet:', e.message);
     res.status(500).json({ error: 'Kunne ikke opprette booking' });

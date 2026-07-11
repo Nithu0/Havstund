@@ -113,6 +113,67 @@ router.post('/login', async (req, res) => {
   }
 });
 
+/* GET /api/auth/magic/:token — magisk innlogging via engangs-token.
+   Kunden fikk lenken paa e-post da bookingen opprettet/knyttet en konto.
+   Gyldig token -> samme JWT-cookie som /login + redirect til Min side.
+   Ugyldig/utloept -> redirect til /konto (ingen lekkasje om hvorfor).
+   ENGANGS: token slettes i SAMME transaksjon som det valideres/konsumeres,
+   saa en gjenbruk (dobbeltklikk/race) ikke kan logge inn to ganger. */
+router.get('/magic/:token', async (req, res) => {
+  const token = typeof req.params.token === 'string' ? req.params.token : '';
+  if (!token) return res.redirect('/konto?feil=lenke');
+  if (!db.isConfigured()) return res.redirect('/konto?feil=utilgjengelig');
+
+  try {
+    // valider + slaa opp bruker + slett token ATOMISK. SELECT ... FOR UPDATE
+    // laaser token-raden paa SAMME connection gjennom hele tx (db.withTransaction),
+    // saa to samtidige treff paa samme token serialiseres — den andre finner
+    // raden slettet og faar null (ingen dobbel innlogging).
+    const bruker = await db.withTransaction(async (client) => {
+      const { rows: tokRows } = await client.query(
+        'SELECT token, user_id, utloper FROM reset_tokens WHERE token = $1 FOR UPDATE',
+        [token],
+      );
+      const rad = tokRows[0];
+      // Mangler, mangler utloeps-tid, eller utloept -> ugyldig.
+      if (!rad || rad.utloper == null || new Date(rad.utloper).getTime() <= Date.now()) {
+        return null;
+      }
+
+      const { rows: brukerRows } = await client.query(
+        'SELECT id, navn, epost, rolle FROM users WHERE id = $1',
+        [rad.user_id],
+      );
+      const u = brukerRows[0];
+      if (!u) return null;
+
+      // ENGANGS: konsumer token i samme tx (etter vellykket brukeroppslag).
+      await client.query('DELETE FROM reset_tokens WHERE token = $1', [token]);
+      return u;
+    });
+
+    if (!bruker) return res.redirect('/konto?feil=lenke');
+
+    // Samme token-/cookie-mekanisme som /login (signToken + setAuthCookie:
+    // httpOnly, sameSite=lax, secure i prod).
+    const jwtToken = signToken(bruker);
+    setAuthCookie(res, jwtToken);
+
+    // Revisjonsspor — fire-and-forget (writeAudit kaster aldri).
+    await writeAudit(
+      { id: bruker.id, navn: bruker.navn },
+      'magisk-innlogging',
+      { epost: bruker.epost, rolle: bruker.rolle },
+    );
+
+    return res.redirect('/min-side');
+  } catch (e) {
+    if (/Database ikke konfigurert/i.test(e.message)) return res.redirect('/konto?feil=utilgjengelig');
+    console.error('magic-feil:', e.message);
+    return res.redirect('/konto?feil=serverfeil');
+  }
+});
+
 /* POST /api/auth/logout */
 router.post('/logout', (req, res) => {
   clearAuthCookie(res);

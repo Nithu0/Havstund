@@ -550,7 +550,11 @@
       </div>
       <div class="felt"><label data-no="Melding (valgfritt)" data-en="Message (optional)">Melding (valgfritt)</label><textarea id="melding" rows="3" data-no-ph="Noe vi bør vite?" data-en-ph="Anything we should know?" placeholder="Noe vi bør vite?"></textarea></div>
       <button type="submit" class="send-knapp" data-no="Send forespørsel" data-en="Send request">Send forespørsel</button>
-      <div class="takk" id="takk" data-no="Takk! Vi har mottatt forespørselen din og tar kontakt snart." data-en="Thank you! We've received your request and will be in touch soon.">Takk! Vi har mottatt forespørselen din og tar kontakt snart.</div>
+      <div class="takk" id="takk" data-no="Takk! Vi har sendt en innloggingslenke til e-posten din — klikk den for å se og bekrefte bookingen din." data-en="Thank you! We've sent a login link to your email — click it to view and confirm your booking.">Takk! Vi har sendt en innloggingslenke til e-posten din — klikk den for å se og bekrefte bookingen din.</div>
+      <div class="demo-lenke" id="demoLenke" style="display:none;margin-top:14px;padding:14px 16px;border:1px dashed #b0803a;border-radius:8px;background:rgba(176,128,58,0.08);text-align:left;">
+        <a id="demoLenkeUrl" href="#" target="_blank" rel="noopener noreferrer" style="font-weight:600;word-break:break-all;">Logg inn</a>
+        <p class="demo-note" data-no="DEMO: e-post ikke satt opp enda — bruk denne lenken for å logge inn." data-en="DEMO: email not configured yet — use this link to log in." style="margin:6px 0 0;font-size:0.85em;opacity:0.8;">DEMO: e-post ikke satt opp enda — bruk denne lenken for å logge inn.</p>
+      </div>
     </form>
   </div></section>
 
@@ -712,7 +716,19 @@
         method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(data)
       })
         .then(function(r){
-          if(r.ok){ knapp.style.display='none'; document.getElementById('takk').style.display='block'; return; }
+          if(r.ok){
+            knapp.style.display='none';
+            var takk = document.getElementById('takk'); if(takk){ takk.style.display='block'; }
+            return r.json().catch(function(){ return {}; }).then(function(b){
+              var lenke = b && b.innloggingslenke;
+              if(lenke){
+                var boks = document.getElementById('demoLenke');
+                var a = document.getElementById('demoLenkeUrl');
+                if(a){ a.href = lenke; a.textContent = lenke; }
+                if(boks){ boks.style.display='block'; }
+              }
+            });
+          }
           return r.json().catch(function(){ return {}; }).then(function(b){
             var kode = b && (b.code || b.feil);
             if(kode === 'fullt') throw new Error('Beklager, det er dessverre fullt for valgt dato/tidspunkt. Prøv et annet tidspunkt.');
