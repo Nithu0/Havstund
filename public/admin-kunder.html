@@ -50,6 +50,95 @@
     .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:#eef5fb;color:var(--sea-deep)}
 
     @media(max-width:900px){.grid{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
+
+    /* ---- faner ---- */
+    .faner{display:flex;gap:6px;border-bottom:2px solid var(--line);margin-bottom:24px;flex-wrap:wrap}
+    .fane{background:none;border:none;cursor:pointer;font-family:inherit;font-weight:700;font-size:15px;color:var(--muted);padding:12px 18px;border-bottom:3px solid transparent;margin-bottom:-2px;transition:.15s}
+    .fane:hover{color:var(--sea-deep)}
+    .fane.active{color:var(--sea-deep);border-bottom-color:var(--turq)}
+    .pane{display:none}
+    .pane.active{display:block}
+
+    /* ---- FANE «Meldinger» (asynkron kundedialog) ---- */
+    #pane-meldinger .m-layout{display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start;height:calc(100vh - 260px);min-height:520px}
+    #pane-meldinger .m-panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);display:flex;flex-direction:column;height:100%;overflow:hidden}
+    #pane-meldinger .m-phead{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+    #pane-meldinger .m-phead h2{font-size:18px;color:var(--sea-deep)}
+    #pane-meldinger .m-search{padding:12px 16px;border-bottom:1px solid var(--line)}
+    #pane-meldinger .m-search input{width:100%;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:10px}
+    #pane-meldinger #meld-liste{flex:1;overflow-y:auto}
+    #pane-meldinger .kunde-rad{padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:.15s;display:flex;gap:12px;align-items:flex-start}
+    #pane-meldinger .kunde-rad:hover{background:#f4f9fe}
+    #pane-meldinger .kunde-rad.active{background:#eef5fc;border-left:3px solid var(--turq);padding-left:13px}
+    #pane-meldinger .kunde-rad .avatar{width:40px;height:40px;border-radius:50%;flex:0 0 40px;background:linear-gradient(135deg,var(--teal),var(--turq));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px}
+    #pane-meldinger .kunde-rad .info{flex:1;min-width:0}
+    #pane-meldinger .kunde-rad .navn{font-weight:700;font-size:14px;color:var(--sea-deep);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    #pane-meldinger .kunde-rad .utdrag{font-size:13px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    #pane-meldinger .kunde-rad .badge-ulest{flex:0 0 auto;background:var(--clay);color:#fff;font-size:11px;font-weight:700;min-width:20px;height:20px;padding:0 6px;border-radius:20px;display:flex;align-items:center;justify-content:center}
+    #pane-meldinger .liste-tom{padding:24px 18px;color:var(--muted);font-size:14px;text-align:center}
+    #pane-meldinger #meld-panel{display:flex;flex-direction:column;height:100%}
+    #pane-meldinger #meld-vk .vk-navn{font-weight:800;font-size:18px;color:var(--sea-deep)}
+    #pane-meldinger #meld-vk .vk-epost{font-size:13px;color:var(--muted)}
+    #pane-meldinger #meld-traad{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px;background:#fbfcfe}
+    #pane-meldinger .melding{max-width:74%;padding:11px 15px;border-radius:14px;font-size:14px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
+    #pane-meldinger .melding .meta{font-size:10px;text-transform:uppercase;letter-spacing:1px;opacity:.7;margin-bottom:4px}
+    #pane-meldinger .melding.fra-kunde{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px}
+    #pane-meldinger .melding.fra-oss{align-self:flex-end;background:var(--sea);color:#fff;border-bottom-right-radius:4px}
+    #pane-meldinger .melding.fra-oss .meta{color:var(--turq-l)}
+    #pane-meldinger .tilbud-kort{align-self:flex-end;max-width:74%;background:#fff;border:2px solid var(--clay);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow)}
+    #pane-meldinger .tilbud-kort .tk-tag{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--clay-d);font-weight:700}
+    #pane-meldinger .tilbud-kort .tk-belop{font-size:26px;font-weight:800;color:var(--sea-deep);margin:4px 0}
+    #pane-meldinger .tilbud-kort .tk-tekst{font-size:14px;color:var(--ink);line-height:1.5}
+    #pane-meldinger .pane-tom{padding:20px;color:var(--muted);font-size:14px;text-align:center}
+    #pane-meldinger #meld-svar-skjema{border-top:1px solid var(--line);padding:14px;background:#fff;display:flex;flex-direction:column;gap:10px}
+    #pane-meldinger #meld-svar-skjema textarea{min-height:64px;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-family:inherit;width:100%}
+    #pane-meldinger #meld-svar-skjema .svar-rad{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+    #pane-meldinger #meld-svar-skjema .pris-felt{flex:0 0 200px;min-width:160px}
+    #pane-meldinger #meld-svar-skjema .pris-felt label{font-size:12px;color:var(--muted)}
+    #pane-meldinger #meld-svar-skjema .pris-felt input{width:100%;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:10px}
+    #pane-meldinger #meld-svar-skjema .send-wrap{margin-left:auto}
+    #pane-meldinger #meld-ingen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);text-align:center;padding:40px}
+    #pane-meldinger #meld-ingen p{font-size:16px;max-width:34ch}
+    #pane-meldinger .btn-sm{padding:10px 18px;font-size:14px}
+
+    /* ---- FANE «Live chat» (Socket.IO) ---- */
+    #pane-chat .c-inbox{display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start;height:calc(100vh - 260px);min-height:480px}
+    #pane-chat .c-threads{background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;height:100%}
+    #pane-chat .c-threads .hd{padding:14px 16px;border-bottom:1px solid var(--line);font-weight:700;color:var(--sea-deep);display:flex;align-items:center;gap:8px}
+    #pane-chat .c-threads .list{flex:1;overflow-y:auto}
+    #pane-chat .tr{padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:.15s}
+    #pane-chat .tr:hover{background:#fffaf1}
+    #pane-chat .tr.active{background:#eef7f8;border-left:3px solid var(--turq);padding-left:13px}
+    #pane-chat .tr .navn{font-weight:700;font-size:14px;color:var(--sea-deep);display:flex;align-items:center;gap:6px}
+    #pane-chat .tr .prev{font-size:13px;color:var(--muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    #pane-chat .tr .tid{font-size:11px;color:var(--muted);margin-top:3px}
+    #pane-chat .pill{font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:20px;font-weight:700}
+    #pane-chat .pill.apen{background:#e7f5f6;color:var(--teal)}
+    #pane-chat .pill.ansatt{background:#fbe9d8;color:var(--clay-d)}
+    #pane-chat .pill.lukket{background:#eee;color:var(--muted)}
+    #pane-chat .c-conv{background:#fff;border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;height:100%}
+    #pane-chat .c-conv .hd{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    #pane-chat .c-conv .hd .navn{font-weight:800;color:var(--sea-deep);font-size:16px}
+    #pane-chat .c-conv .hd .epost{font-size:13px;color:var(--muted)}
+    #pane-chat .c-conv .hd .sp{flex:1}
+    #pane-chat .c-conv .msgs{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:10px;background:#fbfbf8}
+    #pane-chat .m{max-width:74%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
+    #pane-chat .m .who{font-size:10px;text-transform:uppercase;letter-spacing:1px;opacity:.7;margin-bottom:3px}
+    #pane-chat .m.kunde{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px}
+    #pane-chat .m.ai{align-self:flex-end;background:#eef7f8;color:var(--ink);border-bottom-right-radius:4px}
+    #pane-chat .m.ansatt{align-self:flex-end;background:var(--sea);color:#fff;border-bottom-right-radius:4px}
+    #pane-chat .c-conv .reply{display:flex;gap:10px;padding:12px;border-top:1px solid var(--line);background:#fffaf1}
+    #pane-chat .c-conv .reply input{flex:1;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:10px}
+    #pane-chat .c-conv .tom{flex:1;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:15px;text-align:center;padding:30px}
+    #pane-chat .c-alert{font-size:13px;background:#fbe9d8;color:var(--clay-d);padding:6px 14px;border-bottom:1px solid var(--line)}
+
+    @media(max-width:900px){
+      #pane-meldinger .m-layout{grid-template-columns:1fr;height:auto}
+      #pane-meldinger .m-panel{height:60vh}
+      #pane-chat .c-inbox{grid-template-columns:1fr;height:auto}
+      #pane-chat .c-threads{height:300px}
+      #pane-chat .c-conv{height:60vh}
+    }
   </style>
 </head>
 <body>
@@ -68,177 +157,123 @@
 
   <main class="wrap2">
     <div class="topp"><h1>Kunder</h1></div>
-    <p class="lead">Søk opp en kunde og se samlet profil: bookinger, meldinger og prosjekter på ett sted.</p>
+    <p class="lead">Søk, profil, kundedialog og live chat — samlet på ett sted.</p>
 
-    <div class="grid">
-      <section class="panel">
-        <h3>Søk</h3>
-        <p class="hint">Navn eller e-post.</p>
-        <form class="sok" id="sok-form">
-          <input id="sok-input" type="text" placeholder="Søk kunde…" autocomplete="off" maxlength="100">
-          <button type="submit">Søk</button>
-        </form>
-        <ul class="liste" id="treff"></ul>
-      </section>
-
-      <section class="panel" id="profil-panel">
-        <h3 id="profil-tittel">Kundeprofil</h3>
-        <p class="hint" id="profil-hint">Velg en kunde fra listen.</p>
-        <div id="profil"></div>
-      </section>
+    <div class="faner" role="tablist">
+      <button class="fane active" data-pane="kunder" role="tab">Kunder</button>
+      <button class="fane" data-pane="meldinger" role="tab">Meldinger</button>
+      <button class="fane" data-pane="chat" role="tab">Live chat</button>
     </div>
+
+    <!-- ============ FANE: KUNDER (søk + profil) ============ -->
+    <section class="pane active" id="pane-kunder">
+      <div class="grid">
+        <section class="panel">
+          <h3>Søk</h3>
+          <p class="hint">Navn eller e-post.</p>
+          <form class="sok" id="sok-form">
+            <input id="sok-input" type="text" placeholder="Søk kunde…" autocomplete="off" maxlength="100">
+            <button type="submit">Søk</button>
+          </form>
+          <ul class="liste" id="treff"></ul>
+        </section>
+
+        <section class="panel" id="profil-panel">
+          <h3 id="profil-tittel">Kundeprofil</h3>
+          <p class="hint" id="profil-hint">Velg en kunde fra listen.</p>
+          <div id="profil"></div>
+        </section>
+      </div>
+    </section>
+
+    <!-- ============ FANE: MELDINGER (asynkron kundedialog) ============ -->
+    <section class="pane" id="pane-meldinger">
+      <div class="m-layout">
+
+        <aside class="m-panel">
+          <div class="m-phead"><h2>Kunder</h2></div>
+          <div class="m-search">
+            <input type="search" id="meld-sok" placeholder="Søk etter navn eller e-post…" autocomplete="off">
+          </div>
+          <div id="meld-liste"><div class="liste-tom">Laster kunder…</div></div>
+        </aside>
+
+        <section class="m-panel">
+          <div id="meld-ingen">
+            <p>Velg en kunde til venstre for å se dialogen.</p>
+          </div>
+
+          <div id="meld-panel" style="display:none">
+            <div class="m-phead">
+              <div id="meld-vk">
+                <div class="vk-navn">—</div>
+                <div class="vk-epost"></div>
+              </div>
+            </div>
+
+            <div id="meld-traad">
+              <div class="pane-tom">Ingen meldinger ennå.</div>
+            </div>
+
+            <form id="meld-svar-skjema" autocomplete="off">
+              <div>
+                <textarea id="meld-svar-tekst" placeholder="Skriv et svar til kunden…" required></textarea>
+              </div>
+              <div class="svar-rad">
+                <div class="pris-felt">
+                  <label for="meld-svar-pris">Pristilbud (valgfritt)</label>
+                  <input type="number" id="meld-svar-pris" min="0" step="1" placeholder="kr">
+                </div>
+                <div class="send-wrap">
+                  <button type="submit" class="btn btn-primary btn-sm">Send svar</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </section>
+
+      </div>
+    </section>
+
+    <!-- ============ FANE: LIVE CHAT (Socket.IO) ============ -->
+    <section class="pane" id="pane-chat">
+      <div class="c-inbox">
+
+        <div class="c-threads">
+          <div class="hd">Samtaler <span class="sp" style="flex:1"></span>
+            <button class="btn btn-ghost" id="chat-oppdater" style="padding:6px 12px;font-size:13px">Oppdater</button>
+          </div>
+          <div class="list" id="chat-liste">
+            <div class="tom" style="padding:20px">Laster…</div>
+          </div>
+        </div>
+
+        <div class="c-conv">
+          <div class="hd" id="chat-hd" style="display:none">
+            <div>
+              <div class="navn" id="chat-navn">—</div>
+              <div class="epost" id="chat-epost"></div>
+            </div>
+            <div class="sp"></div>
+            <span class="pill" id="chat-status"></span>
+            <button class="btn btn-primary" id="chat-overta" style="padding:8px 14px;font-size:13px">Overta fra AI</button>
+          </div>
+          <div class="c-alert" id="chat-alert" style="display:none"></div>
+          <div class="msgs" id="chat-msgs">
+            <div class="tom">Velg en samtale fra listen til venstre for å se meldingene.</div>
+          </div>
+          <form class="reply" id="chat-reply" style="display:none">
+            <input type="text" id="chat-reply-input" placeholder="Svar kunden…" autocomplete="off" maxlength="4000">
+            <button type="submit" class="btn btn-primary">Send</button>
+          </form>
+        </div>
+
+      </div>
+    </section>
   </main>
 
-  <script>
-  (function () {
-    'use strict';
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/admin-kunder.js"></script>
 
-    var krFmt = new Intl.NumberFormat('no-NO', { style: 'currency', currency: 'NOK', maximumFractionDigits: 0 });
-    function kr(v) { return krFmt.format(Number(v) || 0); }
-    function $(id) { return document.getElementById(id); }
-    function esc(s) {
-      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-      });
-    }
-    function api(sti, opt) {
-      opt = opt || {};
-      opt.credentials = 'same-origin';
-      opt.headers = Object.assign({ 'Content-Type': 'application/json' }, opt.headers || {});
-      return fetch(sti, opt);
-    }
-    function dato(s) {
-      if (!s) return '–';
-      var d = new Date(s);
-      return isNaN(d) ? '–' : d.toLocaleDateString('no-NO');
-    }
-
-    var valgtId = null;
-
-    // ---- Søk ----
-    function sok(q) {
-      var liste = $('treff');
-      liste.innerHTML = '<li class="tom" style="border:none;cursor:default">Søker…</li>';
-      api('/api/customers/search?q=' + encodeURIComponent(q))
-        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
-        .then(function (res) {
-          if (!res.ok) {
-            liste.innerHTML = '<li class="tom" style="border:none;cursor:default">' + esc((res.d && res.d.error) || 'Feil ved søk') + '</li>';
-            return;
-          }
-          var rows = res.d;
-          if (!Array.isArray(rows) || !rows.length) {
-            liste.innerHTML = '<li class="tom" style="border:none;cursor:default">Ingen treff.</li>';
-            return;
-          }
-          liste.innerHTML = '';
-          rows.forEach(function (k) {
-            var li = document.createElement('li');
-            li.setAttribute('data-id', k.id);
-            li.innerHTML = '<div class="navn">' + esc(k.navn || '–') + '</div><div class="epost">' + esc(k.epost) + '</div>';
-            li.addEventListener('click', function () { velg(k.id, li); });
-            liste.appendChild(li);
-          });
-        })
-        .catch(function () {
-          liste.innerHTML = '<li class="tom" style="border:none;cursor:default">Feil ved søk.</li>';
-        });
-    }
-
-    function velg(id, li) {
-      valgtId = id;
-      var alle = document.querySelectorAll('#treff li');
-      for (var i = 0; i < alle.length; i++) alle[i].classList.remove('aktiv');
-      if (li) li.classList.add('aktiv');
-      lastProfil(id);
-    }
-
-    // ---- Profil ----
-    function lastProfil(id) {
-      $('profil-hint').textContent = 'Laster…';
-      $('profil').innerHTML = '';
-      api('/api/crm/customers/' + encodeURIComponent(id) + '/profile')
-        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
-        .then(function (res) {
-          if (!res.ok) {
-            $('profil-hint').textContent = (res.d && res.d.error) || 'Kunne ikke hente profil.';
-            return;
-          }
-          tegnProfil(res.d);
-        })
-        .catch(function () { $('profil-hint').textContent = 'Kunne ikke hente profil.'; });
-    }
-
-    function tegnProfil(p) {
-      var b = p.bruker || {};
-      var o = p.oppsummering || {};
-      $('profil-tittel').textContent = b.navn || 'Kundeprofil';
-      $('profil-hint').textContent = esc(b.epost || '') + ' · kunde siden ' + dato(b.opprettet);
-
-      var html = '';
-      html += '<div class="kpis">' +
-        '<div class="kpi"><div class="label">Bookinger</div><div class="val">' + (Number(o.antall_bookinger) || 0) + '</div></div>' +
-        '<div class="kpi"><div class="label">Omsetning</div><div class="val">' + kr(o.omsetning) + '</div></div>' +
-        '<div class="kpi"><div class="label">Meldinger</div><div class="val">' + (Number(o.antall_meldinger) || 0) + '</div></div>' +
-        '<div class="kpi"><div class="label">Prosjekter</div><div class="val">' + (Number(o.antall_prosjekter) || 0) + '</div></div>' +
-        '</div>';
-
-      // Bookinger
-      html += '<h3 style="margin-top:8px">Bookinger</h3>';
-      if (p.bookinger && p.bookinger.length) {
-        html += '<table class="tbl"><thead><tr><th>Aktivitet</th><th>Dato</th><th>Status</th><th class="num">Antall</th><th class="num">Beløp</th></tr></thead><tbody>';
-        p.bookinger.forEach(function (x) {
-          html += '<tr><td>' + esc(x.aktivitet || '–') + '</td><td>' + dato(x.dato) + '</td>' +
-            '<td><span class="pill">' + esc(x.status) + '</span></td>' +
-            '<td class="num">' + (Number(x.antall) || 0) + '</td>' +
-            '<td class="num">' + kr(x.belop) + '</td></tr>';
-        });
-        html += '</tbody></table>';
-      } else { html += '<p class="tom">Ingen bookinger.</p>'; }
-
-      // Meldinger
-      html += '<h3 style="margin-top:18px">Meldinger</h3>';
-      if (p.meldinger && p.meldinger.length) {
-        html += '<table class="tbl"><thead><tr><th>Avsender</th><th>Melding</th><th>Tid</th></tr></thead><tbody>';
-        p.meldinger.forEach(function (m) {
-          html += '<tr><td><span class="pill">' + esc(m.avsender) + '</span></td>' +
-            '<td>' + esc(m.tekst) + '</td><td class="num">' + dato(m.opprettet) + '</td></tr>';
-        });
-        html += '</tbody></table>';
-      } else { html += '<p class="tom">Ingen meldinger.</p>'; }
-
-      // Prosjekter
-      html += '<h3 style="margin-top:18px">Prosjekter</h3>';
-      if (p.prosjekter && p.prosjekter.length) {
-        html += '<table class="tbl"><thead><tr><th>Tittel</th><th>Type</th><th>Status</th><th class="num">Opprettet</th></tr></thead><tbody>';
-        p.prosjekter.forEach(function (pr) {
-          html += '<tr><td>' + esc(pr.tittel) + '</td><td>' + esc(pr.type || '–') + '</td>' +
-            '<td><span class="pill">' + esc(pr.status) + '</span></td>' +
-            '<td class="num">' + dato(pr.opprettet) + '</td></tr>';
-        });
-        html += '</tbody></table>';
-      } else { html += '<p class="tom">Ingen prosjekter.</p>'; }
-
-      $('profil').innerHTML = html;
-    }
-
-    // ---- Events ----
-    $('sok-form').addEventListener('submit', function (e) {
-      e.preventDefault();
-      var q = $('sok-input').value.trim();
-      if (q) sok(q);
-    });
-
-    var loggUt = $('logg-ut');
-    if (loggUt) {
-      loggUt.addEventListener('click', function (e) {
-        e.preventDefault();
-        api('/api/auth/logout', { method: 'POST' })
-          .then(function () { window.location = '/konto'; })
-          .catch(function () { window.location = '/konto'; });
-      });
-    }
-  })();
-  </script>
 </body>
 </html>
