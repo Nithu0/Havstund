@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Bookinger — Havstund</title>
+  <title>Admin — Havstund</title>
   <link rel="stylesheet" href="css/styles.css">
   <style>
     body{background:var(--cream)}
@@ -17,46 +17,118 @@
     .adm-top nav a:hover{opacity:1;color:#fff}
 
     .wrap2{max-width:1240px;margin:0 auto;padding:28px 24px 70px}
-    .topp{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:6px}
+    .topp{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:14px}
     .topp h1{font-size:30px;color:var(--sea-deep)}
-    .lead{color:var(--muted);margin-bottom:22px}
+    .lead{color:var(--muted);margin-bottom:22px;max-width:70ch}
 
-    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
-    .kpi{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow)}
-    .kpi .label{font-size:12px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:700}
-    .kpi .val{font-size:28px;font-weight:800;color:var(--sea-deep);margin-top:6px;line-height:1}
-    .kpi.vent .val{color:var(--clay-d)}
+    /* ---- Faner (speilet fra ansatt.html) ---- */
+    .faner{display:flex;gap:6px;border-bottom:2px solid var(--line);margin-bottom:22px;flex-wrap:wrap}
+    .fane-btn{appearance:none;background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;
+      font-family:inherit;font-size:15px;font-weight:700;color:var(--muted);padding:10px 16px;cursor:pointer;transition:.12s;position:relative}
+    .fane-btn:hover{color:var(--sea-deep)}
+    .fane-btn[aria-selected="true"]{color:var(--sea-deep);border-bottom-color:var(--turq)}
+    .fane-panel{display:none}
+    .fane-panel.aktiv{display:block}
 
-    .panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:22px 24px;box-shadow:var(--shadow)}
-    .filtre{display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin-bottom:18px}
-    .felt{display:flex;flex-direction:column;gap:5px}
-    .felt label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-    .felt input,.felt select{padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:14px;background:#fff;color:var(--ink)}
-    .felt.sok{flex:1;min-width:200px}
+    /* ---- Delt panel ---- */
+    .panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:22px 24px;box-shadow:var(--shadow);margin-bottom:22px}
+    .panel h3{margin-bottom:4px}
+    .panel .hint{color:var(--muted);font-size:13px;margin-bottom:16px}
 
-    .tbl{width:100%;border-collapse:collapse;font-size:14px}
-    .tbl th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:10px 12px;border-bottom:2px solid var(--line)}
-    .tbl td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
-    .tbl tr:last-child td{border-bottom:none}
-    .tbl .belop{font-weight:700;color:var(--sea-deep);white-space:nowrap}
-    .tbl .muted{color:var(--muted);font-size:12px}
-    .tbl .melding{max-width:240px;color:var(--muted);font-size:13px}
-    .tbl select{padding:7px 10px;font-size:13px;border-radius:20px;border:1.5px solid var(--line);font-weight:700;cursor:pointer}
-    .tbl select.forespurt{background:#fff0dd;color:var(--clay-d);border-color:#f0d7b5}
-    .tbl select.bekreftet{background:#d8f3f6;color:#0a6f7a;border-color:#bfe6df}
-    .tbl select.fullfort{background:#dfeede;color:#2c6b35;border-color:#cce0c9}
-    .tbl select.avlyst{background:#f3ddd8;color:#9a3b2c;border-color:#eccabf}
-    .tom{color:var(--muted);font-size:15px;padding:26px 4px;text-align:center}
-    .loading{color:var(--muted);font-size:15px;padding:20px 0}
-    @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}}
-    @media(max-width:560px){.kpis{grid-template-columns:1fr}}
+    /* ============ Fane: Bookinger ============ */
+    #fane-bookinger .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+    #fane-bookinger .kpi{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow)}
+    #fane-bookinger .kpi .label{font-size:12px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:700}
+    #fane-bookinger .kpi .val{font-size:28px;font-weight:800;color:var(--sea-deep);margin-top:6px;line-height:1}
+    #fane-bookinger .kpi.vent .val{color:var(--clay-d)}
+    #fane-bookinger .filtre{display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin-bottom:18px}
+    #fane-bookinger .felt{display:flex;flex-direction:column;gap:5px}
+    #fane-bookinger .felt label{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+    #fane-bookinger .felt input,#fane-bookinger .felt select{padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-family:inherit;font-size:14px;background:#fff;color:var(--ink)}
+    #fane-bookinger .felt.sok{flex:1;min-width:200px}
+    #fane-bookinger .tbl{width:100%;border-collapse:collapse;font-size:14px}
+    #fane-bookinger .tbl th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:10px 12px;border-bottom:2px solid var(--line)}
+    #fane-bookinger .tbl td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+    #fane-bookinger .tbl tr:last-child td{border-bottom:none}
+    #fane-bookinger .tbl .belop{font-weight:700;color:var(--sea-deep);white-space:nowrap}
+    #fane-bookinger .tbl .muted{color:var(--muted);font-size:12px}
+    #fane-bookinger .tbl .melding{max-width:240px;color:var(--muted);font-size:13px}
+    #fane-bookinger .tbl select{padding:7px 10px;font-size:13px;border-radius:20px;border:1.5px solid var(--line);font-weight:700;cursor:pointer}
+    #fane-bookinger .tbl select.forespurt{background:#fff0dd;color:var(--clay-d);border-color:#f0d7b5}
+    #fane-bookinger .tbl select.bekreftet{background:#d8f3f6;color:#0a6f7a;border-color:#bfe6df}
+    #fane-bookinger .tbl select.fullfort{background:#dfeede;color:#2c6b35;border-color:#cce0c9}
+    #fane-bookinger .tbl select.avlyst{background:#f3ddd8;color:#9a3b2c;border-color:#eccabf}
+    #fane-bookinger .tom{color:var(--muted);font-size:15px;padding:26px 4px;text-align:center}
+    #fane-bookinger .loading{color:var(--muted);font-size:15px;padding:20px 0}
+    @media(max-width:900px){#fane-bookinger .kpis{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:560px){#fane-bookinger .kpis{grid-template-columns:1fr}}
+
+    /* ============ Fane: Agenda ============ */
+    #fane-agenda .ctrls{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:20px}
+    #fane-agenda .ctrls .felt{display:flex;flex-direction:column;gap:5px}
+    #fane-agenda .ctrls label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:700}
+    #fane-agenda .ctrls input[type=date]{padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:#fff;color:var(--sea-deep)}
+    #fane-agenda .ctrls button{padding:9px 18px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;background:var(--sea-deep);color:#fff}
+    #fane-agenda .ctrls button.ghost{background:#fff;border:1px solid var(--line);color:var(--sea-deep)}
+    #fane-agenda .tbl{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+    #fane-agenda .tbl th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:9px 10px;border-bottom:2px solid var(--line)}
+    #fane-agenda .tbl td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+    #fane-agenda .tbl tr:last-child td{border-bottom:none}
+    #fane-agenda .tbl .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+    #fane-agenda .tbl .belop{font-weight:700;color:var(--sea-deep)}
+    #fane-agenda .tom{color:var(--muted);font-size:14px;padding:18px 4px}
+    #fane-agenda .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:30px;letter-spacing:.3px}
+    #fane-agenda .pill.forespurt{background:#fff4e0;color:#9a6400}
+    #fane-agenda .pill.bekreftet{background:#e3f4e7;color:#1d6b35}
+    #fane-agenda .pill.fullfort{background:#e6eef7;color:#1d4e7a}
+    #fane-agenda .pill.avlyst{background:#f7e3e3;color:#8a2a2a}
+
+    /* ============ Fane: Aktiviteter ============ */
+    #fane-aktiviteter .akt-topp{display:flex;justify-content:flex-end;margin-bottom:14px}
+    .knapp{padding:11px 18px;border:none;border-radius:10px;background:var(--sea-deep);color:#fff;font-weight:700;cursor:pointer;font-size:14px}
+    .knapp:hover{background:var(--sea)}
+    .knapp.sek{background:#fff;color:var(--sea-deep);border:1px solid var(--line)}
+    .knapp.sek:hover{background:var(--cream)}
+    .knapp.fare{background:#fff;color:#b3261e;border:1px solid #f2c4c0}
+    .knapp.fare:hover{background:#fdecea}
+    .knapp.liten{padding:6px 12px;font-size:13px}
+    #fane-aktiviteter .tbl{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+    #fane-aktiviteter .tbl th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);padding:9px 10px;border-bottom:2px solid var(--line)}
+    #fane-aktiviteter .tbl td{padding:10px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+    #fane-aktiviteter .tbl tr:last-child td{border-bottom:none}
+    #fane-aktiviteter .tbl .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+    #fane-aktiviteter .tbl tr.inaktiv td{opacity:.55}
+    #fane-aktiviteter .tbl .navn{font-weight:700;color:var(--sea-deep)}
+    #fane-aktiviteter .tbl .slug{font-size:12px;color:var(--muted)}
+    #fane-aktiviteter .tom{color:var(--muted);font-size:14px;padding:14px 4px}
+    #fane-aktiviteter .akt-pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;background:#eef5fb;color:var(--sea-deep)}
+    #fane-aktiviteter .akt-pill.av{background:#fdecea;color:#b3261e}
+    #fane-aktiviteter .handling{display:flex;gap:8px;justify-content:flex-end;white-space:nowrap}
+    #fane-aktiviteter .akt-melding{padding:12px 14px;border-radius:10px;margin-bottom:16px;font-size:14px;font-weight:600;display:none}
+    #fane-aktiviteter .akt-melding.vis{display:block}
+    #fane-aktiviteter .akt-melding.ok{background:#e7f6ec;color:#1d6b3a;border:1px solid #bfe3cb}
+    #fane-aktiviteter .akt-melding.feil{background:#fdecea;color:#b3261e;border:1px solid #f2c4c0}
+
+    /* Aktiviteter modal/skjema (body-nivå, egne klasser for å unngå kollisjon) */
+    .akt-overlay{position:fixed;inset:0;background:rgba(10,39,71,.45);display:none;align-items:flex-start;justify-content:center;z-index:80;padding:40px 16px;overflow:auto}
+    .akt-overlay.vis{display:flex}
+    .akt-overlay .dialog{background:#fff;border-radius:var(--r);box-shadow:0 18px 60px rgba(10,39,71,.3);max-width:560px;width:100%;padding:26px 28px}
+    .akt-overlay .dialog h2{font-size:22px;color:var(--sea-deep);margin-bottom:18px}
+    .akt-overlay .akt-felt{margin-bottom:15px}
+    .akt-overlay .akt-felt label{display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px}
+    .akt-overlay .akt-felt input,.akt-overlay .akt-felt textarea{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-size:15px;font-family:inherit}
+    .akt-overlay .akt-felt textarea{min-height:80px;resize:vertical}
+    .akt-overlay .akt-felt .akt-sub{font-size:12px;color:var(--muted);margin-top:5px}
+    .akt-overlay .akt-rad{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .akt-overlay .dialog-bunn{display:flex;gap:10px;justify-content:flex-end;margin-top:22px}
+    @media(max-width:700px){.akt-overlay .akt-rad{grid-template-columns:1fr}#fane-aktiviteter .handling{flex-direction:column}}
   </style>
 </head>
 <body>
   <header class="adm-top">
     <div class="inner">
       <a href="/intranett" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.45);color:#fff;font-weight:700;font-size:13px;padding:8px 15px;border-radius:30px;white-space:nowrap">← Tilbake til oversikt</a>
-      <a href="/" class="logo"><img src="bilder/wordmark.png" alt="Havstund"><small>Bookinger · Admin</small></a>
+      <a href="/" class="logo"><img src="bilder/wordmark.png" alt="Havstund"><small>Admin</small></a>
       <nav>
         <a href="/intranett">Oversikt</a>
         <a href="/kunde-dialog">Meldinger</a>
@@ -67,40 +139,136 @@
   </header>
 
   <main class="wrap2">
-    <div class="topp"><h1>Bookinger</h1></div>
-    <p class="lead">Alle forespørsler og bookinger. Endre status direkte i listen — kunden kan følge status på «Min side».</p>
+    <div class="topp"><h1>Administrasjon</h1></div>
 
-    <section class="kpis">
-      <div class="kpi vent"><div class="label">Venter svar</div><div class="val" id="k-forespurt">–</div></div>
-      <div class="kpi"><div class="label">Bekreftet</div><div class="val" id="k-bekreftet">–</div></div>
-      <div class="kpi"><div class="label">Kommende</div><div class="val" id="k-kommende">–</div></div>
-      <div class="kpi"><div class="label">Totalt</div><div class="val" id="k-total">–</div></div>
+    <div class="faner" role="tablist" aria-label="Administrasjon">
+      <button type="button" class="fane-btn" id="fane-knapp-bookinger" role="tab" aria-selected="true" aria-controls="fane-bookinger" data-fane="bookinger">Bookinger</button>
+      <button type="button" class="fane-btn" id="fane-knapp-agenda" role="tab" aria-selected="false" aria-controls="fane-agenda" data-fane="agenda">Agenda</button>
+      <button type="button" class="fane-btn" id="fane-knapp-aktiviteter" role="tab" aria-selected="false" aria-controls="fane-aktiviteter" data-fane="aktiviteter">Aktiviteter</button>
+    </div>
+
+    <!-- ============ FANE: BOOKINGER ============ -->
+    <section class="fane-panel aktiv" id="fane-bookinger" role="tabpanel" aria-labelledby="fane-knapp-bookinger">
+      <p class="lead">Alle forespørsler og bookinger. Endre status direkte i listen — kunden kan følge status på «Min side».</p>
+
+      <section class="kpis">
+        <div class="kpi vent"><div class="label">Venter svar</div><div class="val" id="k-forespurt">–</div></div>
+        <div class="kpi"><div class="label">Bekreftet</div><div class="val" id="k-bekreftet">–</div></div>
+        <div class="kpi"><div class="label">Kommende</div><div class="val" id="k-kommende">–</div></div>
+        <div class="kpi"><div class="label">Totalt</div><div class="val" id="k-total">–</div></div>
+      </section>
+
+      <section class="panel">
+        <div class="filtre">
+          <div class="felt sok"><label>Søk (navn, e-post, aktivitet)</label><input type="text" id="sok" placeholder="Søk …"></div>
+          <div class="felt"><label>Status</label>
+            <select id="f-status">
+              <option value="">Alle</option>
+              <option value="forespurt">Venter svar</option>
+              <option value="bekreftet">Bekreftet</option>
+              <option value="fullfort">Fullført</option>
+              <option value="avlyst">Avlyst</option>
+            </select>
+          </div>
+          <div class="felt"><label>Tid</label>
+            <select id="f-tid">
+              <option value="alle">Alle</option>
+              <option value="kommende">Kommende</option>
+              <option value="tidligere">Tidligere</option>
+            </select>
+          </div>
+        </div>
+        <div id="liste"><div class="loading">Laster bookinger …</div></div>
+      </section>
     </section>
 
-    <section class="panel">
-      <div class="filtre">
-        <div class="felt sok"><label>Søk (navn, e-post, aktivitet)</label><input type="text" id="sok" placeholder="Søk …"></div>
-        <div class="felt"><label>Status</label>
-          <select id="f-status">
-            <option value="">Alle</option>
-            <option value="forespurt">Venter svar</option>
-            <option value="bekreftet">Bekreftet</option>
-            <option value="fullfort">Fullført</option>
-            <option value="avlyst">Avlyst</option>
-          </select>
+    <!-- ============ FANE: AGENDA ============ -->
+    <section class="fane-panel" id="fane-agenda" role="tabpanel" aria-labelledby="fane-knapp-agenda" hidden>
+      <p class="lead">Dagens og kommende bookinger. Velg en dato for å se hva som skjer den dagen og fremover.</p>
+
+      <div class="ctrls">
+        <div class="felt">
+          <label for="agenda-dato">Fra dato</label>
+          <input type="date" id="agenda-dato">
         </div>
-        <div class="felt"><label>Tid</label>
-          <select id="f-tid">
-            <option value="alle">Alle</option>
-            <option value="kommende">Kommende</option>
-            <option value="tidligere">Tidligere</option>
-          </select>
-        </div>
+        <button id="agenda-vis">Vis</button>
+        <button id="agenda-idag" class="ghost">I dag</button>
       </div>
-      <div id="liste"><div class="loading">Laster bookinger …</div></div>
+
+      <section class="panel">
+        <h3 id="agenda-tittel">Bookinger</h3>
+        <p class="hint" id="agenda-hint">Laster …</p>
+        <div id="agenda-tabell"></div>
+      </section>
+    </section>
+
+    <!-- ============ FANE: AKTIVITETER ============ -->
+    <section class="fane-panel" id="fane-aktiviteter" role="tabpanel" aria-labelledby="fane-knapp-aktiviteter" hidden>
+      <p class="lead">Administrer aktivitetene som vises på nettsiden. Slett gjør aktiviteten inaktiv (skjult), men beholder historikk i bookinger.</p>
+
+      <div class="akt-topp">
+        <button class="knapp" id="ny-knapp">+ Ny aktivitet</button>
+      </div>
+
+      <div class="akt-melding" id="akt-melding"></div>
+
+      <section class="panel">
+        <div id="liste-omr">
+          <p class="tom" id="laster">Laster aktiviteter…</p>
+        </div>
+      </section>
     </section>
   </main>
 
+  <!-- Skjema-dialog (opprett/rediger aktivitet) -->
+  <div class="akt-overlay" id="akt-overlay">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-tittel">
+      <h2 id="dlg-tittel">Ny aktivitet</h2>
+      <form id="skjema">
+        <input type="hidden" id="f-id">
+        <div class="akt-felt">
+          <label for="f-navn">Navn *</label>
+          <input id="f-navn" type="text" maxlength="200" required autocomplete="off">
+        </div>
+        <div class="akt-felt">
+          <label for="f-slug">Slug *</label>
+          <input id="f-slug" type="text" maxlength="64" autocomplete="off" placeholder="f.eks. fisketur-fjord">
+          <div class="akt-sub">Bare a-z, 0-9 og bindestrek. Brukes i URL.</div>
+        </div>
+        <div class="akt-felt">
+          <label for="f-beskrivelse">Beskrivelse</label>
+          <textarea id="f-beskrivelse" maxlength="2000"></textarea>
+        </div>
+        <div class="akt-rad">
+          <div class="akt-felt">
+            <label for="f-varighet">Varighet</label>
+            <input id="f-varighet" type="text" maxlength="100" autocomplete="off" placeholder="f.eks. 3 timer">
+          </div>
+          <div class="akt-felt">
+            <label for="f-bilde">Bilde (sti/URL)</label>
+            <input id="f-bilde" type="text" maxlength="300" autocomplete="off" placeholder="bilder/…">
+          </div>
+        </div>
+        <div class="akt-rad">
+          <div class="akt-felt">
+            <label for="f-pris">Pris (kr)</label>
+            <input id="f-pris" type="number" min="0" step="1" inputmode="numeric" value="0">
+          </div>
+          <div class="akt-felt">
+            <label for="f-kapasitet">Kapasitet</label>
+            <input id="f-kapasitet" type="number" min="0" step="1" inputmode="numeric" value="0">
+          </div>
+        </div>
+        <div class="dialog-bunn">
+          <button type="button" class="knapp sek" id="avbryt">Avbryt</button>
+          <button type="submit" class="knapp" id="lagre">Lagre</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/booking-status.js"></script>
   <script src="js/bookinger.js"></script>
 </body>
 </html>
