@@ -1213,6 +1213,12 @@
     if ($('eksporter-excel')) $('eksporter-excel').addEventListener('click', eksporterExcel);
     if ($('last-pakke')) $('last-pakke').addEventListener('click', lastPakke);
 
+    // Deep-link: åpne fane fra location.hash (#okonomi, #meldinger, …) hvis den finnes.
+    var hashNavn = (location.hash || '').replace('#', '');
+    if (hashNavn && document.getElementById('pane-' + hashNavn)) {
+      byttFane(hashNavn);
+    }
+
     lastOversikt();
   }
 
