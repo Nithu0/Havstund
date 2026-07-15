@@ -298,15 +298,7 @@
       .opplevelser-swiper .swiper-slide{width:80vw;}
       .kar-knapp{display:none;}
     }
-    /* ---------- Rullende tekst-stripe (marquee) ---------- */
-    .marquee{background:var(--hav-dyp);color:var(--sand);overflow:hidden;white-space:nowrap;}
-    .marquee__spor{display:inline-block;animation:rulle 36s linear infinite;}
-    .marquee__spor span{font-family:'Fraunces',serif;font-size:clamp(1.4rem,3vw,2.3rem);line-height:1;padding:22px 0;display:inline-block;}
-    .marquee__spor b{color:var(--turkis);font-weight:400;margin:0 30px;}
-    .marquee:hover .marquee__spor{animation-play-state:paused;}
-    @keyframes rulle{from{transform:translateX(0);}to{transform:translateX(-50%);}}
     .magnetisk{will-change:transform;transition:transform .25s cubic-bezier(.2,.8,.2,1);}
-    @media(prefers-reduced-motion:reduce){.marquee__spor{animation:none;}}
     /* ---------- 2025: markør, tall, ord-avsløring ---------- */
     .cursor-dot,.cursor-ring{position:fixed;top:0;left:0;border-radius:50%;pointer-events:none;z-index:10000;transform:translate(-50%,-50%);will-change:left,top;}
     .cursor-dot{width:7px;height:7px;background:var(--leire);}
@@ -365,13 +357,6 @@
     <div class="scroll-hint"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></div>
   </div>
   <svg class="bolge" viewBox="0 0 1440 90" preserveAspectRatio="none"><path fill="#f4ede2" d="M0,40 C240,90 480,0 720,40 C960,80 1200,10 1440,45 L1440,90 L0,90 Z"></path></svg>
-
-  <!-- RULLENDE TEKST-STRIPE -->
-  <div class="marquee" aria-hidden="true">
-    <div class="marquee__spor">
-      <span>Et øyeblikk med havet <b>·</b> Kollektivt maleri <b>·</b> Keramikk fra Lofoten <b>·</b> Glasur fra dette havet <b>·</b> Håndlaget på Ballstad <b>·</b> Et øyeblikk med havet <b>·</b> Kollektivt maleri <b>·</b> Keramikk fra Lofoten <b>·</b> Glasur fra dette havet <b>·</b> Håndlaget på Ballstad <b>·</b> </span>
-    </div>
-  </div>
 
   <!-- OPPLEVELSER -->
   <section id="opplevelser">
