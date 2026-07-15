@@ -194,7 +194,7 @@
 
     /* ---------- Havveggen (mosaikk) ---------- */
     .signatur{background:var(--skum);}
-    .signatur-flex{display:grid;grid-template-columns:1.05fr 1fr;gap:50px;align-items:center;}
+    .signatur-flex{max-width:820px;margin:0 auto;}
     .signatur-flex .tekst h2{color:var(--hav-dyp);font-size:clamp(2.5rem,6vw,3.6rem);letter-spacing:-0.02em;margin-bottom:6px;}
     .kollektiv-undertittel{font-family:'Caveat',cursive !important;color:var(--turkis-dyp);font-size:clamp(1.6rem,3.5vw,2.1rem);margin-bottom:22px !important;}
     .seksjon-eyebrow{display:block;font-family:'Inter',sans-serif;text-transform:uppercase;letter-spacing:.2em;font-size:.74rem;color:var(--leire-mork);margin-bottom:14px;font-weight:600;}
@@ -220,10 +220,6 @@
     .pris-liste li{padding:8px 0;border-bottom:1px solid var(--sand-mork);color:var(--tekst);font-size:.97rem;}
     .pris-liste li:last-child{border-bottom:none;}
     .pris-note{font-size:.86rem !important;color:var(--myk);line-height:1.6;}
-    .havvegg-foto{border-radius:20px;overflow:hidden;box-shadow:0 18px 50px rgba(10,79,94,.22);transition:.4s;}
-    .havvegg-foto img{width:100%;height:auto;display:block;transition:.6s;}
-    .havvegg-foto:hover{box-shadow:0 26px 64px rgba(10,79,94,.3);}
-    .havvegg-foto:hover img{transform:scale(1.04);}
     /* Galleri «Fra studioet» */
     .galleri{background:var(--sand);}
     .galleri-grid{display:grid;grid-template-columns:1.5fr 1fr;grid-template-rows:1fr 1fr;gap:14px;height:min(82vh,660px);}
@@ -320,15 +316,19 @@
     .seksjon-bg{position:relative;}
     .seksjon-bg::before{content:"";position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;pointer-events:none;}
     .seksjon-bg > *{position:relative;z-index:1;}
-    /* Lyse seksjoner med mørk tekst — svakt bilde (opacity 0.10–0.13) */
-    #opplevelser::before{background-image:url('bilder/3-havfiske.jpg');opacity:.12;}
-    #signatur::before{background-image:url('bilder/4-hjell.jpg');opacity:.10;}
-    #stats::before{background-image:url('bilder/fjell.jpg');opacity:.12;}
-    #om::before{background-image:url('bilder/1a-havn.jpg');opacity:.12;}
-    #nyheter::before{background-image:url('bilder/5-midnatt.jpg');opacity:.12;}
+    /* Lyse seksjoner med mørk tekst — svakt bilde (opacity ~0.16–0.19).
+       Litt sterkere enn før, men holdt under grensen der mørk tekst blir
+       tung å lese på lys sand-bakgrunn. Tekst-tette seksjoner (#signatur,
+       #nyheter) holdes et hakk lavere enn de luftige. */
+    #opplevelser::before{background-image:url('bilder/3-havfiske.jpg');opacity:.19;}
+    #signatur::before{background-image:url('bilder/havvegg.jpg');opacity:.16;}
+    #stats::before{background-image:url('bilder/fjell.jpg');opacity:.19;}
+    #om::before{background-image:url('bilder/1a-havn.jpg');opacity:.18;}
+    #nyheter::before{background-image:url('bilder/5-midnatt.jpg');opacity:.16;}
     /* Booking — mørk seksjon m/ hvit tekst: bildet ligger bak en mørknende
-       overlay så hvit tekst forblir klart lesbar. */
-    #booking::before{background-image:linear-gradient(rgba(10,39,71,.80),rgba(22,62,102,.80)),url('bilder/nordlys.jpg');opacity:1;}
+       overlay så hvit tekst forblir klart lesbar. Overlay lettet litt (.80→.72)
+       så nordlyset trer tydeligere fram, men hvit tekst forblir klart lesbar. */
+    #booking::before{background-image:linear-gradient(rgba(10,39,71,.72),rgba(22,62,102,.72)),url('bilder/nordlys.jpg');opacity:1;}
   </style>
 </head>
 <body>
@@ -477,12 +477,6 @@
           <p class="pris-note" data-no="Fortell oss hvor mange dere er, så skreddersyr vi opplevelsen og verket for dere." data-en="Tell us how many you are, and we'll tailor the experience and the artwork for you.">Fortell oss hvor mange dere er, så skreddersyr vi opplevelsen og verket for dere.</p>
           <a href="#booking" class="knapp magnetisk" style="margin-top:18px;" data-no="Be om et tilbud" data-en="Request a quote">Be om et tilbud</a>
         </div>
-      </div>
-      <div class="reveal v-hoyre delay-1">
-        <div class="havvegg-foto">
-          <img src="bilder/havvegg.jpg" alt="Havstund Havveggen — håndmalte fliser satt sammen til ett motiv" loading="lazy" />
-        </div>
-        <p class="mosaikk-bildetekst" data-no="Et ekte kollektivt maleri - ett bilde delt i fliser, malt av mange hender." data-en="A real collective painting - one picture split into tiles, painted by many hands.">Et ekte kollektivt maleri - ett bilde delt i fliser, malt av mange hender.</p>
       </div>
     </div>
   </section>
@@ -812,18 +806,6 @@
 
     /* Galleri-lightbox (GLightbox): zoom + sveip mellom bildene */
     if (typeof GLightbox === 'function') { GLightbox({ selector: '.glightbox', loop: true, touchNavigation: true }); }
-
-    /* Lightbox for havvegg-foto (egen dialog) */
-    (function(){
-      var lb=document.getElementById('lightboks');
-      if(!lb) return;
-      var lbImg=document.getElementById('lightboksImg');
-      document.querySelectorAll('.havvegg-foto img').forEach(function(im){
-        im.style.cursor='zoom-in';
-        im.addEventListener('click',function(){ lbImg.src=im.src; lb.showModal(); });
-      });
-      lb.addEventListener('click',function(e){ if(e.target===lb) lb.close(); });
-    })();
 
     /* Magnetiske knapper (følger musa lett) */
     if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
