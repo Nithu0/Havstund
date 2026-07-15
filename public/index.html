@@ -311,6 +311,20 @@
     .stat .etikett{color:var(--myk);margin-top:12px;font-size:.96rem;}
     .ord{display:inline-block;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .55s cubic-bezier(.2,.8,.2,1);}
     .ord.vis{opacity:1;transform:none;}
+
+    /* ---------- Personlige Lofoten-foto-seksjoner (bilde + tekst) ---------- */
+    .foto-tekst{display:grid;grid-template-columns:1fr 1fr;gap:clamp(30px,5vw,64px);align-items:center;margin-bottom:8px;}
+    .foto-tekst-media{border-radius:20px;overflow:hidden;box-shadow:0 18px 50px rgba(10,79,94,.20);}
+    .foto-tekst-media img{width:100%;height:100%;max-height:540px;object-fit:cover;display:block;transition:.6s cubic-bezier(.2,.8,.2,1);}
+    .foto-tekst-media:hover img{transform:scale(1.04);}
+    .foto-tekst-innhold{min-width:0;}
+    /* Bilde til hoyre: media legges etter innhold i visningen paa desktop */
+    .foto-tekst.bilde-hoyre .foto-tekst-media{order:2;}
+    @media(max-width:820px){
+      .foto-tekst{grid-template-columns:1fr;gap:30px;}
+      .foto-tekst.bilde-hoyre .foto-tekst-media{order:0;}
+      .foto-tekst-media img{max-height:320px;}
+    }
   </style>
 </head>
 <body>
@@ -360,8 +374,15 @@
 
   <!-- OPPLEVELSER -->
   <section id="opplevelser">
-    <h2 class="seksjon-tittel reveal" data-no="Opplevelser" data-en="Experiences">Opplevelser</h2>
-    <p class="seksjon-undertekst reveal delay-1" data-no="Senk skuldrene, glem klokka, og skap noe med hendene mens lyset står inn over havet." data-en="Drop your shoulders, forget the clock, and make something by hand while the light pours in over the sea.">Senk skuldrene, glem klokka, og skap noe med hendene mens lyset står inn over havet.</p>
+    <div class="foto-tekst bilde-hoyre">
+      <div class="foto-tekst-media reveal v-hoyre">
+        <img src="bilder/3-havfiske.jpg" alt="Havfiske i Lofoten — en fiskebåt på havet i det klare nordlyset" loading="lazy" />
+      </div>
+      <div class="foto-tekst-innhold">
+        <h2 class="seksjon-tittel reveal" style="text-align:left;" data-no="Opplevelser" data-en="Experiences">Opplevelser</h2>
+        <p class="seksjon-undertekst reveal delay-1" style="text-align:left;margin:0;" data-no="Senk skuldrene, glem klokka, og skap noe med hendene mens lyset står inn over havet." data-en="Drop your shoulders, forget the clock, and make something by hand while the light pours in over the sea.">Senk skuldrene, glem klokka, og skap noe med hendene mens lyset står inn over havet.</p>
+      </div>
+    </div>
     <div class="kar-wrap reveal delay-1">
       <button class="kar-knapp prev" aria-label="forrige">‹</button>
       <div class="swiper opplevelser-swiper"><div class="swiper-wrapper">
@@ -494,21 +515,35 @@
 
   <!-- OM OSS -->
   <section id="om" class="om full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
-    <h2 class="seksjon-tittel reveal" data-no="Om oss" data-en="About us">Om oss</h2>
-    <p class="reveal delay-1" data-no="Havstund drives av to unge gründere — begge jordmødre i Lofoten. Den ene jobber med keramikk, den andre med kunst og maling." data-en="Havstund is run by two young founders — both midwives in Lofoten. One works with ceramics, the other with art and painting.">Havstund drives av to unge gründere — begge jordmødre i Lofoten. Den ene jobber med keramikk, den andre med kunst og maling.</p>
-    <p class="reveal delay-1" data-no="At det nettopp er to jordmødre som står bak er ikke tilfeldig: til daglig tar de imot nytt liv her i Lofoten, og nå vil de gi barna og gjestene her en annen type omsorg — gleden og mestringen ved å skape noe ekte med egne hender." data-en="That two midwives are behind it is no coincidence: every day they welcome new life here in Lofoten, and now they want to give the children and guests here a different kind of care — the joy and mastery of making something real with your own hands.">At det nettopp er to jordmødre som står bak er ikke tilfeldig: til daglig tar de imot nytt liv her i Lofoten, og nå vil de gi barna og gjestene her en annen type omsorg — gleden og mestringen ved å skape noe ekte med egne hender.</p>
-    <p class="sitat reveal delay-2" data-no="«Vi er det første stedet i Lofoten med et helårs keramikk- og kunsttilbud — og vi er her for å bli.»" data-en="“We are the first place in Lofoten with a year-round ceramics and art offering — and we are here to stay.”">«Vi er det første stedet i Lofoten med et helårs keramikk- og kunsttilbud — og vi er her for å bli.»</p>
+    <div class="foto-tekst">
+      <div class="foto-tekst-media reveal v-venstre">
+        <img src="bilder/1a-havn.jpg" alt="Havna på Ballstad i Lofoten — båter og rorbuer under fjellene" loading="lazy" />
+      </div>
+      <div class="foto-tekst-innhold" style="text-align:left;">
+        <h2 class="seksjon-tittel reveal" style="text-align:left;" data-no="Om oss" data-en="About us">Om oss</h2>
+        <p class="reveal delay-1" style="margin-left:0;margin-right:0;" data-no="Havstund drives av to unge gründere — begge jordmødre i Lofoten. Den ene jobber med keramikk, den andre med kunst og maling." data-en="Havstund is run by two young founders — both midwives in Lofoten. One works with ceramics, the other with art and painting.">Havstund drives av to unge gründere — begge jordmødre i Lofoten. Den ene jobber med keramikk, den andre med kunst og maling.</p>
+        <p class="reveal delay-1" style="margin-left:0;margin-right:0;" data-no="At det nettopp er to jordmødre som står bak er ikke tilfeldig: til daglig tar de imot nytt liv her i Lofoten, og nå vil de gi barna og gjestene her en annen type omsorg — gleden og mestringen ved å skape noe ekte med egne hender." data-en="That two midwives are behind it is no coincidence: every day they welcome new life here in Lofoten, and now they want to give the children and guests here a different kind of care — the joy and mastery of making something real with your own hands.">At det nettopp er to jordmødre som står bak er ikke tilfeldig: til daglig tar de imot nytt liv her i Lofoten, og nå vil de gi barna og gjestene her en annen type omsorg — gleden og mestringen ved å skape noe ekte med egne hender.</p>
+        <p class="sitat reveal delay-2" style="margin-left:0;margin-right:0;" data-no="«Vi er det første stedet i Lofoten med et helårs keramikk- og kunsttilbud — og vi er her for å bli.»" data-en="“We are the first place in Lofoten with a year-round ceramics and art offering — and we are here to stay.”">«Vi er det første stedet i Lofoten med et helårs keramikk- og kunsttilbud — og vi er her for å bli.»</p>
+      </div>
+    </div>
   </div></section>
 
   <!-- NYHETER -->
   <section id="nyheter" class="nyheter full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
-    <h2 class="seksjon-tittel reveal" data-no="Nyheter" data-en="News">Nyheter</h2>
-    <p id="nyheterIntro" class="seksjon-undertekst reveal delay-1" data-no="Her legger vi ut alt nytt til dere — nyeste øverst." data-en="Here we post everything new — newest on top.">Her legger vi ut alt nytt til dere — nyeste øverst.</p>
-    <div style="max-width:780px;margin:0 auto;">
+    <div class="foto-tekst bilde-hoyre">
+      <div class="foto-tekst-media reveal v-hoyre">
+        <img src="bilder/5-midnatt.jpg" alt="Midnattssol over havet i Lofoten — det gylne nattlyset om sommeren" loading="lazy" />
+      </div>
+      <div class="foto-tekst-innhold">
+    <h2 class="seksjon-tittel reveal" style="text-align:left;" data-no="Nyheter" data-en="News">Nyheter</h2>
+    <p id="nyheterIntro" class="seksjon-undertekst reveal delay-1" style="text-align:left;margin-left:0;margin-right:0;" data-no="Her legger vi ut alt nytt til dere — nyeste øverst." data-en="Here we post everything new — newest on top.">Her legger vi ut alt nytt til dere — nyeste øverst.</p>
+    <div style="max-width:780px;margin:0;">
       <div class="nyhet reveal">
         <div class="dato" data-no="Eksempel" data-en="Example">Eksempel</div>
         <h3 data-no="Barneklubben starter til høsten" data-en="The Kids' Club starts this autumn">Barneklubben starter til høsten</h3>
         <p data-no="Skriv den ekte nyheten her når dere er klare." data-en="Write the real news here when you're ready.">Skriv den ekte nyheten her når dere er klare.</p>
+      </div>
+    </div>
       </div>
     </div>
   </div></section>
