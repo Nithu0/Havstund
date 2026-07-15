@@ -159,7 +159,7 @@
     /* Opplevelser-karusell (Swiper) */
     .opplevelser-swiper{counter-reset:kort;padding:6px 4px 30px;}
     .opplevelser-swiper .swiper-slide{width:320px;height:auto;}
-    .kort{position:relative;height:100%;background:var(--skum);border-radius:20px;padding:42px 34px 36px;box-shadow:0 10px 36px rgba(10,79,94,.07);border:1px solid var(--sand-mork);transition:.35s cubic-bezier(.2,.8,.2,1);}
+    .kort{position:relative;height:100%;background:rgba(251,248,241,.74);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:20px;padding:42px 34px 36px;box-shadow:0 10px 36px rgba(10,79,94,.07);border:1px solid var(--sand-mork);transition:.35s cubic-bezier(.2,.8,.2,1);}
     .kort::before{counter-increment:kort;content:counter(kort,decimal-leading-zero);display:block;font-family:'Fraunces',serif;font-size:.9rem;color:var(--leire);letter-spacing:.18em;margin-bottom:16px;}
     .kort:hover{transform:translateY(-8px);box-shadow:0 20px 44px rgba(10,79,94,.16);}
     .kort .ikon{font-size:2.3rem;margin-bottom:14px;}
@@ -320,18 +320,33 @@
     .seksjon-bg{position:relative;}
     .seksjon-bg::before{content:"";position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;pointer-events:none;}
     .seksjon-bg > *{position:relative;z-index:1;}
-    /* Lyse seksjoner med mørk tekst — svakt bilde (opacity ~0.16–0.19).
-       Litt sterkere enn før, men holdt under grensen der mørk tekst blir
-       tung å lese på lys sand-bakgrunn. Tekst-tette seksjoner (#signatur,
-       #nyheter) holdes et hakk lavere enn de luftige. */
-    #opplevelser::before{background-image:url('bilder/3-havfiske.jpg');opacity:.19;}
-    #stats::before{background-image:url('bilder/fjell.jpg');opacity:.19;}
-    #om::before{background-image:url('bilder/1a-havn.jpg');opacity:.18;}
-    #nyheter::before{background-image:url('bilder/5-midnatt.jpg');opacity:.16;}
+    /* Lyse seksjoner med mørk tekst — TYDELIG synlige bilder (opacity ~0.30–0.34).
+       Bildene skal klart kunne sees bak innholdet; lesbarheten sikres av
+       frostede kort/paneler + en lys tekst-halo på tekst som ligger direkte
+       over bildet (se lesbarhets-regelen lenger ned). Tekst-tettere seksjoner
+       (#om, #nyheter) holdes et hakk lavere (~0.30) enn de luftige (~0.34). */
+    #opplevelser::before{background-image:url('bilder/3-havfiske.jpg');opacity:.34;}
+    #stats::before{background-image:url('bilder/fjell.jpg');opacity:.34;}
+    #om::before{background-image:url('bilder/1a-havn.jpg');opacity:.30;}
+    #nyheter::before{background-image:url('bilder/5-midnatt.jpg');opacity:.30;}
     /* Booking — mørk seksjon m/ hvit tekst: bildet ligger bak en mørknende
-       overlay så hvit tekst forblir klart lesbar. Overlay lettet litt (.80→.72)
-       så nordlyset trer tydeligere fram, men hvit tekst forblir klart lesbar. */
-    #booking::before{background-image:linear-gradient(rgba(10,39,71,.72),rgba(22,62,102,.72)),url('bilder/nordlys.jpg');opacity:1;}
+       overlay så hvit tekst forblir klart lesbar. Overlay lettet ytterligere
+       (.72→.60) så nordlyset trer tydelig fram; hvit tekst holdes skarp av
+       en myk mørk text-shadow (se lesbarhets-regelen). */
+    #booking::before{background-image:linear-gradient(rgba(10,39,71,.60),rgba(22,62,102,.60)),url('bilder/nordlys.jpg');opacity:1;}
+    /* ---------- Lesbarhet: tekst direkte over de sterkere bildene ---------- */
+    /* Mørk tekst som ligger DIREKTE over bildet (seksjons-titler, introtekst,
+       Om-oss-avsnitt, stat-tall) får en myk lys halo (sand-farget text-shadow)
+       så teksten forblir skarp uten å skjule bildet bak. Tekst med eget
+       ugjennomsiktig/frostet panel (.kort, .nyhet) trenger det ikke. */
+    #opplevelser .seksjon-tittel,#opplevelser .seksjon-undertekst,
+    #stats .seksjon-tittel,#stats .stat,
+    #om .seksjon-tittel,#om p,
+    #nyheter .seksjon-tittel,#nyheter #nyheterIntro{
+      text-shadow:0 1px 10px rgba(244,237,226,.95),0 0 4px rgba(251,248,241,.85);}
+    /* Booking: hvit tekst på lettet mørk overlay — myk mørk halo holder den skarp. */
+    #booking .seksjon-tittel,#booking .seksjon-undertekst{
+      text-shadow:0 1px 12px rgba(6,20,40,.55);}
   </style>
 </head>
 <body>
