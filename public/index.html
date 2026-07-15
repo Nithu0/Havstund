@@ -313,17 +313,17 @@
     .ord.vis{opacity:1;transform:none;}
 
     /* ---------- Personlige Lofoten-foto-seksjoner (bilde + tekst) ---------- */
-    .foto-tekst{display:grid;grid-template-columns:1fr 1fr;gap:clamp(30px,5vw,64px);align-items:center;margin-bottom:8px;}
-    .foto-tekst-media{border-radius:20px;overflow:hidden;box-shadow:0 18px 50px rgba(10,79,94,.20);}
-    .foto-tekst-media img{width:100%;height:100%;max-height:540px;object-fit:cover;display:block;transition:.6s cubic-bezier(.2,.8,.2,1);}
-    .foto-tekst-media:hover img{transform:scale(1.04);}
-    .foto-tekst-innhold{min-width:0;}
-    /* Bilde til hoyre: media legges etter innhold i visningen paa desktop */
+    /* Stort «band»-bilde i full bredde, med teksten stablet over/under. */
+    .foto-tekst{display:grid;grid-template-columns:1fr;gap:clamp(22px,3.4vw,42px);margin-bottom:8px;}
+    .foto-tekst-media{border-radius:20px;overflow:hidden;box-shadow:0 6px 16px rgba(10,79,94,.10),0 16px 34px rgba(10,79,94,.12),0 32px 64px rgba(10,79,94,.14);}
+    .foto-tekst-media img{width:100%;max-width:100%;height:clamp(340px,44vw,600px);object-fit:cover;object-position:center;display:block;transition:.7s cubic-bezier(.2,.8,.2,1);}
+    .foto-tekst-media:hover img{transform:scale(1.03);}
+    .foto-tekst-innhold{min-width:0;max-width:960px;}
+    /* Subtil veksling: standard = stort bilde over teksten, bilde-hoyre = stort bilde under teksten */
     .foto-tekst.bilde-hoyre .foto-tekst-media{order:2;}
     @media(max-width:820px){
-      .foto-tekst{grid-template-columns:1fr;gap:30px;}
-      .foto-tekst.bilde-hoyre .foto-tekst-media{order:0;}
-      .foto-tekst-media img{max-height:320px;}
+      .foto-tekst{gap:22px;}
+      .foto-tekst-media img{height:clamp(230px,58vw,360px);}
     }
   </style>
 </head>
