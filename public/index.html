@@ -326,9 +326,6 @@
        over bildet (se lesbarhets-regelen lenger ned). Tekst-tettere seksjoner
        (#om, #nyheter) holdes et hakk lavere (~0.30) enn de luftige (~0.34). */
     #opplevelser::before{background-image:url('bilder/3-havfiske.jpg');opacity:.34;}
-    #stats::before{background-image:url('bilder/fjell.jpg');opacity:.34;}
-    #om::before{background-image:url('bilder/1a-havn.jpg');opacity:.30;}
-    #nyheter::before{background-image:url('bilder/5-midnatt.jpg');opacity:.30;}
     /* Booking — mørk seksjon m/ hvit tekst: bildet ligger bak en mørknende
        overlay så hvit tekst forblir klart lesbar. Overlay lettet ytterligere
        (.72→.60) så nordlyset trer tydelig fram; hvit tekst holdes skarp av
@@ -339,10 +336,7 @@
        Om-oss-avsnitt, stat-tall) får en myk lys halo (sand-farget text-shadow)
        så teksten forblir skarp uten å skjule bildet bak. Tekst med eget
        ugjennomsiktig/frostet panel (.kort, .nyhet) trenger det ikke. */
-    #opplevelser .seksjon-tittel,#opplevelser .seksjon-undertekst,
-    #stats .seksjon-tittel,#stats .stat,
-    #om .seksjon-tittel,#om p,
-    #nyheter .seksjon-tittel,#nyheter #nyheterIntro{
+    #opplevelser .seksjon-tittel,#opplevelser .seksjon-undertekst{
       text-shadow:0 1px 10px rgba(244,237,226,.95),0 0 4px rgba(251,248,241,.85);}
     /* Booking: hvit tekst på lettet mørk overlay — myk mørk halo holder den skarp. */
     #booking .seksjon-tittel,#booking .seksjon-undertekst{
@@ -517,7 +511,7 @@
   </div></section>
 
   <!-- STATS / TELLENDE TALL -->
-  <section id="stats" class="stats full seksjon-bg"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
+  <section id="stats" class="stats full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
     <h2 class="seksjon-tittel ordvis" data-no="Havstund i tall" data-en="Havstund in numbers">Havstund i tall</h2>
     <div class="seksjon-undertekst reveal delay-1" style="margin-bottom:48px;">&nbsp;</div>
     <div class="stats-grid">
@@ -529,7 +523,7 @@
   </div></section>
 
   <!-- OM OSS -->
-  <section id="om" class="om full seksjon-bg"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
+  <section id="om" class="om full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
     <h2 class="seksjon-tittel reveal" data-no="Om oss" data-en="About us">Om oss</h2>
     <p class="reveal delay-1" data-no="Havstund drives av to unge gründere — begge jordmødre i Lofoten. Den ene jobber med keramikk, den andre med kunst og maling." data-en="Havstund is run by two young founders — both midwives in Lofoten. One works with ceramics, the other with art and painting.">Havstund drives av to unge gründere — begge jordmødre i Lofoten. Den ene jobber med keramikk, den andre med kunst og maling.</p>
     <p class="reveal delay-1" data-no="At det nettopp er to jordmødre som står bak er ikke tilfeldig: til daglig tar de imot nytt liv her i Lofoten, og nå vil de gi barna og gjestene her en annen type omsorg — gleden og mestringen ved å skape noe ekte med egne hender." data-en="That two midwives are behind it is no coincidence: every day they welcome new life here in Lofoten, and now they want to give the children and guests here a different kind of care — the joy and mastery of making something real with your own hands.">At det nettopp er to jordmødre som står bak er ikke tilfeldig: til daglig tar de imot nytt liv her i Lofoten, og nå vil de gi barna og gjestene her en annen type omsorg — gleden og mestringen ved å skape noe ekte med egne hender.</p>
@@ -537,7 +531,7 @@
   </div></section>
 
   <!-- NYHETER -->
-  <section id="nyheter" class="nyheter full seksjon-bg"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
+  <section id="nyheter" class="nyheter full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
     <h2 class="seksjon-tittel reveal" data-no="Nyheter" data-en="News">Nyheter</h2>
     <p id="nyheterIntro" class="seksjon-undertekst reveal delay-1" data-no="Her legger vi ut alt nytt til dere — nyeste øverst." data-en="Here we post everything new — newest on top.">Her legger vi ut alt nytt til dere — nyeste øverst.</p>
     <div style="max-width:780px;margin:0 auto;">
