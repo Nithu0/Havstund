@@ -21,7 +21,7 @@
     "@anthropic-ai/sdk": "0.65.0",
     "pg": "8.13.1",
     "pino": "9.5.0",
-    "undici": "7.28.0",
+    "undici": "7.29.0",
     "zod": "3.25.76"
   },
   "devDependencies": {
