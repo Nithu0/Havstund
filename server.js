@@ -11,6 +11,7 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 const cookieParser = require('cookie-parser');
+const compression = require('compression');
 const { Server } = require('socket.io');
 
 const db = require('./db');
@@ -22,6 +23,16 @@ const sentry = require('./lib/sentry');
 
 const app = express();
 applySecurity(app); // helmet + rate limiting — før body-parsere og ruter
+
+// gzip på alt tekstlig. Målt 2026-08-07: forsiden ble sendt HELT ukomprimert
+// (Content-Encoding manglet, 67 770 bytes på tråden) — Railway sin proxy
+// komprimerer ikke for oss, og express.static gjør det ikke selv. index.html er
+// én selvstendig fil med all CSS og JS inline, så den komprimerer ekstremt godt:
+// ~68 KB -> ~19 KB. Det er mer spart enn noe bibliotek vi vurderte ville lagt til.
+// Må stå FØR express.static og før rutene, ellers rekker svaret å bli sendt
+// uten å passere her. Bilder (jpg/png) hoppes over av compression selv — de er
+// allerede komprimerte formater.
+app.use(compression());
 
 // Strukturert request-logging (pino-http). Etter applySecurity, før ruter,
 // slik at hver request får req.log + automatisk request/response-logg.
