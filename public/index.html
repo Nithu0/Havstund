@@ -257,11 +257,25 @@
     .galleri-item:first-child{grid-row:1 / span 2;}
     @media(max-width:700px){.galleri-grid{grid-template-columns:1fr;grid-template-rows:none;height:auto;}.galleri-item{aspect-ratio:1;}.galleri-item:first-child{grid-row:auto;}}
     .galleri-item{position:relative;display:block;text-decoration:none;border-radius:18px;overflow:hidden;box-shadow:0 12px 36px rgba(10,79,94,.14);cursor:pointer;}
-    .galleri-item img{width:100%;height:100%;object-fit:cover;display:block;filter:saturate(1.1) contrast(1.05);transition:.55s;}
-    .galleri-item:hover img{transform:scale(1.08);}
-    .galleri-item .overlegg{position:absolute;inset:0;display:flex;align-items:flex-end;padding:20px;background:linear-gradient(to top,rgba(4,34,43,.82),transparent 55%);opacity:0;transition:.4s;}
-    .galleri-item:hover .overlegg{opacity:1;}
-    .galleri-item .overlegg span{color:#fff;font-family:'Caveat',cursive;font-size:1.5rem;line-height:1.2;}
+    /* Fargefilteret (saturate 1.1 / contrast 1.05) er FJERNET 2026-08-07.
+       Det gradet keramikken mot en annen farge enn den faktisk har — og for et
+       verksted som selger glasurer er fargen produktet. Materialærlighet foran
+       stilisering. transition er også smalnet fra "alt" til transform, ellers
+       animeres box-shadow og filter i samme slengen. */
+    .galleri-item img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .55s cubic-bezier(.2,.8,.2,1);}
+    .galleri-item:hover img{transform:scale(1.06);}
+    /* Bildeteksten er ALLTID synlig, ikke bare ved hover. En hover-tekst finnes
+       ikke på telefon — der så halvparten av besøkende aldri hva bildet var.
+       Satt som galleriskilt (versaler, 0.18em, liten grad) i stedet for
+       håndskrift: det er slik gallerier og museer skriver, og det leser som
+       dokumentasjon i stedet for dekor. */
+    .galleri-item .overlegg{position:absolute;inset:0;display:flex;align-items:flex-end;padding:20px;
+      background:linear-gradient(to top,rgba(4,34,43,.78),transparent 48%);}
+    .galleri-item .overlegg > div{display:flex;flex-direction:column;gap:3px;}
+    .galleri-item .overlegg .g-tittel{color:#fff;font-family:'Inter',sans-serif;text-transform:uppercase;
+      letter-spacing:.18em;font-size:.72rem;font-weight:600;line-height:1.3;}
+    .galleri-item .overlegg .g-detalj{color:rgba(255,255,255,.74);font-family:'Inter',sans-serif;
+      font-size:.76rem;line-height:1.4;}
     /* Lightbox */
     #lightboks{border:none;padding:0;background:transparent;max-width:96vw;max-height:96vh;}
     #lightboks::backdrop{background:rgba(6,45,56,.93);backdrop-filter:blur(5px);}
@@ -335,12 +349,8 @@
       .kar-knapp{display:none;}
     }
     .magnetisk{will-change:transform;transition:transform .25s cubic-bezier(.2,.8,.2,1);}
-    /* ---------- 2025: markør, tall, ord-avsløring ---------- */
-    .cursor-dot,.cursor-ring{position:fixed;top:0;left:0;border-radius:50%;pointer-events:none;z-index:10000;transform:translate(-50%,-50%);will-change:left,top;}
-    .cursor-dot{width:7px;height:7px;background:var(--leire);}
-    .cursor-ring{width:34px;height:34px;border:1.5px solid var(--turkis-dyp);transition:width .25s,height .25s,background .25s;}
-    .cursor-ring.hover{width:58px;height:58px;background:rgba(21,179,187,.12);}
-    @media(hover:none),(pointer:coarse){.cursor-dot,.cursor-ring{display:none;}}
+    /* ---------- Tall + ord-avsløring ---------- */
+    /* (markør-CSS fjernet 2026-08-07 sammen med effekten) */
     .stats{background:var(--skum);}
     .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:34px;text-align:center;}
     .stat .tall{font-family:'Fraunces',serif;font-size:clamp(2.8rem,6vw,4.2rem);color:var(--turkis-dyp);line-height:1;letter-spacing:-0.02em;}
@@ -381,13 +391,11 @@
 </head>
 <body>
 
-  <div class="cursor-dot"></div>
-  <div class="cursor-ring"></div>
 
   <header>
     <nav>
       <a href="#" class="logo" style="text-decoration:none;display:flex;align-items:center;">
-        <img src="bilder/wordmark.png" alt="Havstund" class="logo-wordmark" />
+        <img src="bilder/wordmark.png" width="1013" height="161" alt="Havstund" class="logo-wordmark" />
       </a>
       <div class="meny">
         <a href="#opplevelser" data-no="Opplevelser" data-en="Experiences">Opplevelser</a>
@@ -414,7 +422,7 @@
     <div class="hero-bg" aria-hidden="true"></div>
     <div class="hero-inner">
       <div class="liten reveal" data-no="Keramikk- og kunststudio · Ballstad, Lofoten" data-en="Ceramics & art studio · Ballstad, Lofoten">Keramikk- og kunststudio · Ballstad, Lofoten</div>
-      <h1 class="reveal delay-1"><img src="bilder/wordmark.png" alt="Havstund" class="hero-wordmark"></h1>
+      <h1 class="reveal delay-1"><img src="bilder/wordmark.png" width="1013" height="161" alt="Havstund" class="hero-wordmark" fetchpriority="high"></h1>
       <div id="heroSitat" class="tagline reveal delay-1" data-no="Et øyeblikk med havet" data-en="A moment with the sea">Et øyeblikk med havet</div>
       <p class="reveal delay-2" data-no="Lag noe ekte av Lofoten med dine egne hender — og ta med deg hjem noe som varer, og en følelse du aldri glemmer." data-en="Create something real from Lofoten with your own hands — and bring home something that lasts, and a feeling you'll never forget.">Lag noe ekte av Lofoten med dine egne hender — og ta med deg hjem noe som varer, og en følelse du aldri glemmer.</p>
       <a href="#booking" class="knapp magnetisk reveal delay-3" data-no="Book en opplevelse" data-en="Book an experience">Book en opplevelse</a>
@@ -527,7 +535,7 @@
       </div>
       <div class="reveal v-hoyre delay-1">
         <div class="havvegg-foto">
-          <img src="bilder/havvegg.jpg" alt="Havstund Havveggen — håndmalte fliser satt sammen til ett motiv" loading="lazy" />
+          <img src="bilder/havvegg.jpg" width="662" height="1040" alt="Havstund Havveggen — håndmalte fliser satt sammen til ett motiv" loading="lazy" decoding="async" />
         </div>
         <p class="mosaikk-bildetekst" data-no="Et ekte kollektivt maleri - ett bilde delt i fliser, malt av mange hender." data-en="A real collective painting - one picture split into tiles, painted by many hands.">Et ekte kollektivt maleri - ett bilde delt i fliser, malt av mange hender.</p>
       </div>
@@ -539,9 +547,9 @@
     <h2 class="seksjon-tittel reveal" data-no="Fra studioet" data-en="From the studio">Fra studioet</h2>
     <p class="seksjon-undertekst reveal delay-1" data-no="Smakebiter på det som skapes hos Havstund — glasur fra dette havet, i hver eneste form." data-en="A glimpse of what's created at Havstund — glaze from this sea, in every single piece.">Smakebiter på det som skapes hos Havstund — glasur fra dette havet, i hver eneste form.</p>
     <div class="galleri-grid">
-      <a class="galleri-item reveal" href="bilder/keramikk1.jpg"><img src="bilder/keramikk1.jpg" alt="Keramikk-kopp med galakse-glasur" loading="lazy" /><div class="overlegg"><span data-no="Galakse-koppen" data-en="The galaxy cup">Galakse-koppen</span></div></a>
-      <a class="galleri-item reveal delay-1" href="bilder/keramikk2.jpg"><img src="bilder/keramikk2.jpg" alt="Turkise keramikk-tallerkener" loading="lazy" /><div class="overlegg"><span data-no="Havturkis servise" data-en="Sea-turquoise tableware">Havturkis servise</span></div></a>
-      <a class="galleri-item reveal delay-2" href="bilder/havvegg.jpg"><img src="bilder/havvegg.jpg" alt="Havveggen — håndmalte fliser" loading="lazy" /><div class="overlegg"><span data-no="Havveggen" data-en="The Sea Wall">Havveggen</span></div></a>
+      <a class="galleri-item reveal" href="bilder/keramikk1.jpg"><img src="bilder/keramikk1.jpg" width="640" height="640" alt="Keramikk-kopp med galakse-glasur" loading="lazy" decoding="async" /><div class="overlegg"><div><span class="g-tittel" data-no="Galakse-koppen" data-en="The galaxy cup">Galakse-koppen</span><span class="g-detalj" data-no="Håndlaget keramikk · galakse-glasur" data-en="Hand-thrown ceramics · galaxy glaze">Håndlaget keramikk · galakse-glasur</span></div></div></a>
+      <a class="galleri-item reveal delay-1" href="bilder/keramikk2.jpg"><img src="bilder/keramikk2.jpg" width="640" height="640" alt="Turkise keramikk-tallerkener" loading="lazy" decoding="async" /><div class="overlegg"><div><span class="g-tittel" data-no="Havturkis servise" data-en="Sea-turquoise tableware">Havturkis servise</span><span class="g-detalj" data-no="Håndlaget keramikk · dreide tallerkener" data-en="Hand-thrown ceramics · turned plates">Håndlaget keramikk · dreide tallerkener</span></div></div></a>
+      <a class="galleri-item reveal delay-2" href="bilder/havvegg.jpg"><img src="bilder/havvegg.jpg" width="662" height="1040" alt="Havveggen — håndmalte fliser" loading="lazy" decoding="async" /><div class="overlegg"><div><span class="g-tittel" data-no="Havveggen" data-en="The Sea Wall">Havveggen</span><span class="g-detalj" data-no="Håndmalte fliser satt sammen til ett motiv" data-en="Hand-painted tiles assembled into one motif">Håndmalte fliser satt sammen til ett motiv</span></div></div></a>
     </div>
   </div></section>
 
@@ -646,7 +654,7 @@
   </section>
 
   <footer>
-    <img src="bilder/wordmark.png" alt="Havstund" class="footer-wordmark" />
+    <img src="bilder/wordmark.png" width="1013" height="161" alt="Havstund" class="footer-wordmark" loading="lazy" decoding="async" />
     <p data-no="Et øyeblikk med havet · Ballstad, Lofoten" data-en="A moment with the sea · Ballstad, Lofoten">Et øyeblikk med havet · Ballstad, Lofoten</p>
     <p style="margin-top:6px;">post@havstund.no · 000 00 000</p>
     <p style="margin-top:10px;">
@@ -661,31 +669,20 @@
     <img alt="" id="lightboksImg" />
   </dialog>
 
-  <!-- Lenis: myk, premium scrolling (github.com/darkroomengineering/lenis · 14k★ · MIT) -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lenis@1/dist/lenis.css">
-  <script src="https://cdn.jsdelivr.net/npm/lenis@1/dist/lenis.min.js"></script>
+  <!-- Lenis fjernet 2026-08-07 (18,7 KB). Den overstyrte hjulscrolling med en
+       JS-løkke som kjørte hver frame så lenge siden var åpen. En kommentar i
+       koden påsto allerede at den var fjernet ("bruker naturlig, rask
+       scrolling") mens biblioteket lå og kjørte — den løgnen er borte nå.
+       Ankerlenker håndteres av `html{scroll-behavior:smooth}` (95 % støtte).
+       Med dette laster siden INGEN tredjeparts-JS lenger. -->
   <!-- Swiper fjernet 2026-08-07 (48 KB for én karusell) — erstattet av CSS scroll-snap.
        GLightbox fjernet samme dag (18 KB) — siden hadde TO lightbox-systemer for fire
        bilder til sammen; den native <dialog id="lightboks"> nedenfor dekker begge. -->
 
   <script>
-    /* ---- Myk scrolling (Lenis) — gjør hele forsiden rolig og premium ---- */
-    (function(){
-      if (typeof Lenis !== 'function') return;
-      var lenis = new Lenis({ duration: 1.1, smoothWheel: true });
-      function raf(t){ lenis.raf(t); requestAnimationFrame(raf); }
-      requestAnimationFrame(raf);
-      // Ankerlenker (#booking osv.) scroller mykt i stedet for å hoppe
-      document.querySelectorAll('a[href^="#"]').forEach(function(a){
-        a.addEventListener('click', function(e){
-          var id = a.getAttribute('href');
-          if (id && id.length > 1) {
-            var el = document.querySelector(id);
-            if (el) { e.preventDefault(); lenis.scrollTo(el, { offset: -10 }); }
-          }
-        });
-      });
-    })();
+    /* Lenis-oppsettet fjernet 2026-08-07 sammen med biblioteket. Ankerlenker
+       scroller nå via `html{scroll-behavior:smooth}` — nettleserens egen, på
+       kompositoren, uten en rAF-løkke som går resten av besøket. */
 
     /* ---- Opplevelser-karusell — pilknappene scroller den native scrolleren.
            Selve karusellen er ren CSS (scroll-snap); dette er kun pilene. ---- */
@@ -961,24 +958,15 @@
       });
     }
 
-    /* (Lenis myk-scroll fjernet - bruker naturlig, rask scrolling) */
-
-    /* ===== 2025-effekter ===== */
     var redusert = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    /* Egendefinert markør (myk ring som følger musa) */
-    (function(){
-      if(redusert || window.matchMedia('(pointer:coarse)').matches) return;
-      var dot=document.querySelector('.cursor-dot'), ring=document.querySelector('.cursor-ring');
-      if(!dot||!ring) return;
-      var mx=0,my=0,rx=0,ry=0;
-      window.addEventListener('mousemove',function(e){mx=e.clientX;my=e.clientY;dot.style.left=mx+'px';dot.style.top=my+'px';});
-      (function loop(){rx+=(mx-rx)*0.18;ry+=(my-ry)*0.18;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(loop);})();
-      document.querySelectorAll('a,button,.kort,.galleri-item').forEach(function(el){
-        el.addEventListener('mouseenter',function(){ring.classList.add('hover');});
-        el.addEventListener('mouseleave',function(){ring.classList.remove('hover');});
-      });
-    })();
+    /* Egendefinert markør FJERNET 2026-08-07.
+       Den animerte `left`/`top` — layout-egenskaper — i en rAF-løkke som aldri
+       stoppet, altså layout + maling hver frame så lenge fanen var åpen.
+       `will-change:left,top` var virkningsløst; will-change kan ikke løfte
+       layout-egenskaper til kompositoren. Den kunne vært fikset med transform,
+       men ble fjernet i stedet: en ring som følger musa er et byrå-triks fra
+       2021, ikke "den stille stunden ved havet". */
 
     /* (Parallax fjernet for jevn scrolling) */
 
@@ -1029,7 +1017,10 @@
   </script>
 
   <!-- Live chat + realtime (fra plattformen) -->
-  <script src="/socket.io/socket.io.js"></script>
+  <!-- defer lagt til 2026-08-07: denne blokkerte parsingen. chat-widget.js under
+       har defer fra før, og deferrede skript kjører i rekkefølge, så avhengigheten
+       holder. -->
+  <script src="/socket.io/socket.io.js" defer></script>
   <script src="js/chat-widget.js" defer></script>
 </body>
 </html>
