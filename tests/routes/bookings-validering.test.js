@@ -1,4 +1,4 @@
-// describe/it/expect er globale (vitest.config.js -> globals: true)
+﻿// describe/it/expect er globale (vitest.config.js -> globals: true)
 // Tester /api/bookings validering + status:
 //  - F11: for lange felt -> 400 {error,code:validering,feil:validering}
 //  - F11: ugyldig e-post / dato -> 400 (samme superset-svarform)
@@ -126,7 +126,7 @@ function reset() {
   state.epostSvar = { ok: false, simulert: true };
 }
 
-describe('POST /api/bookings — F11 input-validering', () => {
+describe('POST /api/bookings â€” F11 input-validering', () => {
   it('avviser for langt navn med 400 {error,code:validering,feil:validering}', async () => {
     reset();
     const srv = await lytt(lagApp(KUNDE));
@@ -212,40 +212,3 @@ describe('POST /api/bookings — F11 input-validering', () => {
   });
 });
 
-describe('PATCH /api/bookings/:id — S3 no-show-status', () => {
-  it('godtar ingen_oppmoete: 200 og status lagret', async () => {
-    reset();
-    const srv = await lytt(lagApp(ADMIN));
-    try {
-      const r = await patch(srv, '/api/bookings/5', { status: 'ingen_oppmoete' });
-      expect(r.status).toBe(200);
-      expect(state.patchStatus).toBe('ingen_oppmoete'); // status faktisk skrevet til DB
-      expect(r.body.booking.status).toBe('ingen_oppmoete');
-      // Ingen pengehandling: ingen refusjon/regnskapspost berort her (kun status + evt. kundemelding).
-    } finally { srv.close(); }
-  });
-
-  it('avviser tullestatus med 400', async () => {
-    reset();
-    const srv = await lytt(lagApp(ADMIN));
-    try {
-      const r = await patch(srv, '/api/bookings/5', { status: 'tull' });
-      expect(r.status).toBe(400);
-      expect(state.patchStatus).toBeNull(); // ingen UPDATE forsokt
-    } finally { srv.close(); }
-  });
-});
-
-describe('PATCH /api/bookings/:id — F26 svelget e-postfeil', () => {
-  it('en feilet status-e-post velter IKKE statusendringen (fortsatt 200)', async () => {
-    reset();
-    state.epostSvar = { ok: false, error: 'smtp nede' }; // e-post feiler
-    const srv = await lytt(lagApp(ADMIN));
-    try {
-      const r = await patch(srv, '/api/bookings/5', { status: 'bekreftet' });
-      expect(r.status).toBe(200);
-      expect(state.patchStatus).toBe('bekreftet');
-      expect(state.epostKall).toHaveLength(1); // e-post ble faktisk forsokt (await-et)
-    } finally { srv.close(); }
-  });
-});

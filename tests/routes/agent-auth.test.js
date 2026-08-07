@@ -39,7 +39,10 @@ function lagApp() {
   app.use(agentAuth);
   app.use(agentGate);
   app.use('/api/hours', require('../../routes/hours'));
-  app.use('/api/admin', require('../../routes/admin'));
+  // Forenklingen 2026-08-07 fjernet routes/admin; content-ruten dekker den
+  // samme allowlist-mekanikken (én allowlistet GET + én ikke-allowlistet sti).
+  app.use('/api/content', require('../../routes/content'));
+  app.use('/api/gdpr', require('../../routes/gdpr'));
   return app;
 }
 
@@ -116,18 +119,18 @@ describe('HULL 1 — agent service-token', () => {
   });
 
   it('agent KUN på allowlistede ruter: ikke-allowlistet rute -> 403', async () => {
-    // /api/admin/stats er IKKE i adapter-allowlista (kun /api/admin/content er).
+    // /api/gdpr er IKKE i adapter-allowlista (kun /api/content er).
     const srv = await lytt(lagApp());
     try {
-      const res = await call(srv, 'GET', '/api/admin/stats', TOKEN);
+      const res = await call(srv, 'GET', '/api/gdpr', TOKEN);
       expect(res.status).toBe(403); // agentGate blokkerer før handler
     } finally { srv.close(); }
   });
 
-  it('allowlistet admin-rute: GET /api/admin/content -> 200', async () => {
+  it('allowlistet rute: GET /api/content -> 200', async () => {
     const srv = await lytt(lagApp());
     try {
-      const res = await call(srv, 'GET', '/api/admin/content', TOKEN);
+      const res = await call(srv, 'GET', '/api/content', TOKEN);
       expect(res.status).toBe(200);
     } finally { srv.close(); }
   });
