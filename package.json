@@ -16,7 +16,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@sentry/node": "^8",
+    "@sentry/node": "^10",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
     "dotenv": "^16.4.5",
