@@ -1,4 +1,4 @@
-// describe/it/expect er globale (vitest.config.js -> globals: true)
+﻿// describe/it/expect er globale (vitest.config.js -> globals: true)
 // Tester /api/bookings Fase 2 + 3:
 //  - POST -> 409 {error,code:'fullt',feil:'fullt'} ved overbooking (superset)
 //  - POST -> 409 {error,code:'stengt',feil:'stengt'} ved stengt dag (closed_dates)
@@ -13,7 +13,7 @@ const db = require('../../db');
 const email = require('../../lib/email');
 const discord = require('../../lib/discord');
 
-// E-post/discord skal aldri kjore i test — gjor dem til no-op.
+// E-post/discord skal aldri kjore i test â€” gjor dem til no-op.
 const sendteMottatt = [];
 email.sendStatusEpost = async () => ({ ok: false, simulert: true });
 email.sendBookingMottatt = async (til, navn, info, aktNavn) => { sendteMottatt.push({ til, navn, info, aktNavn }); return { ok: false, simulert: true }; };
@@ -54,9 +54,12 @@ db.one = async (text, params) => {
   if (/SELECT id FROM regnskap_poster WHERE booking_id/i.test(text)) return null;
   if (/INSERT INTO bookings/i.test(text)) {
     return {
-      id: 99, activity_id: params[0], bruker_id: params[1], navn: params[2],
-      epost: params[3], tlf: params[4], dato: params[5], tid: params[6],
-      antall: params[7], belop: params[8], status: 'forespurt',
+      // Param-rekkefølge etter forenklingen 2026-08-07: bruker_id er ikke lenger
+      // en bundet param (INSERT-en skriver NULL direkte), så alt etter
+      // activity_id forskjøv seg ett hakk ned.
+      id: 99, activity_id: params[0], bruker_id: null, navn: params[1],
+      epost: params[2], tlf: params[3], dato: params[4], tid: params[5],
+      antall: params[6], belop: params[7], melding: params[8], status: 'forespurt',
     };
   }
   if (/SELECT \* FROM bookings WHERE id/i.test(text)) return state.refundBooking;
@@ -126,9 +129,11 @@ db.withTransaction = async (fn) => {
         state.txInsertParams = params;
         return {
           rows: [{
-            id: 99, activity_id: params[0], bruker_id: params[1], navn: params[2],
-            epost: params[3], tlf: params[4], dato: params[5], tid: params[6],
-            antall: params[7], belop: params[8], status: 'forespurt',
+            // Se kommentaren ved db.one-attrappen: bruker_id er ikke lenger en
+            // bundet param, så alt etter activity_id forskjøv seg ett hakk ned.
+            id: 99, activity_id: params[0], bruker_id: null, navn: params[1],
+            epost: params[2], tlf: params[3], dato: params[4], tid: params[5],
+            antall: params[6], belop: params[7], melding: params[8], status: 'forespurt',
           }],
         };
       }
@@ -186,7 +191,7 @@ function reset() {
 // En gyldig fremtidig hverdag (tirsdag 2026-07-07) for caser som ikke tester stengt.
 const HVERDAG = '2026-07-07';
 
-describe('POST /api/bookings — kapasitet (#3)', () => {
+describe('POST /api/bookings â€” kapasitet (#3)', () => {
   it('avviser overbooking med 409 {error,code:fullt,feil:fullt}', async () => {
     reset();
     state.sum = 8; // allerede fullt (kapasitet 8)
@@ -213,76 +218,19 @@ describe('POST /api/bookings — kapasitet (#3)', () => {
     } finally { srv.close(); }
   });
 
-  it('slipper gjennom naar det er plass, og bruker aktivitetens mva_sats (#PER-AKT MVA)', async () => {
+  it('slipper gjennom naar det er plass, og INSERT gaar paa tx-klienten', async () => {
     reset();
-    state.akt.mva_sats = 12; // ikke-standard sats
     state.sum = 0;
     const srv = await lytt(lagApp(KUNDE));
     try {
       const r = await post(srv, '/api/bookings', { activity_id: 1, navn: 'Kari', epost: 'k@x.no', dato: HVERDAG, tid: '12:00', antall: 1 });
       expect(r.status).toBe(201);
       // INSERT bookings skjedde via withTransaction-klienten (tx-lasen holder).
+      // Det er selve overbookingsvernet: uten samme klient slipper to samtidige
+      // POST forbi kapasitetssjekken.
       expect(state.txClientUsed).toBe(true);
       expect(state.txInsertParams).not.toBeNull();
       expect(state.txInsertParams[0]).toBe(1); // activity_id
-      expect(state.regnskap).toHaveLength(1);
-      // A5: regnskap-INSERT skjer naa paa SAMME tx-klient som booking-INSERT.
-      expect(state.regnskapViaTx).toBe(true);
-      // mva_sats er 5. param i INSERT (0-indeks 4)
-      expect(state.regnskap[0][4]).toBe(12);
-    } finally { srv.close(); }
-  });
-});
-
-describe('POST /api/bookings — atomisitet booking+regnskap (A5)', () => {
-  it('regnskap-INSERT ruller booking tilbake hvis den feiler (ingen 201)', async () => {
-    reset();
-    state.regnskapFeiler = true; // simuler at regnskap-INSERT kaster i tx
-    const srv = await lytt(lagApp(KUNDE));
-    try {
-      const r = await post(srv, '/api/bookings', { activity_id: 1, navn: 'Kari', epost: 'k@x.no', dato: HVERDAG, tid: '12:00', antall: 1 });
-      // Tx kaster -> withTransaction ROLLBACK -> route fanger -> 500.
-      expect(r.status).toBe(500);
-      // Booking-INSERT ble forsokt paa tx-klienten, men ingen regnskapspost lagret
-      // (rullet tilbake sammen): ingen booking uten regnskapspost.
-      expect(state.txClientUsed).toBe(true);
-      expect(state.regnskapViaTx).toBe(true);
-      expect(state.regnskap).toHaveLength(0);
-    } finally { srv.close(); }
-  });
-
-  it('idempotens bevart: hopper over regnskap-INSERT hvis posten finnes (paa tx-klient)', async () => {
-    reset();
-    state.regnskapFinnes = true; // idempotens-lookup paa tx-klient returnerer en rad
-    const srv = await lytt(lagApp(KUNDE));
-    try {
-      const r = await post(srv, '/api/bookings', { activity_id: 1, navn: 'Kari', epost: 'k@x.no', dato: HVERDAG, tid: '12:00', antall: 1 });
-      expect(r.status).toBe(201);
-      expect(state.txClientUsed).toBe(true);
-      // Ingen ny regnskapspost (idempotent).
-      expect(state.regnskap).toHaveLength(0);
-    } finally { srv.close(); }
-  });
-});
-
-describe('GET /api/bookings/agenda (#5)', () => {
-  it('returnerer rader for rolle og filtrerer paa dato', async () => {
-    reset();
-    state.agendaRows = [{ id: 1, dato: '2026-07-08', tid: '10:00' }];
-    const srv = await lytt(lagApp(ADMIN));
-    try {
-      const r = await reqJson(srv, '/api/bookings/agenda?dato=2026-07-01');
-      expect(r.status).toBe(200);
-      expect(Array.isArray(r.body)).toBe(true);
-      expect(r.body).toHaveLength(1);
-    } finally { srv.close(); }
-  });
-
-  it('krever rolle: 403 for kunde', async () => {
-    reset();
-    const srv = await lytt(lagApp(KUNDE));
-    try {
-      expect((await reqJson(srv, '/api/bookings/agenda')).status).toBe(403);
     } finally { srv.close(); }
   });
 });
@@ -315,128 +263,3 @@ describe('POST /api/bookings - mottatt-kvittering (S1A)', () => {
   });
 });
 
-describe('POST /api/bookings/:id/refusjon (Fase 4 — refusjons-subsystem)', () => {
-  it('registrerer en refusjon + negativ (reverserende) regnskapspost', async () => {
-    reset();
-    const srv = await lytt(lagApp(ADMIN));
-    try {
-      const r = await post(srv, '/api/bookings/5/refusjon', { grunn: 'Avlyst tur' });
-      expect(r.status).toBe(200);
-      // Én refusjons-rad skrevet via tx-klienten.
-      expect(state.refusjoner).toHaveLength(1);
-      // ...og den lokale reverserende regnskapsposten (bakoverkompat).
-      expect(state.regnskap).toHaveLength(1);
-      expect(state.regnskapViaTx).toBe(true);
-      // regnskap-INSERT params: [navn, beskr, mvaKode, mva_sats, -netto, -mva, -brutto, id]
-      // brutto_ore = index 6 og skal vaere negativ
-      expect(state.regnskap[0][6]).toBeLessThan(0);
-      // uten oppgitt belop refunderes hele booking-beloepet (500 kr = 50000 ore).
-      expect(state.refusjoner[0][1]).toBe(50000); // belop_ore
-    } finally { srv.close(); }
-  });
-
-  it('haandhever invariant: refusjon utover gjenstaende gir 409', async () => {
-    reset();
-    // Booking 500 kr = 50000 ore; allerede 40000 refundert -> 10000 gjenstaar.
-    state.refusjonSum = 40000;
-    const srv = await lytt(lagApp(ADMIN));
-    try {
-      const r = await post(srv, '/api/bookings/5/refusjon', { belop_ore: 20000 });
-      expect(r.status).toBe(409);
-      expect(r.body.code).toBe('refusjon_overstiger');
-      expect(r.body.gjenstaende_ore).toBe(10000);
-      // Ingen refusjon/regnskap skrevet naar invarianten brytes.
-      expect(state.refusjoner).toHaveLength(0);
-      expect(state.regnskap).toHaveLength(0);
-    } finally { srv.close(); }
-  });
-
-  it('godtar delrefusjon innenfor gjenstaende (N delrefusjoner)', async () => {
-    reset();
-    state.refusjonSum = 40000; // 10000 gjenstaar
-    const srv = await lytt(lagApp(ADMIN));
-    try {
-      const r = await post(srv, '/api/bookings/5/refusjon', { belop_ore: 10000 });
-      expect(r.status).toBe(200);
-      expect(state.refusjoner).toHaveLength(1);
-      expect(state.refusjoner[0][1]).toBe(10000);
-      expect(r.body.refusjon.gjenstaende_ore).toBe(0);
-    } finally { srv.close(); }
-  });
-
-  it('idempotens: kjent noekkel gir 200 duplikat uten ny rad', async () => {
-    reset();
-    state.refusjonDup = true;
-    const srv = await lytt(lagApp(ADMIN));
-    try {
-      const r = await post(srv, '/api/bookings/5/refusjon', { belop_ore: 10000, idempotens_nokkel: 'abc' });
-      expect(r.status).toBe(200);
-      expect(r.body.duplikat).toBe(true);
-      expect(state.refusjoner).toHaveLength(0);
-      expect(state.regnskap).toHaveLength(0);
-    } finally { srv.close(); }
-  });
-
-  it('gavekort=true utsteder gavekort i samme tx og returnerer koden', async () => {
-    reset();
-    const srv = await lytt(lagApp(ADMIN));
-    try {
-      const r = await post(srv, '/api/bookings/5/refusjon', { belop_ore: 20000, gavekort: true });
-      expect(r.status).toBe(200);
-      expect(state.gavekortRader).toHaveLength(1);
-      // gavekort-INSERT params: [kode, verdi_ore, utstedt_for_refusjon_av]
-      expect(state.gavekortRader[0][1]).toBe(20000); // verdi_ore = refusjonsbelop
-      expect(r.body.gavekort).not.toBeNull();
-      expect(r.body.gavekort.verdi_ore).toBe(20000);
-      expect(typeof r.body.gavekort.kode).toBe('string');
-      // refusjons-raden er merket gavekort=true (param index 3).
-      expect(state.refusjoner[0][3]).toBe(true);
-    } finally { srv.close(); }
-  });
-
-  it('PII: kundenavn/e-post i grunn saniteres bort fra regnskaps-beskrivelsen', async () => {
-    reset();
-    const srv = await lytt(lagApp(ADMIN));
-    try {
-      const r = await post(srv, '/api/bookings/5/refusjon', { grunn: 'Kontakt kari@x.no om dette' });
-      expect(r.status).toBe(200);
-      // regnskap-INSERT beskrivelse = param index 1.
-      const beskr = state.regnskap[0][1];
-      expect(beskr).not.toContain('kari@x.no');
-      expect(beskr).toContain('[fjernet]');
-      // ...og den sanerte grunn ligger i refusjons-raden (param index 2), uten e-post.
-      expect(state.refusjoner[0][2]).not.toContain('kari@x.no');
-    } finally { srv.close(); }
-  });
-
-  it('ReDoS-vern: svaert lang grunn saniteres raskt og kappes til <=200 tegn', async () => {
-    reset();
-    const srv = await lytt(lagApp(ADMIN));
-    try {
-      // 100k tegn uten gyldig e-post -> worst case for `\S+@\S+\.\S+`-regexen.
-      // Uten lengdekapping foerst gir dette polynomisk backtracking (CPU-DoS).
-      const langGrunn = 'a'.repeat(100000);
-      const t0 = Date.now();
-      const r = await post(srv, '/api/bookings/5/refusjon', { grunn: langGrunn });
-      const brukt = Date.now() - t0;
-      expect(r.status).toBe(200);
-      // Skal returnere raskt — ingen ReDoS-blokkering. Rundhaandet grense for
-      // et tregt CI-miljoe; ekte backtracking her ville tatt titalls sekunder.
-      expect(brukt).toBeLessThan(2000);
-      // Sanert grunn (refusjons-rad param index 2) er kappet til <=200 tegn.
-      const lagretGrunn = state.refusjoner[0][2];
-      expect(lagretGrunn.length).toBeLessThanOrEqual(200);
-    } finally { srv.close(); }
-  });
-
-  it('404 naar bookingen ikke finnes', async () => {
-    reset();
-    state.refundBooking = null;
-    const srv = await lytt(lagApp(ADMIN));
-    try {
-      const r = await post(srv, '/api/bookings/5/refusjon', { belop_ore: 100 });
-      expect(r.status).toBe(404);
-      expect(state.refusjoner).toHaveLength(0);
-    } finally { srv.close(); }
-  });
-});

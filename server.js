@@ -37,22 +37,14 @@ const PORT = process.env.PORT || 3000;
 sentry.init(app);
 
 // F52 — body-grenser. Global default er lav (256kb) mot minne-/DoS-misbruk.
-// Kun rutene som faktisk tar store payloads får egen 8mb-parser FORAN den
-// globale. De to som trenger det er base64-bilde-opplastinger (data:image/…,
-// begge kappet på ~7 MB i ruten selv):
-//   - POST /api/projects/:id/media   (prosjekt-media, felt `fil`)
-//   - POST/PATCH /api/regnskap/poster (kvitteringsbilde, felt `vedlegg`)
-// Express markerer req._body=true etter parse, så den globale 256kb-parseren
-// hopper over disse når de allerede er parset. Alt annet (activities.bilde er
-// bare en sti/URL, admin/content kappet på 50k tegn, kvitteringer er tall/tekst)
-// får den lave grensen. Prefiks-nivå er granulariteten auto-mount gir oss;
-// begge prefiks er uansett rolle-beskyttet (ansatt|admin).
+// Etter forenklingen 2026-08-07 ("kun forsiden") er /api/projects og
+// /api/regnskap borte, så bare brain-ruten trenger fortsatt en stor parser:
+// kvittering-opplasting POST-er base64-foto (1-5 MB) til /api/brain/ask, og
+// den globale 256kb-grensen ville gitt 413 på ekte bilder. Express markerer
+// req._body=true etter parse, så den globale parseren hopper over den når den
+// allerede er parset. Forsidens egne ruter (activities/bookings/content/hours/
+// chat) er tall og kort tekst og får den lave grensen.
 const storBodyParser = express.json({ limit: '8mb' });
-app.use('/api/projects', storBodyParser);
-app.use('/api/regnskap', storBodyParser);
-// Fase 6: kvittering-opplasting POST-er base64-foto (1-5 MB) til /api/brain/ask.
-// Uten egen parser her ville den globale 256kb-grensen gitt 413 på ekte bilder.
-// Samme mønster som projects/regnskap; brain-rutene er agent-/rolle-beskyttet.
 app.use('/api/brain', storBodyParser);
 app.use(express.json({ limit: '256kb' }));
 app.use(cookieParser());
@@ -123,88 +115,18 @@ if (fs.existsSync(rtDir)) {
   }
 }
 
-// ---- S1: rolle-gate for interne HTML-skall (default PÅ) ----
-// De statiske sidene under er interne admin-/intern-skall. API-dataene bak dem
-// er allerede rolle-beskyttet, så uinnlogget tilgang her er skall-eksponering
-// (selve HTML-et lastes), ikke en PII-lekkasje. Middleware kjører FØR
-// express.static og etter authOptional, så req.user er allerede satt.
-// Rollback på 30 sek uten kodeendring: STATIC_AUTH_ENABLED=false.
-// Roller pr. side speiler rolle-kravet på sidens primære API (se routes/*).
-const BESKYTTEDE_SIDER = {
-  'admin-agenda': ['admin'], // admin-only: ansatt bruker /ansatt (kun timeliste + samtale)
-  'admin-aktiviteter': ['admin'], // /api/activities/admin/all krever admin
-  'admin-innsikt': ['admin'], // admin-only skall
-  'admin-kunder': ['admin'], // admin-only skall
-  'regnskap': ['admin'], // /api/regnskap/* er admin-only (blocker 2, bolge 98)
-  'okonomi': ['admin'], // /api/finance krever admin
-  'intranett': ['admin'], // admin-dashbord: ansatt sendes til /ansatt, ikke hit
-  'ansatt': ['ansatt', 'admin'], // /api/min/* krever innlogget ansatt/admin (bolge 98, steg 5)
-  'chat-innboks': ['admin'], // admin-only skall
-  'bookinger': ['admin'], // admin-only skall
-  'kunde-dialog': ['admin'], // admin-only skall
-};
-
-// Normaliser en rå request-path til NØYAKTIG den oppslagsnøkkelen
-// express.static til slutt slår opp — slik at porten ser det samme som static.
-// Returnerer null for stier vi ikke trygt kan tolke (fail-closed-signal).
+// ---- Rolle-gate for interne HTML-skall: FJERNET 2026-08-07 ----
+// Porten (S1) fantes for å hindre at uinnloggede lastet skallet til de interne
+// admin-/ansatt-/kundesidene. Ved forenklingen ("kun forsiden") ble ALLE de
+// sidene slettet — public/ inneholder nå bare index.html. En allowlist som
+// vokter filer som ikke finnes er død kode, og redirecten pekte til /konto,
+// som også er borte. Fjernet i stedet for å la den råtne.
 //
-// Hvorfor dette er nødvendig: req.path er RÅ (ikke prosentdekodet), men
-// express.static/send DEKODER én gang før filoppslag. En navne-allowlist på
-// req.path ser derfor '/regnskap%2Ehtml' (ingen treff -> next), mens static
-// dekoder til 'regnskap.html' og serverer siden. Vi lukker hele klassen ved å
-// dekode + normalisere på SAMME måte som static, ikke bare stripe '.html'.
-//
-// Dekoding: KUN én gang. Bekreftet ved probe at express.static single-dekoder
-// ('/regnskap%252Ehtml' serverer IKKE regnskap.html — static leter etter en fil
-// med literal '%2E' i navnet, som ikke finnes). En dekode-LØKKE ville derfor
-// avvike fra static OG er sin egen sårbarhet — vi bruker bevisst ikke while.
-function normaliserForOppslag(raStien) {
-  let sti;
-  try {
-    // decodeURIComponent er samme dekoder som send bruker; kaster på ugyldig
-    // prosentkoding (f.eks. '%ZZ', '%E0%A4%A').
-    sti = decodeURIComponent(raStien);
-  } catch {
-    return null; // udekodbar -> fail-closed
-  }
-  // Null-byte kan trunkere filoppslag på lavere lag — aldri trygt.
-  if (sti.indexOf('\0') !== -1) return null;
-  // Windows bruker '\\' som katalogseparator; normaliser til '/' før traversal-
-  // kollaps slik at '\\..\\'-varianter ikke slipper unna.
-  sti = sti.replace(/\\/g, '/');
-  // Kollaps '.', '..' og duplikat-slash slik path-oppslaget faktisk gjør. Dette
-  // fanger 'foo/../regnskap.html', '/./regnskap.html' og '%5C..%5C'-variantene.
-  sti = path.posix.normalize(sti);
-  // Fjern ledende slash(er), strip '.html' (case-ufølsomt), og lowercase.
-  // Case-ufølsomt oppslag er forsvar i dybden: filsystemet på Windows er
-  // case-ufølsomt (/REGNSKAP.html treffer regnskap.html), mens Linux uansett
-  // gir 404 på feil case.
-  return sti.replace(/^\/+/, '').replace(/\.html$/i, '').toLowerCase();
-}
+// Hvis en intern side noen gang kommer tilbake: hent porten fra git-historikken
+// (den håndterte prosentkoding og path-traversal riktig — ikke skriv den på nytt
+// fra minnet), og legg den tilbake FØR express.static.
 
-function beskyttetSideGate(req, res, next) {
-  // Default PÅ: kun eksakt 'false' slår av (rollback-bryter).
-  if (process.env.STATIC_AUTH_ENABLED === 'false') return next();
-  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
-  const nøkkel = normaliserForOppslag(req.path);
-  if (nøkkel === null) {
-    // Udekodbar/utrygg sti: vi kan ikke avgjøre hva static ville slått opp, så
-    // vi feiler LUKKET. 400 (ikke redirect): stien er en ugyldig ressurs-
-    // identitet, ikke et innloggingsproblem, og 400 kan aldri servere beskyttet
-    // HTML. Statisk lag ville uansett ikke servert en beskyttet side fra en
-    // sti med samme dekode-feil, så dette divergerer ikke fra static.
-    return res.status(400).type('text/plain').send('Ugyldig forespørsel');
-  }
-  const kreverRoller = BESKYTTEDE_SIDER[nøkkel];
-  if (!kreverRoller) return next();
-  const rolle = req.user && req.user.rolle;
-  if (rolle && kreverRoller.includes(rolle)) return next();
-  // Nettleser-navigasjon: redirect til innlogging (ikke 403-JSON).
-  return res.redirect('/konto');
-}
-app.use(beskyttetSideGate);
-
-// ---- Statiske filer (offentlig side + intern shell) ----
+// ---- Statiske filer (kun den offentlige forsiden) ----
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
 // Fallback: alle ikke-API GET-ruter -> forsiden
