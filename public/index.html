@@ -206,6 +206,41 @@
        designet i stedet for å gjenopplive gjetninger. Ligger i git-loggen.
        NB: .mosaikk-bildetekst under er IKKE død — den er i bruk. */
     .mosaikk-bildetekst{font-family:'Caveat',cursive;text-align:center;color:var(--myk);font-size:1.25rem;margin-top:14px;}
+
+    /* ---------- Kollektivt maleri: flisene som samler seg ---------- */
+    /* Seksjonens hele budskap er "ett bilde delt i fliser, malt av mange hender,
+       satt sammen igjen". Det ble tidligere fortalt med ett flatt foto. Nå VISES
+       mekanismen: flisene kommer inn spredt og legger seg på plass.
+       Bygges av JS som progressiv forbedring — <img> ligger i HTML og vises hvis
+       JS, grid eller redusert bevegelse gjør at effekten ikke skal kjøre. */
+    .flis-verk{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(4,1fr);
+      gap:4px;aspect-ratio:662/1040;border-radius:20px;overflow:hidden;
+      box-shadow:0 18px 50px rgba(10,79,94,.22);background:var(--hav-dyp);}
+    .flis-verk .flis{
+      background-image:var(--verk);background-repeat:no-repeat;background-size:300% 400%;
+      opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rot)) scale(.86);
+      transition:transform .95s cubic-bezier(.22,.9,.24,1),opacity .55s ease-out;
+      transition-delay:var(--pause);will-change:transform,opacity;}
+    .flis-verk.samlet .flis{opacity:1;transform:none;}
+    /* Når alt har landet slipper vi will-change igjen — ingen grunn til å holde
+       tolv lag på GPU-en resten av besøket. */
+    .flis-verk.ferdig .flis{will-change:auto;transition-delay:0s;}
+    @media(prefers-reduced-motion:reduce){
+      .flis-verk .flis{transition:none;opacity:1;transform:none;}
+    }
+
+    /* ---------- Fullbredde foto-bånd ---------- */
+    /* Bildeteksten er bevisst satt som et galleriskilt: versaler, stor
+       bokstavavstand, liten grad, dempet farge — den samme typografien museer
+       og gallerier bruker. Det leser som «ekte sted», ikke som dekor. */
+    .foto-band{margin:0;position:relative;line-height:0;}
+    .foto-band img{width:100%;height:clamp(320px,52vh,560px);object-fit:cover;display:block;}
+    .foto-band figcaption{position:absolute;left:0;right:0;bottom:0;padding:56px 24px 22px;line-height:1.5;
+      display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;
+      background:linear-gradient(to top,rgba(6,26,45,.72),transparent);}
+    .foto-band .fb-sted{font-family:'Inter',sans-serif;text-transform:uppercase;letter-spacing:.22em;
+      font-size:.74rem;font-weight:600;color:#fff;}
+    .foto-band .fb-note{font-family:'Inter',sans-serif;font-size:.8rem;color:rgba(255,255,255,.72);}
     .pris-boks{background:var(--sand);border:1px solid var(--sand-mork);border-radius:16px;padding:24px 26px;margin-top:26px;}
     .pris-boks .pris-stor{font-family:'Fraunces',serif;font-size:1.5rem;color:var(--leire-mork);margin-bottom:14px;}
     .pris-liste{list-style:none;margin:0 0 14px;padding:0;}
@@ -530,6 +565,18 @@
     <p class="sitat reveal delay-2" data-no="«Vi er det første stedet i Lofoten med et helårs keramikk- og kunsttilbud — og vi er her for å bli.»" data-en="“We are the first place in Lofoten with a year-round ceramics and art offering — and we are here to stay.”">«Vi er det første stedet i Lofoten med et helårs keramikk- og kunsttilbud — og vi er her for å bli.»</p>
   </div></section>
 
+  <!-- STEDET: fullbredde-bånd med ekte Ballstad-foto. Bildeteksten er satt som
+       et museums-/galleriskilt (sted · årstid · fotograf) — det er den billigste
+       troverdighets-markøren som finnes, og den er umulig å forfalske. -->
+  <figure class="foto-band reveal">
+    <img src="bilder/1b-rorbuer.jpg" width="1280" height="848" loading="lazy" decoding="async"
+         alt="Rorbuer og fiskebåt i Ballstad havn, Lofoten" />
+    <figcaption>
+      <span class="fb-sted" data-no="Ballstad, Lofoten" data-en="Ballstad, Lofoten">Ballstad, Lofoten</span>
+      <span class="fb-note" data-no="Havna rett utenfor studioet" data-en="The harbour just outside the studio">Havna rett utenfor studioet</span>
+    </figcaption>
+  </figure>
+
   <!-- NYHETER -->
   <section id="nyheter" class="nyheter full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
     <h2 class="seksjon-tittel reveal" data-no="Nyheter" data-en="News">Nyheter</h2>
@@ -704,6 +751,64 @@
     /* karRull() fjernet 2026-08-07 — den slo opp document.getElementById('kar'),
        en id som ikke finnes i dokumentet, og ville kastet på null. Ingen kalte
        den. Karusellen styres av pil-koden lenger oppe. */
+
+    /* ---- Kollektivt maleri: flisene samler seg ----
+       Progressiv forbedring. <img> ligger i HTML og er det som vises hvis noe av
+       dette ikke går: ingen JS, redusert bevegelse, eller manglende støtte.
+       Forskyvningene er DETERMINISTISKE (utledet av flis-indeksen), ikke
+       tilfeldige — tilfeldig spredning ser ulik ut for hver besøkende og leser
+       som støy. Fast spredning leser som komposisjon. */
+    (function(){
+      var vert = document.querySelector('.havvegg-foto');
+      if (!vert) return;
+      var img = vert.querySelector('img');
+      if (!img || !('IntersectionObserver' in window)) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      var KOL = 3, RAD = 4;
+
+      function bygg(){
+        var verk = document.createElement('div');
+        verk.className = 'flis-verk';
+        verk.style.setProperty('--verk', "url('" + img.getAttribute('src') + "')");
+        verk.setAttribute('role', 'img');
+        verk.setAttribute('aria-label', img.alt || '');
+
+        for (var r = 0; r < RAD; r++) {
+          for (var k = 0; k < KOL; k++) {
+            var f = document.createElement('span');
+            f.className = 'flis';
+            // Utsnitt: samme bilde i hver flis, forskjøvet som et sprite-ark.
+            f.style.backgroundPosition = (k / (KOL - 1) * 100) + '% ' + (r / (RAD - 1) * 100) + '%';
+            // Spredning ut fra midten, så de "faller inn mot" hverandre.
+            var dx = (k - (KOL - 1) / 2) * 26;
+            var dy = (r - (RAD - 1) / 2) * 20;
+            f.style.setProperty('--dx', dx.toFixed(0) + 'px');
+            f.style.setProperty('--dy', dy.toFixed(0) + 'px');
+            f.style.setProperty('--rot', (((k + r) % 3) - 1) * 2.4 + 'deg');
+            // Nederste rad lander sist — verket bygger seg oppover.
+            f.style.setProperty('--pause', (r * 90 + k * 45) + 'ms');
+            verk.appendChild(f);
+          }
+        }
+        return verk;
+      }
+
+      var verk = bygg();
+      img.style.display = 'none';
+      vert.appendChild(verk);
+
+      var io = new IntersectionObserver(function(poster){
+        poster.forEach(function(p){
+          if (!p.isIntersecting) return;
+          verk.classList.add('samlet');
+          io.unobserve(p.target);
+          // Siste flis: 3*90 + 2*45 = 360 ms forsinkelse + 950 ms overgang.
+          setTimeout(function(){ verk.classList.add('ferdig'); }, 1400);
+        });
+      }, { threshold: 0.25 });
+      io.observe(verk);
+    })();
 
     /* ---- Booking ---- */
     // Booking-skjema -> plattformens database (/api/bookings). Backend varsler Discord automatisk.
