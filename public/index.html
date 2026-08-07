@@ -359,7 +359,6 @@
         <a href="#signatur" data-no="Kollektivt maleri" data-en="Collective painting">Kollektivt maleri</a>
         <a href="#galleri" data-no="Galleri" data-en="Gallery">Galleri</a>
         <a href="#om" data-no="Om oss" data-en="About">Om oss</a>
-        <a href="/konto" data-no="Logg inn" data-en="Log in">Logg inn</a>
         <a href="#booking" class="knapp-liten" data-no="Book" data-en="Book">Book</a>
         <div class="sprak">
           <button id="btnNo" class="aktiv" onclick="setLang('no')">NO</button>
@@ -565,11 +564,7 @@
       </div>
       <div class="felt"><label data-no="Melding (valgfritt)" data-en="Message (optional)">Melding (valgfritt)</label><textarea id="melding" rows="3" data-no-ph="Noe vi bør vite?" data-en-ph="Anything we should know?" placeholder="Noe vi bør vite?"></textarea></div>
       <button type="submit" class="send-knapp" data-no="Send forespørsel" data-en="Send request">Send forespørsel</button>
-      <div class="takk" id="takk" data-no="Takk! Vi har sendt en innloggingslenke til e-posten din — klikk den for å se og bekrefte bookingen din." data-en="Thank you! We've sent a login link to your email — click it to view and confirm your booking.">Takk! Vi har sendt en innloggingslenke til e-posten din — klikk den for å se og bekrefte bookingen din.</div>
-      <div class="demo-lenke" id="demoLenke" style="display:none;margin-top:14px;padding:14px 16px;border:1px dashed #b0803a;border-radius:8px;background:rgba(176,128,58,0.08);text-align:left;">
-        <a id="demoLenkeUrl" href="#" target="_blank" rel="noopener noreferrer" style="font-weight:600;word-break:break-all;">Logg inn</a>
-        <p class="demo-note" data-no="DEMO: e-post ikke satt opp enda — bruk denne lenken for å logge inn." data-en="DEMO: email not configured yet — use this link to log in." style="margin:6px 0 0;font-size:0.85em;opacity:0.8;">DEMO: e-post ikke satt opp enda — bruk denne lenken for å logge inn.</p>
-      </div>
+      <div class="takk" id="takk" data-no="Takk! Vi har mottatt forespørselen din, og har sendt deg en bekreftelse på e-post. Vi tar kontakt for å avtale tidspunkt." data-en="Thank you! We've received your request and sent a confirmation to your email. We'll be in touch to arrange a time.">Takk! Vi har mottatt forespørselen din, og har sendt deg en bekreftelse på e-post. Vi tar kontakt for å avtale tidspunkt.</div>
     </form>
   </div></section>
 
@@ -609,7 +604,6 @@
     <p style="margin-top:10px;">
       <a href="https://www.instagram.com/havstund/" target="_blank" rel="noopener" style="color:#9fd2e4;text-decoration:none;font-weight:600;">@havstund</a>
     </p>
-    <p style="margin-top:10px;"><a href="/konto" style="color:#9fd2e4;text-decoration:none;font-size:.85rem;font-weight:600;">Logg inn (ansatt)</a></p>
     <p style="margin-top:12px;font-size:.85rem;opacity:.6;">© 2026 Havstund</p>
   </footer>
 
@@ -734,15 +728,7 @@
           if(r.ok){
             knapp.style.display='none';
             var takk = document.getElementById('takk'); if(takk){ takk.style.display='block'; }
-            return r.json().catch(function(){ return {}; }).then(function(b){
-              var lenke = b && b.innloggingslenke;
-              if(lenke){
-                var boks = document.getElementById('demoLenke');
-                var a = document.getElementById('demoLenkeUrl');
-                if(a){ a.href = lenke; a.textContent = lenke; }
-                if(boks){ boks.style.display='block'; }
-              }
-            });
+            return;
           }
           return r.json().catch(function(){ return {}; }).then(function(b){
             var kode = b && (b.code || b.feil);
