@@ -236,6 +236,66 @@
       .flis-verk .flis{transition:none;opacity:1;transform:none;}
     }
 
+    /* ======================================================================
+       EFFEKTER 2026-08-07 — alle koster 0 KB ekstra nedlasting.
+       De bruker funksjoner nettleseren allerede har (scroll-drevne animasjoner
+       og View Transitions), ikke biblioteker. Alt ligger bak
+       @media (prefers-reduced-motion: no-preference) + @supports, så eldre
+       nettlesere og folk som har slått av bevegelse får dagens side uendret.
+       ====================================================================== */
+
+    /* --- 1. Bildet som legger seg til ro ---
+       Galleribildene poppet inn binært. Nå er bevegelsen bundet til SCROLLEN:
+       fotoet står litt for stort når det kommer inn i syne og lander på plass
+       mens du drar deg forbi — som en hånd som setter fra seg en krukke.
+       Går på kompositoren (kun transform), og reverserer hvis du scroller opp.
+       Ligger på en egen ramme rundt <img> slik at hover-zoomen på selve bildet
+       fortsatt virker uten å slåss med animasjonen. */
+    .g-ramme{display:block;width:100%;height:100%;overflow:hidden;}
+    @media(prefers-reduced-motion:no-preference){
+      @supports (animation-timeline: view()){
+        .g-ramme{
+          animation:legg-seg linear both;
+          animation-timeline:view();
+          animation-range:entry 8% cover 42%;
+        }
+        @keyframes legg-seg{
+          from{transform:scale(1.14);}
+          to{transform:scale(1);}
+        }
+      }
+    }
+
+    /* --- 2. Bølgene som beveger seg ---
+       De tre skillebølgene mellom seksjonene har stått helt stille. Nå driver
+       de sakte sidelengs og hever seg litt — 24 s per runde, knapt merkbart,
+       men det gjør at siden puster. Transform på <path>, altså kompositoren.
+       scaleX(1.06) gir monn i kantene så drift aldri blottlegger hjørnene. */
+    @media(prefers-reduced-motion:no-preference){
+      .bolge path{animation:bolgedrift 24s ease-in-out infinite alternate;transform-origin:center bottom;}
+      .bolge.opp path{animation-duration:31s;animation-direction:alternate-reverse;}
+      @keyframes bolgedrift{
+        from{transform:translateX(-1.6%) scale(1.06,1);}
+        to{transform:translateX(1.6%) scale(1.06,1.14);}
+      }
+    }
+
+    /* --- 3. Dybde på barneklubb-kortene ---
+       De fire kortene på den mørke nordlys-seksjonen får svak 3D-vipp mot
+       musepekeren. Kun transform, kun desktop (slås av under 820px sammen med
+       resten), og kun der peker er presis — en telefon har ingen hover. */
+    .barn-grid{perspective:900px;}
+    .barn-punkt{transform-style:preserve-3d;}
+
+    /* --- 4. View Transitions ---
+       Brukes to steder: galleri-miniatyren som vokser ut i lightboxen, og
+       språkbyttet som krysstoner i stedet for å hoppe. Nettleseren gjør begge
+       på kompositoren. Uten støtte skjer endringen bare umiddelbart — samme
+       oppførsel som i dag, ingen ødelagt tilstand. */
+    @media(prefers-reduced-motion:no-preference){
+      ::view-transition-old(root),::view-transition-new(root){animation-duration:.34s;}
+    }
+
     /* ---------- Fullbredde foto-bånd ---------- */
     /* Bildeteksten er bevisst satt som et galleriskilt: versaler, stor
        bokstavavstand, liten grad, dempet farge — den samme typografien museer
@@ -576,9 +636,9 @@
     <h2 class="seksjon-tittel reveal" data-no="Fra studioet" data-en="From the studio">Fra studioet</h2>
     <p class="seksjon-undertekst reveal delay-1" data-no="Smakebiter på det som skapes hos Havstund — glasur fra dette havet, i hver eneste form." data-en="A glimpse of what's created at Havstund — glaze from this sea, in every single piece.">Smakebiter på det som skapes hos Havstund — glasur fra dette havet, i hver eneste form.</p>
     <div class="galleri-grid">
-      <a class="galleri-item reveal" href="bilder/keramikk1.jpg"><img src="bilder/keramikk1.jpg" width="640" height="640" alt="Keramikk-kopp med galakse-glasur" loading="lazy" decoding="async" /><div class="overlegg"><div><span class="g-tittel" data-no="Galakse-koppen" data-en="The galaxy cup">Galakse-koppen</span><span class="g-detalj" data-no="Håndlaget keramikk · galakse-glasur" data-en="Hand-thrown ceramics · galaxy glaze">Håndlaget keramikk · galakse-glasur</span></div></div></a>
-      <a class="galleri-item reveal delay-1" href="bilder/keramikk2.jpg"><img src="bilder/keramikk2.jpg" width="640" height="640" alt="Turkise keramikk-tallerkener" loading="lazy" decoding="async" /><div class="overlegg"><div><span class="g-tittel" data-no="Havturkis servise" data-en="Sea-turquoise tableware">Havturkis servise</span><span class="g-detalj" data-no="Håndlaget keramikk · dreide tallerkener" data-en="Hand-thrown ceramics · turned plates">Håndlaget keramikk · dreide tallerkener</span></div></div></a>
-      <a class="galleri-item reveal delay-2" href="bilder/havvegg.jpg"><img src="bilder/havvegg.jpg" width="662" height="1040" alt="Havveggen — håndmalte fliser" loading="lazy" decoding="async" /><div class="overlegg"><div><span class="g-tittel" data-no="Havveggen" data-en="The Sea Wall">Havveggen</span><span class="g-detalj" data-no="Håndmalte fliser satt sammen til ett motiv" data-en="Hand-painted tiles assembled into one motif">Håndmalte fliser satt sammen til ett motiv</span></div></div></a>
+      <a class="galleri-item reveal" href="bilder/keramikk1.jpg"><span class="g-ramme"><img src="bilder/keramikk1.jpg" width="640" height="640" alt="Keramikk-kopp med galakse-glasur" loading="lazy" decoding="async" /></span><div class="overlegg"><div><span class="g-tittel" data-no="Galakse-koppen" data-en="The galaxy cup">Galakse-koppen</span><span class="g-detalj" data-no="Håndlaget keramikk · galakse-glasur" data-en="Hand-thrown ceramics · galaxy glaze">Håndlaget keramikk · galakse-glasur</span></div></div></a>
+      <a class="galleri-item reveal delay-1" href="bilder/keramikk2.jpg"><span class="g-ramme"><img src="bilder/keramikk2.jpg" width="640" height="640" alt="Turkise keramikk-tallerkener" loading="lazy" decoding="async" /></span><div class="overlegg"><div><span class="g-tittel" data-no="Havturkis servise" data-en="Sea-turquoise tableware">Havturkis servise</span><span class="g-detalj" data-no="Håndlaget keramikk · dreide tallerkener" data-en="Hand-thrown ceramics · turned plates">Håndlaget keramikk · dreide tallerkener</span></div></div></a>
+      <a class="galleri-item reveal delay-2" href="bilder/havvegg.jpg"><span class="g-ramme"><img src="bilder/havvegg.jpg" width="662" height="1040" alt="Havveggen — håndmalte fliser" loading="lazy" decoding="async" /></span><div class="overlegg"><div><span class="g-tittel" data-no="Havveggen" data-en="The Sea Wall">Havveggen</span><span class="g-detalj" data-no="Håndmalte fliser satt sammen til ett motiv" data-en="Hand-painted tiles assembled into one motif">Håndmalte fliser satt sammen til ett motiv</span></div></div></a>
     </div>
   </div></section>
 
@@ -732,7 +792,7 @@
     })();
 
     /* ---- Språk ---- */
-    function setLang(lang){
+    function byttSpraak(lang){
       document.documentElement.lang = lang;
       document.querySelectorAll('[data-'+lang+']').forEach(function(el){ el.textContent = el.getAttribute('data-'+lang); });
       document.querySelectorAll('[data-'+lang+'-ph]').forEach(function(el){ el.setAttribute('placeholder', el.getAttribute('data-'+lang+'-ph')); });
@@ -742,7 +802,20 @@
       try{ localStorage.setItem('havstund-lang',lang); }catch(e){}
       if(typeof aktiverOrdvis==='function') aktiverOrdvis();
     }
-    (function(){ var s=null; try{s=localStorage.getItem('havstund-lang');}catch(e){} if(s==='en') setLang('en'); })();
+
+    /* Hele siden krysstoner mellom norsk og engelsk i stedet for å snappe.
+       All tekst byttes i ett — på en tospråklig Lofoten-side er selve
+       språkbyttet et merkevare-øyeblikk, ikke bare en funksjon.
+       Uten støtte skjer byttet umiddelbart, akkurat som før. */
+    function setLang(lang){
+      var kanOverGaa = typeof document.startViewTransition === 'function' &&
+                       !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!kanOverGaa) { byttSpraak(lang); return; }
+      document.startViewTransition(function(){ byttSpraak(lang); });
+    }
+    /* Gjenoppretting ved sidelasting går UTENOM overgangen — å krysstone mot en
+       side som ikke er tegnet ennå gir bare et blink. byttSpraak direkte. */
+    (function(){ var s=null; try{s=localStorage.getItem('havstund-lang');}catch(e){} if(s==='en') byttSpraak('en'); })();
 
     /* ---- Redigerbart innhold (CMS) — henter offentlig /api/content og
        oppdaterer data-no/data-en på utvalgte elementer. HTML beholdes som
@@ -952,10 +1025,35 @@
       if (!lb) return;
       var lbImg = document.getElementById('lightboksImg');
 
-      function aapne(src, alt){
-        lbImg.src = src;
-        lbImg.alt = alt || '';
-        lb.showModal();
+      // NB: `redusert` deklareres lenger ned i fila. `var` heiser den til
+      // undefined her oppe, så en sjekk mot den ville stille passert. Vi spør
+      // matchMedia direkte i stedet.
+      function villHaRo(){
+        return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      }
+
+      /* Miniatyren VOKSER ut i lightboxen i stedet for at et lag fader over.
+         Vi gir kilde-bildet og lightbox-bildet samme view-transition-name, og
+         nettleseren morfer mellom dem. Navnet fjernes etterpå — to elementer
+         kan ikke dele navn samtidig, ellers hopper neste overgang over.
+         Uten støtte for startViewTransition skjer åpningen bare umiddelbart. */
+      function aapne(src, alt, kilde){
+        function gjor(){
+          lbImg.src = src;
+          lbImg.alt = alt || '';
+          lb.showModal();
+        }
+        if (typeof document.startViewTransition !== 'function' || villHaRo()) {
+          gjor();
+          return;
+        }
+        if (kilde) kilde.style.viewTransitionName = 'galleri-bilde';
+        lbImg.style.viewTransitionName = 'galleri-bilde';
+        var vt = document.startViewTransition(gjor);
+        vt.finished.catch(function(){}).then(function(){
+          if (kilde) kilde.style.viewTransitionName = '';
+          lbImg.style.viewTransitionName = '';
+        });
       }
 
       // Galleriet: fang klikket på lenka, vis i dialogen i stedet.
@@ -963,14 +1061,14 @@
         a.addEventListener('click', function(e){
           var img = a.querySelector('img');
           e.preventDefault();
-          aapne(a.getAttribute('href'), img ? img.alt : '');
+          aapne(a.getAttribute('href'), img ? img.alt : '', img);
         });
       });
 
       // Havvegg-fotoet: samme dialog.
       document.querySelectorAll('.havvegg-foto img').forEach(function(im){
         im.style.cursor = 'zoom-in';
-        im.addEventListener('click', function(){ aapne(im.src, im.alt); });
+        im.addEventListener('click', function(){ aapne(im.src, im.alt, im); });
       });
 
       lb.addEventListener('click', function(e){ if (e.target === lb) lb.close(); });
@@ -996,6 +1094,39 @@
        layout-egenskaper til kompositoren. Den kunne vært fikset med transform,
        men ble fjernet i stedet: en ring som følger musa er et byrå-triks fra
        2021, ikke "den stille stunden ved havet". */
+
+    /* Dybde på barneklubb-kortene — svak 3D-vipp mot musepekeren.
+       Kun transform, så kompositoren gjør jobben. Utslaget er bevisst lite
+       (±5°): det skal kjennes som at kortet ligger i rommet, ikke som at det
+       vipper. Skrives i requestAnimationFrame slik at flere mousemove-hendelser
+       i samme frame kollapser til én skriving — uten det tvinger hver hendelse
+       en ny layout-beregning (samme feil som .magnetisk hadde). */
+    (function(){
+      if (redusert || !window.matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+      var kort = document.querySelectorAll('.barn-punkt');
+      if (!kort.length) return;
+
+      kort.forEach(function(k){
+        var venter = false, sisteX = 0, sisteY = 0;
+
+        function tegn(){
+          venter = false;
+          var r = k.getBoundingClientRect();
+          var px = (sisteX - r.left) / r.width - 0.5;
+          var py = (sisteY - r.top) / r.height - 0.5;
+          k.style.transform =
+            'perspective(900px) rotateY(' + (px * 5).toFixed(2) + 'deg) rotateX(' +
+            (-py * 5).toFixed(2) + 'deg) translateY(-5px)';
+        }
+
+        k.addEventListener('mousemove', function(e){
+          sisteX = e.clientX; sisteY = e.clientY;
+          if (!venter) { venter = true; requestAnimationFrame(tegn); }
+        }, { passive: true });
+
+        k.addEventListener('mouseleave', function(){ k.style.transform = ''; });
+      });
+    })();
 
     /* (Parallax fjernet for jevn scrolling) */
 
