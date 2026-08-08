@@ -140,10 +140,23 @@ if (fs.existsSync(rtDir)) {
 // ---- Statiske filer (kun den offentlige forsiden) ----
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
-// Fallback: alle ikke-API GET-ruter -> forsiden
-app.get(/^\/(?!api).*/, (_req, res) =>
-  res.sendFile(path.join(__dirname, 'public', 'index.html'))
-);
+// Fallback: alle ikke-API GET-ruter -> forsiden.
+//
+// MEN IKKE for stier som ser ut som filer. Uten det unntaket svarte serveren
+// 200 + hele forsiden (91 KB HTML) på en manglende .webp, i stedet for 404.
+// To reelle problemer med det:
+//   1. Sløsing — 360-spinnet ber om 32 rammer. Er mappa tom eller halvfull,
+//      lastet klienten ned ~3 MB HTML som den uansett ikke kunne dekode.
+//   2. Løgn — verktøy, søkemotorer og vi selv får «finnes» på noe som ikke
+//      finnes. Det gjorde det målbart vanskeligere å feilsøke spinnet.
+// Stier UTEN punktum i siste ledd er fortsatt sider (/booking, /om) og går til
+// forsiden som før; det er bare fil-lignende stier som nå får ærlig 404.
+const SER_UT_SOM_FIL = /\.[a-z0-9]{2,5}$/i;
+app.get(/^\/(?!api).*/, (req, res, next) => {
+  const sisteLedd = req.path.split('/').pop() || '';
+  if (SER_UT_SOM_FIL.test(sisteLedd)) return next();
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // ---- Feil-middleware (MÅ stå sist, etter alle ruter) ----
 // Rapporterer til Sentry (no-op uten DSN), logger via pino og svarer 500.
