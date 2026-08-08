@@ -123,7 +123,11 @@
        aldri eksistert. Død kode lyver om hva systemet gjør. Ligger i git-loggen
        hvis nordlys-effekten skal bygges på ordentlig senere. */
     /* EKTE Ballstad-bilde med Ken Burns-drift */
+    /* WebP med JPEG-fallback. Første deklarasjon fanges av nettlesere som ikke
+       kjenner image-set(); nyere overstyrer med den. type() gjør at bare den
+       som faktisk støtter WebP laster den. Hero-bildet: 56 KB -> 18 KB. */
     .hero-bg{position:absolute;inset:0;z-index:0;background:url('bilder/hero-bg.jpg') center/cover no-repeat;animation:kenburns 46s ease-in-out infinite alternate;}
+    .hero-bg{background-image:image-set(url('bilder/hero-bg.webp') type('image/webp'),url('bilder/hero-bg.jpg') type('image/jpeg'));}
     @keyframes kenburns{from{transform:scale(1.02) translateY(0);}to{transform:scale(1.12) translateY(-2%);}}
     @media(prefers-reduced-motion:reduce){.hero-bg{animation:none;}}
     .hero-inner{position:relative;z-index:4;max-width:760px;}
@@ -439,11 +443,13 @@
        over bildet (se lesbarhets-regelen lenger ned). Tekst-tettere seksjoner
        (#om, #nyheter) holdes et hakk lavere (~0.30) enn de luftige (~0.34). */
     #opplevelser::before{background-image:url('bilder/3-havfiske.jpg');opacity:.34;}
+    #opplevelser::before{background-image:image-set(url('bilder/3-havfiske.webp') type('image/webp'),url('bilder/3-havfiske.jpg') type('image/jpeg'));}
     /* Booking — mørk seksjon m/ hvit tekst: bildet ligger bak en mørknende
        overlay så hvit tekst forblir klart lesbar. Overlay lettet ytterligere
        (.72→.60) så nordlyset trer tydelig fram; hvit tekst holdes skarp av
        en myk mørk text-shadow (se lesbarhets-regelen). */
     #booking::before{background-image:linear-gradient(rgba(10,39,71,.60),rgba(22,62,102,.60)),url('bilder/nordlys.jpg');opacity:1;}
+    #booking::before{background-image:linear-gradient(rgba(10,39,71,.60),rgba(22,62,102,.60)),image-set(url('bilder/nordlys.webp') type('image/webp'),url('bilder/nordlys.jpg') type('image/jpeg'));}
     /* ---------- Lesbarhet: tekst direkte over de sterkere bildene ---------- */
     /* Mørk tekst som ligger DIREKTE over bildet (seksjons-titler, introtekst,
        Om-oss-avsnitt, stat-tall) får en myk lys halo (sand-farget text-shadow)
@@ -462,7 +468,7 @@
   <header>
     <nav>
       <a href="#" class="logo" style="text-decoration:none;display:flex;align-items:center;">
-        <img src="bilder/wordmark.png" width="1013" height="161" alt="Havstund" class="logo-wordmark" />
+        <picture><source srcset="bilder/wordmark.webp" type="image/webp"><img src="bilder/wordmark.png" width="1013" height="161" alt="Havstund" class="logo-wordmark" /></picture>
       </a>
       <div class="meny">
         <a href="#opplevelser" data-no="Opplevelser" data-en="Experiences">Opplevelser</a>
@@ -489,7 +495,7 @@
     <div class="hero-bg" aria-hidden="true"></div>
     <div class="hero-inner">
       <div class="liten reveal" data-no="Keramikk- og kunststudio · Ballstad, Lofoten" data-en="Ceramics & art studio · Ballstad, Lofoten">Keramikk- og kunststudio · Ballstad, Lofoten</div>
-      <h1 class="reveal delay-1"><img src="bilder/wordmark.png" width="1013" height="161" alt="Havstund" class="hero-wordmark" fetchpriority="high"></h1>
+      <h1 class="reveal delay-1"><picture><source srcset="bilder/wordmark.webp" type="image/webp"><img src="bilder/wordmark.png" width="1013" height="161" alt="Havstund" class="hero-wordmark" fetchpriority="high"></picture></h1>
       <div id="heroSitat" class="tagline reveal delay-1" data-no="Et øyeblikk med havet" data-en="A moment with the sea">Et øyeblikk med havet</div>
       <p class="reveal delay-2" data-no="Lag noe ekte av Lofoten med dine egne hender — og ta med deg hjem noe som varer, og en følelse du aldri glemmer." data-en="Create something real from Lofoten with your own hands — and bring home something that lasts, and a feeling you'll never forget.">Lag noe ekte av Lofoten med dine egne hender — og ta med deg hjem noe som varer, og en følelse du aldri glemmer.</p>
       <a href="#booking" class="knapp magnetisk reveal delay-3" data-no="Book en opplevelse" data-en="Book an experience">Book en opplevelse</a>
@@ -624,7 +630,7 @@
       </div>
       <div class="reveal v-hoyre delay-1">
         <div class="havvegg-foto">
-          <img src="bilder/havvegg.jpg" width="662" height="1040" alt="Havstund Havveggen — håndmalte fliser satt sammen til ett motiv" loading="lazy" decoding="async" />
+          <picture><source srcset="bilder/havvegg.webp" type="image/webp"><img src="bilder/havvegg.jpg" width="662" height="1040" alt="Havstund Havveggen — håndmalte fliser satt sammen til ett motiv" loading="lazy" decoding="async" /></picture>
         </div>
         <p class="mosaikk-bildetekst" data-no="Et ekte kollektivt maleri - ett bilde delt i fliser, malt av mange hender." data-en="A real collective painting - one picture split into tiles, painted by many hands.">Et ekte kollektivt maleri - ett bilde delt i fliser, malt av mange hender.</p>
       </div>
@@ -636,9 +642,9 @@
     <h2 class="seksjon-tittel reveal" data-no="Fra studioet" data-en="From the studio">Fra studioet</h2>
     <p class="seksjon-undertekst reveal delay-1" data-no="Smakebiter på det som skapes hos Havstund — glasur fra dette havet, i hver eneste form." data-en="A glimpse of what's created at Havstund — glaze from this sea, in every single piece.">Smakebiter på det som skapes hos Havstund — glasur fra dette havet, i hver eneste form.</p>
     <div class="galleri-grid">
-      <a class="galleri-item reveal" href="bilder/keramikk1.jpg"><span class="g-ramme"><img src="bilder/keramikk1.jpg" width="640" height="640" alt="Keramikk-kopp med galakse-glasur" loading="lazy" decoding="async" /></span><div class="overlegg"><div><span class="g-tittel" data-no="Galakse-koppen" data-en="The galaxy cup">Galakse-koppen</span><span class="g-detalj" data-no="Håndlaget keramikk · galakse-glasur" data-en="Hand-thrown ceramics · galaxy glaze">Håndlaget keramikk · galakse-glasur</span></div></div></a>
-      <a class="galleri-item reveal delay-1" href="bilder/keramikk2.jpg"><span class="g-ramme"><img src="bilder/keramikk2.jpg" width="640" height="640" alt="Turkise keramikk-tallerkener" loading="lazy" decoding="async" /></span><div class="overlegg"><div><span class="g-tittel" data-no="Havturkis servise" data-en="Sea-turquoise tableware">Havturkis servise</span><span class="g-detalj" data-no="Håndlaget keramikk · dreide tallerkener" data-en="Hand-thrown ceramics · turned plates">Håndlaget keramikk · dreide tallerkener</span></div></div></a>
-      <a class="galleri-item reveal delay-2" href="bilder/havvegg.jpg"><span class="g-ramme"><img src="bilder/havvegg.jpg" width="662" height="1040" alt="Havveggen — håndmalte fliser" loading="lazy" decoding="async" /></span><div class="overlegg"><div><span class="g-tittel" data-no="Havveggen" data-en="The Sea Wall">Havveggen</span><span class="g-detalj" data-no="Håndmalte fliser satt sammen til ett motiv" data-en="Hand-painted tiles assembled into one motif">Håndmalte fliser satt sammen til ett motiv</span></div></div></a>
+      <a class="galleri-item reveal" href="bilder/keramikk1.jpg"><span class="g-ramme"><picture><source srcset="bilder/keramikk1.webp" type="image/webp"><img src="bilder/keramikk1.jpg" width="640" height="640" alt="Keramikk-kopp med galakse-glasur" loading="lazy" decoding="async" /></picture></span><div class="overlegg"><div><span class="g-tittel" data-no="Galakse-koppen" data-en="The galaxy cup">Galakse-koppen</span><span class="g-detalj" data-no="Håndlaget keramikk · galakse-glasur" data-en="Hand-thrown ceramics · galaxy glaze">Håndlaget keramikk · galakse-glasur</span></div></div></a>
+      <a class="galleri-item reveal delay-1" href="bilder/keramikk2.jpg"><span class="g-ramme"><picture><source srcset="bilder/keramikk2.webp" type="image/webp"><img src="bilder/keramikk2.jpg" width="640" height="640" alt="Turkise keramikk-tallerkener" loading="lazy" decoding="async" /></picture></span><div class="overlegg"><div><span class="g-tittel" data-no="Havturkis servise" data-en="Sea-turquoise tableware">Havturkis servise</span><span class="g-detalj" data-no="Håndlaget keramikk · dreide tallerkener" data-en="Hand-thrown ceramics · turned plates">Håndlaget keramikk · dreide tallerkener</span></div></div></a>
+      <a class="galleri-item reveal delay-2" href="bilder/havvegg.jpg"><span class="g-ramme"><picture><source srcset="bilder/havvegg.webp" type="image/webp"><img src="bilder/havvegg.jpg" width="662" height="1040" alt="Havveggen — håndmalte fliser" loading="lazy" decoding="async" /></picture></span><div class="overlegg"><div><span class="g-tittel" data-no="Havveggen" data-en="The Sea Wall">Havveggen</span><span class="g-detalj" data-no="Håndmalte fliser satt sammen til ett motiv" data-en="Hand-painted tiles assembled into one motif">Håndmalte fliser satt sammen til ett motiv</span></div></div></a>
     </div>
   </div></section>
 
@@ -743,7 +749,7 @@
   </section>
 
   <footer>
-    <img src="bilder/wordmark.png" width="1013" height="161" alt="Havstund" class="footer-wordmark" loading="lazy" decoding="async" />
+    <picture><source srcset="bilder/wordmark.webp" type="image/webp"><img src="bilder/wordmark.png" width="1013" height="161" alt="Havstund" class="footer-wordmark" loading="lazy" decoding="async" /></picture>
     <p data-no="Et øyeblikk med havet · Ballstad, Lofoten" data-en="A moment with the sea · Ballstad, Lofoten">Et øyeblikk med havet · Ballstad, Lofoten</p>
     <p style="margin-top:6px;">post@havstund.no · 000 00 000</p>
     <p style="margin-top:10px;">
@@ -869,7 +875,11 @@
       function bygg(){
         var verk = document.createElement('div');
         verk.className = 'flis-verk';
-        verk.style.setProperty('--verk', "url('" + img.getAttribute('src') + "')");
+        // currentSrc er fila nettleseren FAKTISK valgte fra <picture> (WebP der
+        // den støttes). getAttribute('src') ville alltid gitt JPEG-fallbacken og
+        // dermed lastet ned bildet en gang til. Tom currentSrc (bildet ikke
+        // lastet ennå pga loading="lazy") faller tilbake på src.
+        verk.style.setProperty('--verk', "url('" + (img.currentSrc || img.src) + "')");
         verk.setAttribute('role', 'img');
         verk.setAttribute('aria-label', img.alt || '');
 
@@ -1061,7 +1071,11 @@
         a.addEventListener('click', function(e){
           var img = a.querySelector('img');
           e.preventDefault();
-          aapne(a.getAttribute('href'), img ? img.alt : '', img);
+          // Bruk fila nettleseren allerede har i cache (WebP der den støttes) i
+          // stedet for href-en, som peker på JPEG-fallbacken. href beholdes som
+          // den er — den er no-JS-veien og må virke i enhver nettleser.
+          var kilde = (img && img.currentSrc) || a.getAttribute('href');
+          aapne(kilde, img ? img.alt : '', img);
         });
       });
 
