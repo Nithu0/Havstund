@@ -301,7 +301,13 @@
     }
 
     /* ---------- 360-spinn ---------- */
-    .snurr{background:var(--skum);}
+    /* SKJULT som standard. Seksjonen inviterer til å dra i bildet, og den
+       invitasjonen skal ikke stå der før den kan innfris. Uten bilder i
+       public/bilder/spinn/ ser den besøkende ingenting — ikke et stillbilde
+       som later som det kan snurres. JS setter .klar først når hver eneste
+       ramme er bekreftet lastet. */
+    .snurr{background:var(--skum);display:none;}
+    .snurr.klar{display:block;}
     .spinn{position:relative;margin:0 auto;max-width:560px;border-radius:20px;overflow:hidden;
       background:var(--sand);box-shadow:0 18px 50px rgba(10,79,94,.14);line-height:0;}
     .spinn img{width:100%;height:auto;display:block;user-select:none;-webkit-user-drag:none;}
@@ -933,7 +939,14 @@
       var proeve = new Image();
       proeve.onerror = function(){ /* ingen bilder ennå: behold fallback-fotoet */ };
       proeve.onload = function(){
-        // Trinn 2 — vent til seksjonen er i syne før resten lastes.
+        // Trinn 2 — vent til brukeren nærmer seg før resten lastes.
+        // VIKTIG: vi kan IKKE observere spinn-seksjonen selv. Den er
+        // display:none til rammene er bekreftet, og et element uten boks
+        // krysser aldri viewporten — observeren ville aldri fyrt, og spinnet
+        // aldri dukket opp. Vi observerer galleriet rett over i stedet.
+        // Finnes det ikke, laster vi med én gang i stedet for å stå fast.
+        var utloeser = document.getElementById('galleri');
+        if (!utloeser) { lastAlle(); return; }
         var io = new IntersectionObserver(function(poster){
           poster.forEach(function(p){
             if (!p.isIntersecting) return;
@@ -941,7 +954,7 @@
             lastAlle();
           });
         }, { rootMargin: '300px 0px' });
-        io.observe(boks);
+        io.observe(utloeser);
       };
       proeve.src = sti(0);
 
@@ -973,6 +986,16 @@
 
       function slaaPaa(rammer){
         var naa = 0;
+        // Vis hele seksjonen først NÅ. Fram til dette punktet har den vært
+        // display:none, så en besøkende uten bilder aldri ser et løfte om
+        // draging som ikke kan innfris.
+        var seksjon = boks.closest('#snurr');
+        if (seksjon) seksjon.classList.add('klar');
+        // loading="lazy" må vekk FØR første ramme settes. Bildet har stått i en
+        // display:none-seksjon, og et lat bilde uten boks blir aldri lastet —
+        // resultatet var en tom ramme selv om alle 32 lå ferdig i cache.
+        // Her er utsettelsen uansett meningsløs: rammene er allerede lastet.
+        vis.removeAttribute('loading');
         boks.classList.add('aktiv');
         boks.setAttribute('tabindex', '0');
         boks.setAttribute('role', 'img');
