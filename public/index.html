@@ -300,6 +300,25 @@
       ::view-transition-old(root),::view-transition-new(root){animation-duration:.34s;}
     }
 
+    /* ---------- Selskap og bursdagsfeiring ---------- */
+    /* Speilvendt av Kollektivt maleri: der ligger teksten til venstre og bildet
+       til høyre. Her er bildet størst og til høyre igjen, men seksjonen har
+       lysere bunn (skum) så de to ikke smelter sammen når man scroller. */
+    .selskap{background:var(--skum);}
+    .selskap-flex{display:grid;grid-template-columns:1.05fr 1fr;gap:50px;align-items:center;}
+    .selskap-flex h2{color:var(--hav-dyp);font-size:clamp(2.3rem,5.4vw,3.3rem);letter-spacing:-0.02em;margin-bottom:6px;}
+    .selskap-flex p{color:var(--myk);margin-bottom:16px;}
+    .selskap-foto{margin:0;}
+    .selskap-foto picture{display:block;border-radius:20px;overflow:hidden;
+      box-shadow:0 18px 50px rgba(10,79,94,.2);line-height:0;}
+    .selskap-foto img{width:100%;height:auto;display:block;transition:transform .6s cubic-bezier(.2,.8,.2,1);}
+    .selskap-foto:hover img{transform:scale(1.03);}
+    .selskap-foto figcaption{font-family:'Caveat',cursive;text-align:center;color:var(--myk);
+      font-size:1.25rem;margin-top:14px;line-height:1.4;}
+    @media(max-width:820px){
+      .selskap-flex{grid-template-columns:1fr;gap:36px;}
+    }
+
     /* ---------- 360-spinn ---------- */
     /* SKJULT som standard. Seksjonen inviterer til å dra i bildet, og den
        invitasjonen skal ikke stå der før den kan innfris. Uten bilder i
@@ -470,8 +489,12 @@
        frostede kort/paneler + en lys tekst-halo på tekst som ligger direkte
        over bildet (se lesbarhets-regelen lenger ned). Tekst-tettere seksjoner
        (#om, #nyheter) holdes et hakk lavere (~0.30) enn de luftige (~0.34). */
-    #opplevelser::before{background-image:url('bilder/3-havfiske.jpg');opacity:.34;}
-    #opplevelser::before{background-image:image-set(url('bilder/3-havfiske.webp') type('image/webp'),url('bilder/3-havfiske.jpg') type('image/jpeg'));}
+    /* Byttet 2026-08-08: fra et generisk havfiske-foto til hender som former
+       leire i studioet. Seksjonen handler om opplevelsene — da skal bakgrunnen
+       vise dem, ikke et landskap. Opasiteten hevet fra .34 til .38 fordi motivet
+       nå er verdt å se. */
+    #opplevelser::before{background-image:url('bilder/opplevelser-leire.jpg');opacity:.38;}
+    #opplevelser::before{background-image:image-set(url('bilder/opplevelser-leire.webp') type('image/webp'),url('bilder/opplevelser-leire.jpg') type('image/jpeg'));}
     /* Booking — mørk seksjon m/ hvit tekst: bildet ligger bak en mørknende
        overlay så hvit tekst forblir klart lesbar. Overlay lettet ytterligere
        (.72→.60) så nordlyset trer tydelig fram; hvit tekst holdes skarp av
@@ -502,6 +525,7 @@
         <a href="#opplevelser" data-no="Opplevelser" data-en="Experiences">Opplevelser</a>
         <a href="#barneklubb" data-no="Barneklubb" data-en="Kids' Club">Barneklubb</a>
         <a href="#signatur" data-no="Kollektivt maleri" data-en="Collective painting">Kollektivt maleri</a>
+        <a href="#selskap" data-no="Selskap" data-en="Parties">Selskap</a>
         <a href="#galleri" data-no="Galleri" data-en="Gallery">Galleri</a>
         <a href="#om" data-no="Om oss" data-en="About">Om oss</a>
         <a href="#booking" class="knapp-liten" data-no="Book" data-en="Book">Book</a>
@@ -665,6 +689,40 @@
     </div>
   </section>
 
+  <!-- SELSKAP OG BURSDAGSFEIRING
+       Plassert rett etter Kollektivt maleri med vilje: bildet viser nettopp et
+       kollektivt maleri i bakgrunnen, så seksjonen fortsetter der den forrige
+       slapp — fra «hva det er» til «slik ser en feiring ut». -->
+  <section id="selskap" class="selskap full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
+    <div class="selskap-flex">
+      <div class="reveal v-venstre">
+        <div class="seksjon-eyebrow" data-no="FOR SMÅ OG STORE" data-en="FOR ALL AGES">FOR SMÅ OG STORE</div>
+        <h2 data-no="Selskap og bursdagsfeiring" data-en="Parties and birthdays">Selskap og bursdagsfeiring</h2>
+        <p class="kollektiv-undertittel" data-no="Feir hos oss — med leire på hendene." data-en="Celebrate with us — with clay on your hands.">Feir hos oss — med leire på hendene.</p>
+        <p data-no="Vi holder bursdager, jubileer og småselskaper i studioet. Alle lager noe eget, og hver gjest tar med seg hjem det de har laget. Ingen som har vært her har fått den samme gaven to ganger." data-en="We host birthdays, anniversaries and small parties in the studio. Everyone makes something of their own, and every guest takes their piece home. No one who has been here has received the same gift twice.">Vi holder bursdager, jubileer og småselskaper i studioet. Alle lager noe eget, og hver gjest tar med seg hjem det de har laget. Ingen som har vært her har fått den samme gaven to ganger.</p>
+        <p data-no="Dere ordner kake og pynt — vi ordner leire, verktøy, bord og utsikt over havna. Vil dere male sammen i stedet, gjør vi det til et kollektivt maleri dere kan henge opp hjemme." data-en="You bring the cake and decorations — we bring clay, tools, tables and the view over the harbour. If you'd rather paint together, we'll turn it into a collective painting you can hang at home.">Dere ordner kake og pynt — vi ordner leire, verktøy, bord og utsikt over havna. Vil dere male sammen i stedet, gjør vi det til et kollektivt maleri dere kan henge opp hjemme.</p>
+        <div class="pris-boks">
+          <div class="pris-stor"><span data-no="Fra" data-en="From">Fra</span> 950 kr <span style="font-family:'Inter',sans-serif;font-size:.92rem;font-weight:500;color:var(--myk);" data-no="per person · minimum 12 000 kr" data-en="per person · minimum NOK 12,000">per person · minimum 12 000 kr</span></div>
+          <ul class="pris-liste">
+            <li data-no="Barnebursdag, voksenselskap, jubileum eller firmatur" data-en="Children's birthday, adult party, anniversary or company outing">Barnebursdag, voksenselskap, jubileum eller firmatur</li>
+            <li data-no="Alle lager sitt eget — og tar det med hjem" data-en="Everyone makes their own — and takes it home">Alle lager sitt eget — og tar det med hjem</li>
+            <li data-no="Bedre i dårlig vær enn i godt" data-en="Better in bad weather than good">Bedre i dårlig vær enn i godt</li>
+          </ul>
+          <p class="pris-note" data-no="Si hvor mange dere er og hvor gamle bursdagsbarnet er, så setter vi opp et opplegg som passer." data-en="Tell us how many you are and how old the birthday child is, and we'll put together something that fits.">Si hvor mange dere er og hvor gamle bursdagsbarnet er, så setter vi opp et opplegg som passer.</p>
+          <a href="#booking" class="knapp magnetisk" style="margin-top:18px;" data-no="Be om et tilbud" data-en="Request a quote">Be om et tilbud</a>
+        </div>
+      </div>
+      <figure class="selskap-foto reveal v-hoyre delay-1">
+        <picture>
+          <source srcset="bilder/selskap-bursdag.webp" type="image/webp">
+          <img src="bilder/selskap-bursdag.jpg" width="828" height="995" loading="lazy" decoding="async"
+               alt="Bursdagsfeiring på Havstund — muffins med lys, popcorn og kollektivt maleri, med utsikt over Ballstad havn" />
+        </picture>
+        <figcaption data-no="Bursdag i studioet · utsikt over Ballstad havn" data-en="A birthday in the studio · overlooking Ballstad harbour">Bursdag i studioet · utsikt over Ballstad havn</figcaption>
+      </figure>
+    </div>
+  </div></section>
+
   <!-- GALLERI / FRA STUDIOET -->
   <section id="galleri" class="galleri full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
     <h2 class="seksjon-tittel reveal" data-no="Fra studioet" data-en="From the studio">Fra studioet</h2>
@@ -729,11 +787,14 @@
        et museums-/galleriskilt (sted · årstid · fotograf) — det er den billigste
        troverdighets-markøren som finnes, og den er umulig å forfalske. -->
   <figure class="foto-band reveal">
-    <img src="bilder/1b-rorbuer.jpg" width="1280" height="848" loading="lazy" decoding="async"
-         alt="Rorbuer og fiskebåt i Ballstad havn, Lofoten" />
+    <picture>
+      <source srcset="bilder/om-staffeli.webp" type="image/webp">
+      <img src="bilder/om-staffeli.jpg" width="828" height="995" loading="lazy" decoding="async"
+           alt="Kollektivt maleri på staffeli i studioet — Lofoten-motiv delt i 30 fliser" />
+    </picture>
     <figcaption>
-      <span class="fb-sted" data-no="Ballstad, Lofoten" data-en="Ballstad, Lofoten">Ballstad, Lofoten</span>
-      <span class="fb-note" data-no="Havna rett utenfor studioet" data-en="The harbour just outside the studio">Havna rett utenfor studioet</span>
+      <span class="fb-sted" data-no="Ytre Steinfjorden, Mærvoll" data-en="Ytre Steinfjorden, Mærvoll">Ytre Steinfjorden, Mærvoll</span>
+      <span class="fb-note" data-no="Kollektivt maleri · 30 fliser, mange hender" data-en="Collective painting · 30 tiles, many hands">Kollektivt maleri · 30 fliser, mange hender</span>
     </figcaption>
   </figure>
 
