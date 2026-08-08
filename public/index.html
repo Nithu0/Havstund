@@ -300,6 +300,28 @@
       ::view-transition-old(root),::view-transition-new(root){animation-duration:.34s;}
     }
 
+    /* ---------- 360-spinn ---------- */
+    .snurr{background:var(--skum);}
+    .spinn{position:relative;margin:0 auto;max-width:560px;border-radius:20px;overflow:hidden;
+      background:var(--sand);box-shadow:0 18px 50px rgba(10,79,94,.14);line-height:0;}
+    .spinn img{width:100%;height:auto;display:block;user-select:none;-webkit-user-drag:none;}
+    /* Bare når JS har funnet bildene og slått den på: markøren og
+       touch-action forteller at elementet eier den horisontale dragingen.
+       pan-y beholdes så siden fortsatt kan scrolles vertikalt OVER bildet —
+       uten det låser man brukeren fast på mobil. */
+    .spinn.aktiv{cursor:grab;touch-action:pan-y;}
+    .spinn.aktiv.drar{cursor:grabbing;}
+    .spinn.aktiv:focus-visible{outline:3px solid var(--turkis);outline-offset:3px;}
+    .spinn-hint{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);
+      font-family:'Inter',sans-serif;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+      color:#fff;background:rgba(10,39,71,.55);padding:7px 14px;border-radius:999px;
+      line-height:1.4;opacity:0;transition:opacity .4s;pointer-events:none;}
+    .spinn.aktiv .spinn-hint{opacity:1;}
+    .spinn.aktiv.rort .spinn-hint{opacity:0;}
+    .spinn figcaption{position:absolute;left:0;right:0;bottom:0;padding:48px 20px 18px;line-height:1.5;
+      display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;
+      background:linear-gradient(to top,rgba(6,26,45,.72),transparent);}
+
     /* ---------- Fullbredde foto-bånd ---------- */
     /* Bildeteksten er bevisst satt som et galleriskilt: versaler, stor
        bokstavavstand, liten grad, dempet farge — den samme typografien museer
@@ -648,6 +670,35 @@
     </div>
   </div></section>
 
+  <!-- 360-SPINN
+       Viser glasuren fra alle sider ved at kunden drar seg gjennom ekte
+       fotografier. Ikke 3D: hvert bilde ER et fotografi, så den vandrende
+       refleksen i glasuren — det som faktisk selger en glasert kopp — er
+       bevart. En 3D-modell baker glansen inn i en flat tekstur og gjengir
+       samme kopp som matt maling.
+
+       AKTIVERES AUTOMATISK når bildene legges i public/bilder/spinn/ som
+       krus-01.webp … krus-32.webp. Til da vises <img>-en under, og seksjonen
+       ser ut som et vanlig produktbilde. Ingen tom plass, ingen ødelagt
+       tilstand. Se docs/FOTOGUIDE.md for opptaket. -->
+  <section id="snurr" class="snurr full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
+    <h2 class="seksjon-tittel reveal" data-no="Snu på den" data-en="Turn it around">Snu på den</h2>
+    <p class="seksjon-undertekst reveal delay-1" data-no="Dra for å se glasuren fra alle sider — slik den ser ut når du holder den i hånda." data-en="Drag to see the glaze from every side — the way it looks when you hold it.">Dra for å se glasuren fra alle sider — slik den ser ut når du holder den i hånda.</p>
+
+    <figure class="spinn reveal delay-1"
+            data-mappe="bilder/spinn/krus"
+            data-antall="32"
+            data-endelse="webp">
+      <img class="spinn-bilde" src="bilder/keramikk1.jpg" width="640" height="640"
+           alt="Hånddreid kopp med galakse-glasur" loading="lazy" decoding="async" />
+      <span class="spinn-hint" aria-hidden="true" data-no="Dra for å snurre" data-en="Drag to spin">Dra for å snurre</span>
+      <figcaption>
+        <span class="fb-sted" data-no="Galakse-koppen" data-en="The galaxy cup">Galakse-koppen</span>
+        <span class="fb-note" data-no="Håndlaget keramikk · galakse-glasur" data-en="Hand-thrown ceramics · galaxy glaze">Håndlaget keramikk · galakse-glasur</span>
+      </figcaption>
+    </figure>
+  </div></section>
+
   <!-- STATS / TELLENDE TALL -->
   <section id="stats" class="stats full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
     <h2 class="seksjon-tittel ordvis" data-no="Havstund i tall" data-en="Havstund in numbers">Havstund i tall</h2>
@@ -852,6 +903,118 @@
       entries.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('synlig'); io.unobserve(en.target); } });
     },{threshold:.15});
     document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+
+    /* ---- 360-spinn ----
+       Kunden drar seg gjennom ekte fotografier tatt rundt gjenstanden. Ikke 3D:
+       hvert bilde ER et foto, så den vandrende refleksen i glasuren er bevart.
+
+       Progressiv forbedring i to trinn, og begge er viktige:
+       1) Den PRØVER først bare ETT bilde. Finnes ikke mappa ennå, avslutter den
+          stille og <img>-en i HTML-en blir stående. Seksjonen ser ut som et
+          vanlig produktbilde — ingen tom ramme, ingen feilmelding.
+       2) Først når bildene er bekreftet OG seksjonen er scrollet fram, lastes
+          resten. En besøkende som aldri kommer så langt ned betaler ingenting. */
+    (function(){
+      var boks = document.querySelector('.spinn');
+      if (!boks) return;
+      var vis = boks.querySelector('.spinn-bilde');
+      if (!vis || !('IntersectionObserver' in window)) return;
+
+      var mappe  = boks.getAttribute('data-mappe');
+      var antall = parseInt(boks.getAttribute('data-antall'), 10) || 0;
+      var endelse = boks.getAttribute('data-endelse') || 'webp';
+      if (!mappe || antall < 2) return;
+
+      function sti(n){
+        return mappe + '-' + String(n + 1).padStart(2, '0') + '.' + endelse;
+      }
+
+      // Trinn 1 — finnes bildene i det hele tatt?
+      var proeve = new Image();
+      proeve.onerror = function(){ /* ingen bilder ennå: behold fallback-fotoet */ };
+      proeve.onload = function(){
+        // Trinn 2 — vent til seksjonen er i syne før resten lastes.
+        var io = new IntersectionObserver(function(poster){
+          poster.forEach(function(p){
+            if (!p.isIntersecting) return;
+            io.unobserve(p.target);
+            lastAlle();
+          });
+        }, { rootMargin: '300px 0px' });
+        io.observe(boks);
+      };
+      proeve.src = sti(0);
+
+      function lastAlle(){
+        var rammer = [], ferdig = 0, lyktes = 0;
+        for (var i = 0; i < antall; i++) {
+          (function(n){
+            var im = new Image();
+            function talt(ok){
+              ferdig++;
+              if (ok) lyktes++;
+              // Slå BARE på hvis hvert eneste bilde faktisk lastet. Mangler ett,
+              // ville spinnet hoppet eller vist et blankt felt midt i omdreiningen
+              // — verre enn å la det stille være. Da står fallback-fotoet igjen.
+              // NB: server.js sender forsiden (200) for ukjente stier i stedet for
+              // 404, så en manglende ramme kommer tilbake som HTML. Image()
+              // klarer ikke dekode det og utløser onerror, som er det vi vil.
+              if (ferdig === antall) {
+                if (lyktes === antall) slaaPaa(rammer);
+              }
+            }
+            im.onload  = function(){ talt(true); };
+            im.onerror = function(){ talt(false); };
+            im.src = sti(n);
+            rammer[n] = im;
+          })(i);
+        }
+      }
+
+      function slaaPaa(rammer){
+        var naa = 0;
+        boks.classList.add('aktiv');
+        boks.setAttribute('tabindex', '0');
+        boks.setAttribute('role', 'img');
+        // Skjermleser får samme beskrivelse som fallback-bildet hadde.
+        boks.setAttribute('aria-label', vis.alt || '');
+
+        function tegn(n){
+          naa = ((n % antall) + antall) % antall;
+          vis.src = rammer[naa].src;
+        }
+        tegn(0);
+
+        var drar = false, startX = 0, startRamme = 0;
+
+        function ned(e){
+          drar = true; startX = e.clientX; startRamme = naa;
+          boks.classList.add('drar', 'rort');
+          if (boks.setPointerCapture && e.pointerId != null) boks.setPointerCapture(e.pointerId);
+        }
+        function flytt(e){
+          if (!drar) return;
+          // Én full bredde dratt = én hel omdreining. Kjennes riktig uansett
+          // skjermstørrelse, fordi utslaget måles i andel av elementets bredde.
+          var andel = (e.clientX - startX) / boks.clientWidth;
+          tegn(startRamme - Math.round(andel * antall));
+        }
+        function opp(){ drar = false; boks.classList.remove('drar'); }
+
+        boks.addEventListener('pointerdown', ned);
+        boks.addEventListener('pointermove', flytt);
+        boks.addEventListener('pointerup', opp);
+        boks.addEventListener('pointercancel', opp);
+        boks.addEventListener('pointerleave', opp);
+        // Nettleseren skal ikke starte sin egen bilde-dragging oppå vår.
+        boks.addEventListener('dragstart', function(e){ e.preventDefault(); });
+
+        boks.addEventListener('keydown', function(e){
+          if (e.key === 'ArrowLeft')      { tegn(naa - 1); boks.classList.add('rort'); e.preventDefault(); }
+          else if (e.key === 'ArrowRight'){ tegn(naa + 1); boks.classList.add('rort'); e.preventDefault(); }
+        });
+      }
+    })();
 
     /* karRull() fjernet 2026-08-07 — den slo opp document.getElementById('kar'),
        en id som ikke finnes i dokumentet, og ville kastet på null. Ingen kalte

@@ -117,6 +117,64 @@ det er den detaljrikdommen som skiller en ekte virksomhet fra en generert side.
 
 ---
 
+---
+
+# Del 2 — 360-spinnet
+
+Nettsiden har en ferdig seksjon som heter **«Snu på den»**. Den venter bare på
+bilder. Legg dem inn, så slår den seg på av seg selv.
+
+**Hva den gjør:** kunden drar med fingeren og krukka snurrer rundt. Fordi hvert
+bilde er et ekte fotografi, følger refleksen i glasuren med — akkurat som når du
+vrir på den i hånda. Det er den ene tingen et stillbilde ikke klarer.
+
+*(Vi vurderte ekte 3D-skanning i stedet. Konklusjonen fra fem uavhengige
+undersøkelser var nei: blank glasur er det vanskeligste tilfellet som finnes for
+3D-skanning, og selv en vellykket skanning maler glansen inn som en flat tekstur
+— altså gjengir galakse-glasuren som matt grå maling. Spinnet gir det motsatte.)*
+
+## Slik tar dere dem
+
+Alt fra del 1 gjelder — samme lys, samme bakgrunn, samme innstillinger. I tillegg:
+
+1. **Sett krukka på en dreieskive.** En lazy susan fra kjøkkenavdelingen duger.
+   Marker 32 like store steg langs kanten med en tusj — eller bare tell «litt
+   over ti grader» hver gang.
+2. **Telefonen på stativ.** Den skal stå **helt i ro**. Det er hele poenget: det
+   er krukka som snurrer, ikke kameraet. Flytter telefonen seg, hopper spinnet.
+3. **Lås alt.** Fokus, lysstyrke og hvitbalanse. Hvis telefonen justerer seg
+   mellom bildene, blinker spinnet i lysstyrke når man drar. På iPhone: hold
+   fingeren på motivet til det står AE/AF LÅST.
+4. **Ta 32 bilder**, ett per steg, hele veien rundt. Ikke rør noe annet.
+5. **Kamerahøyde:** litt over kanten, så man ser ned i krukka. Det er slik folk
+   holder en kopp.
+
+Tar det for lang tid: 24 bilder holder også. Da endrer dere bare `data-antall`
+i koden — si fra, så gjør vi det.
+
+## Slik leverer dere dem
+
+Døp dem **nøyaktig** slik, med to siffer:
+
+```
+krus-01.webp
+krus-02.webp
+...
+krus-32.webp
+```
+
+Legg dem i `public/bilder/spinn/`.
+
+Send dem gjerne som vanlige bilder fra telefonen — vi konverterer og komprimerer
+til `.webp` før de går ut. Regn med ca. 35 KB per bilde ferdig behandlet, altså
+rundt 1 MB for hele spinnet. Det lastes først når noen scroller ned dit, så
+forsiden åpner like raskt som nå.
+
+**Til dere kommer så langt:** seksjonen viser et vanlig produktbilde. Ingen tom
+ramme, ingenting som ser ødelagt ut. Den bytter til spinn i det bildene ligger der.
+
+---
+
 ## Sjekkliste før dere begynner
 
 - [ ] Overskyet dag
@@ -127,5 +185,6 @@ det er den detaljrikdommen som skiller en ekte virksomhet fra en generert side.
 - [ ] Linsa tørket av
 - [ ] 20–30 gjenstander samlet
 - [ ] Notatblokk til navn, materiale, glasur, år og mål
+- [ ] Dreieskive og stativ, hvis dere også tar 360-spinnet
 
 Send bildene når dere er ferdige, så tar vi resten.
