@@ -1,7 +1,7 @@
 // describe/it/expect/vi er globale (vitest.config.js -> globals: true)
 //
 // Smoke-test for server.js-wiringen. server.js eier ingen ruter selv, men
-// wirer pino-http request-logger, Sentry-init/error-middleware og graceful
+// wirer pino-http request-logger, error-middleware og graceful
 // shutdown. Vitest setter VITEST=true, så server.js hopper over db.init() +
 // auto-listen ved require — vi starter en egen ephemeral-lytter (port 0) for
 // å sende ekte requests gjennom hele middleware-kjeden.

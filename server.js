@@ -19,7 +19,6 @@ const { authOptional } = require('./lib/auth');
 const { agentAuth, agentGate } = require('./lib/agent-auth');
 const { applySecurity } = require('./lib/security');
 const { logger, lagRequestLogger } = require('./lib/logger');
-const sentry = require('./lib/sentry');
 
 const app = express();
 applySecurity(app); // helmet + rate limiting — før body-parsere og ruter
@@ -43,9 +42,6 @@ const io = new Server(server);
 app.set('io', io);
 
 const PORT = process.env.PORT || 3000;
-
-// Slå på Sentry ved oppstart. No-op uten SENTRY_DSN. Kaster aldri.
-sentry.init(app);
 
 // F52 — body-grenser. Global default er lav (256kb) mot minne-/DoS-misbruk.
 // Etter forenklingen 2026-08-07 ("kun forsiden") er /api/projects og
@@ -101,9 +97,8 @@ if (fs.existsSync(routesDir)) {
       app.use('/api/' + name, require(path.join(routesDir, f)));
       console.log('  ✓ rute  /api/' + name);
     } catch (err) {
-      // F48 — strukturert logg + Sentry i stedet for rå console.error.
+      // F48 — strukturert logg i stedet for rå console.error.
       logger.error({ err, fil: f }, 'kunne ikke laste REST-rute');
-      sentry.captureException(err);
     }
   }
 }
@@ -119,9 +114,8 @@ if (fs.existsSync(rtDir)) {
       require(path.join(rtDir, f))(io);
       console.log('  ✓ realtime ' + f);
     } catch (err) {
-      // F48 — strukturert logg + Sentry i stedet for rå console.error.
+      // F48 — strukturert logg i stedet for rå console.error.
       logger.error({ err, fil: f }, 'kunne ikke laste realtime-handler');
-      sentry.captureException(err);
     }
   }
 }
@@ -159,25 +153,12 @@ app.get(/^\/(?!api).*/, (req, res, next) => {
 });
 
 // ---- Feil-middleware (MÅ stå sist, etter alle ruter) ----
-// Rapporterer til Sentry (no-op uten DSN), logger via pino og svarer 500.
+// Logger via pino og svarer 500.
 // 4 argumenter kreves for at Express skal gjenkjenne dette som error-handler.
 // eslint-disable-next-line no-unused-vars
 function errorMiddleware(err, req, res, _next) {
-  try {
-    // F50 — send request-kontekst til Sentry for raskere feilsøking. Kun
-    // ikke-sensitive felt: aldri body/headers/cookies (PII). rolle hentes fra
-    // req.user hvis satt.
-    sentry.captureException(err, {
-      extra: {
-        url: req && req.originalUrl,
-        method: req && req.method,
-        reqId: req && req.id,
-        rolle: (req && req.user && req.user.rolle) || undefined,
-      },
-    });
-  } catch {
-    /* Sentry skal aldri velte requesten */
-  }
+  // Request-konteksten (url, method, reqId) legges på av pino-http, så den
+  // følger med i loggen uten at vi trenger å sette den sammen her.
   const log = (req && req.log) || logger;
   log.error({ err }, 'uhåndtert feil i request');
   if (res.headersSent) return;
