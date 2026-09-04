@@ -27,7 +27,7 @@
     "nodemailer": "^9.0.1",
     "pg": "^8.12.0",
     "pino": "^9",
-    "pino-http": "^10",
+    "pino-http": "^11",
     "qrcode": "^1",
     "socket.io": "^4.7.5",
     "speakeasy": "^2"
