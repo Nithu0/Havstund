@@ -47,8 +47,10 @@ module.exports = [
     },
   },
 
-  // ESM config-filer (vitest.config.js o.l. bruker import/export).
-  // eslint.config.js selv er CommonJS og treffes ikke her.
+  // ESM config-filer. Gjaldt tidligere vitest.config.js, men den ble skrevet
+  // om til CommonJS 2026-09-04 (se kommentaren i fila). Overstyringen står
+  // fortsatt fordi havstund-brain/eslint.config.js er ESM. Rot-eslint.config.js
+  // er CommonJS og ignoreres eksplisitt under.
   {
     files: ["**/*.config.js"],
     ignores: ["eslint.config.js"],
