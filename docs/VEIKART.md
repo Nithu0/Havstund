@@ -70,7 +70,7 @@
 | Input-validering (passord, CMS-nøkkel, chat-cookie) | Svakt: 6-tegns pw, usanitisert nøkkel, `httpOnly:false` | Fiks de tre stedene over | S | 1 |
 | Unit-tester (auth + MVA-matte) | Null tester, ingen runner | vitest, `tests/lib/auth.test.js`, `tests/lib/regnskap.test.js` | M | 1 |
 | Strukturert logging + correlation IDs | Spredt `console.log/error` | `lib/logger.js` (pino) + request-middleware | M | 3 |
-| Error tracking (Sentry) | Ingen | `lib/sentry.js`, hook i error-handler | M | 3 |
+| Error tracking | Kun pino-logg (Railway) | Fjernet Sentry 2026-09-04 — se note under. Ny løsning ikke valgt. | M | 3 |
 | DB backup + DR-plan | Railway-Postgres, idempotent schema; ingen backup | `scripts/backup.sh` (pg_dump) + `docs/BACKUP-RESTORE.md` | M | 3 |
 
 ### Medium / lavere
@@ -130,7 +130,11 @@ Rekkefølge: passordbytte → kalender/kapasitet → aktivitets-CRUD → kundeva
 ### Fase 3 — komplett og robust  (annen terminal)
 Observabilitet, compliance, innsikt. Verdifullt, men ikke blokkerende for drift.
 
-- [ ] Strukturert logging + Sentry
+- [x] Strukturert logging (pino)
+- [ ] Error tracking — Sentry fjernet 2026-09-04 (aldri aktivert: `SENTRY_DSN`
+      var ikke satt, og pakken sto for 19 av 22 sårbarheter i produksjon).
+      Feil logges nå kun via pino til Railway-loggen, som er flyktig og ikke
+      varsler. Skal dette dekkes, må det velges en ny løsning.
 - [ ] DB backup + DR-plan
 - [ ] GDPR PII-eksport + sletting
 - [ ] Refusjon/avbestilling + CSV-eksport

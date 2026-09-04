@@ -30,8 +30,11 @@ Kilde: `db/schema.sql`. Kolonner som er person­data er markert.
 | `reset_tokens` | (kobler `user_id`) | Passord-reset | Engangs, utloper. |
 | `pageviews` | `anon_id`, `referrer`, `sti` | Analyse | Pseudonymt; ingen direkte identifikator. |
 
-Indirekte: serverlogger (pino) og Sentry kan inneholde IP/e-post i feilspor —
-behandle med samme varsomhet og kort retention.
+Indirekte: serverlogger (pino) kan inneholde IP/e-post i feilspor — behandle
+med samme varsomhet og kort retention.
+
+Sentry ble fjernet 2026-09-04. Feilspor forlater ikke lenger driftsmiljøet, og
+det finnes ingen tredjepart som mottar persondata gjennom feilrapportering.
 
 ---
 

@@ -4,7 +4,6 @@
 const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
-const sentry = require('../lib/sentry');
 const { logger } = require('../lib/logger');
 
 const url = process.env.DATABASE_URL;
@@ -16,20 +15,14 @@ if (url) {
     // Railway/managed Postgres bruker ofte selvsignert sert.
     ssl: process.env.PGSSL === 'disable' ? false : { rejectUnauthorized: false },
   });
-  // F51: idle-client-feil fra poolen rutes via strukturert logger + Sentry
-  // (ikke raa console.error). Handleren maa ALDRI kaste — en feil her ville
-  // ellers boble opp som en uncaught 'error' paa poolen. Derfor try/catch rundt
-  // begge kall (bade logger og sentry er allerede definert som kaster-aldri).
+  // F51: idle-client-feil fra poolen rutes via strukturert logger (ikke raa
+  // console.error). Handleren maa ALDRI kaste — en feil her ville ellers boble
+  // opp som en uncaught 'error' paa poolen. Derfor try/catch rundt kallet.
   pool.on('error', (e) => {
     try {
       logger.error({ err: e }, 'PG pool-feil (idle client)');
     } catch (_) {
       // logging skal aldri velte prosessen
-    }
-    try {
-      sentry.captureException(e, { tags: { scope: 'pg-pool' } });
-    } catch (_) {
-      // Sentry skal aldri velte prosessen
     }
   });
 }
@@ -379,11 +372,6 @@ async function init() {
     degradert = true;
     initFeilmelding = e && e.message ? e.message : String(e);
     console.error('✗ DB-init feilet (DB svarer — degradert drift):', initFeilmelding);
-    try {
-      sentry.captureException(e, { tags: { scope: 'db-init' } });
-    } catch (_) {
-      // Sentry skal aldri velte oppstart
-    }
   }
 }
 
