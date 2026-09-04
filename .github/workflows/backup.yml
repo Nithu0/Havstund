@@ -69,7 +69,7 @@ jobs:
 
       - name: Last opp dump som artifact (retention 30 dager)
         if: steps.guard.outputs.run == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: havstund-db-backup
           path: backups/havstund-*.sql.gz
