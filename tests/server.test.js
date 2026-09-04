@@ -183,6 +183,27 @@ describe('server.js wiring', () => {
     expect(kalt).toBe(false); // skal ikke skrive når headers allerede er sendt
   });
 
+  it('ukjent /api-sti svarer 404 JSON, ikke Express sin HTML-side', async () => {
+    const res = await getViaApp('/api/finnes-ikke');
+    expect(res.status).toBe(404);
+    // Skal kunne parses som JSON — det var nettopp dette som feilet før.
+    const body = JSON.parse(res.body);
+    expect(body).toEqual({ ok: false, error: 'Ukjent endepunkt' });
+    expect(res.body).not.toContain('<!DOCTYPE html>');
+  });
+
+  it('POST mot ukjent /api-sti svarer også 404 JSON', async () => {
+    const res = await postViaApp('/api/finnes-heller-ikke', { a: 1 });
+    expect(res.status).toBe(404);
+    expect(JSON.parse(res.body)).toEqual({ ok: false, error: 'Ukjent endepunkt' });
+  });
+
+  it('ukjent side UTENFOR /api gir fortsatt forsiden, ikke JSON-404', async () => {
+    const res = await getViaApp('/en-side-som-ikke-finnes');
+    expect(res.status).toBe(200);
+    expect(res.body).toContain('<!DOCTYPE html>');
+  });
+
   it('gracefulShutdown lukker http-server + pg-pool og exit 0', async () => {
     let serverClosed = false;
     let poolEnded = false;
