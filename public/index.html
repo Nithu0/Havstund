@@ -83,7 +83,7 @@
     body{font-family:'Inter',-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--tekst);background:var(--sand);line-height:1.75;overflow-x:hidden;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
     /* Subtilt filmkorn for et taktilt, eksklusivt preg */
     body::after{content:"";position:fixed;inset:0;z-index:9998;pointer-events:none;opacity:.035;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
-    h1,h2,h3{font-family:'Fraunces',Georgia,serif;font-weight:400;font-optical-sizing:auto;letter-spacing:-0.018em;}
+    h1,h2,h3{font-family:'Fraunces',Georgia,serif;font-weight:400;font-optical-sizing:auto;letter-spacing:-0.018em;overflow-wrap:break-word;}
     /* .logo hadde font-family 'Baloo 2'/'Quicksand' + uppercase, men elementet
        inneholder kun <img src="wordmark.png"> — reglene tegnet ingenting. */
     /* Håndskrevet "signatur"-preg på de personlige tekstene */
@@ -111,7 +111,7 @@
     .meny-toggle{display:none;background:none;border:none;font-size:1.7rem;line-height:1;color:#fff;cursor:pointer;padding:4px 8px;}
 
     /* ---------- Hero ---------- */
-    .hero{position:relative;min-height:92vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;padding:60px 22px 120px;overflow:hidden;
+    .hero{position:relative;min-height:92vh;min-height:92dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;padding:60px 22px 120px;overflow:hidden;
       background:#225781;}
     /* lys-glimt i vannet */
     .hero::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;background:radial-gradient(120% 110% at 50% 38%,transparent 45%,rgba(4,34,43,.28));}
@@ -151,6 +151,7 @@
     /* ---------- Seksjoner ---------- */
     section{max-width:1180px;margin:0 auto;padding:clamp(90px,12vw,165px) 24px;}
     .full{max-width:none;}
+    .inn{padding-left:24px;padding-right:24px;}
     .seksjon-tittel{text-align:center;color:var(--hav-dyp);font-size:clamp(2.3rem,5.5vw,3.2rem);letter-spacing:-0.02em;margin-bottom:16px;}
     .seksjon-undertekst{text-align:center;color:var(--myk);max-width:640px;margin:0 auto 52px;font-size:1.05rem;}
 
@@ -225,7 +226,7 @@
        Bygges av JS som progressiv forbedring — <img> ligger i HTML og vises hvis
        JS, grid eller redusert bevegelse gjør at effekten ikke skal kjøre. */
     .flis-verk{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(4,1fr);
-      gap:4px;aspect-ratio:662/1040;border-radius:20px;overflow:hidden;
+      gap:4px;aspect-ratio:828/995;border-radius:20px;overflow:hidden;
       box-shadow:0 18px 50px rgba(10,79,94,.22);background:var(--hav-dyp);}
     .flis-verk .flis{
       background-image:var(--verk);background-repeat:no-repeat;background-size:300% 400%;
@@ -302,8 +303,10 @@
 
     /* ---------- Selskap og bursdagsfeiring ---------- */
     /* Speilvendt av Kollektivt maleri: der ligger teksten til venstre og bildet
-       til høyre. Her er bildet størst og til høyre igjen, men seksjonen har
-       lysere bunn (skum) så de to ikke smelter sammen når man scroller. */
+       til høyre. Her er bildet størst og til høyre igjen. NB: begge seksjonene
+       har skum-bunn og ligger rett inntil hverandre uten bølgeskille, så de
+       leses som ett langt lyst felt. Slik sto de også før omrokeringene
+       2026-09-04. Skal de skilles visuelt, er det en egen avgjørelse. */
     .selskap{background:var(--skum);}
     .selskap-flex{display:grid;grid-template-columns:1.05fr 1fr;gap:50px;align-items:center;}
     .selskap-flex h2{color:var(--hav-dyp);font-size:clamp(2.3rem,5.4vw,3.3rem);letter-spacing:-0.02em;margin-bottom:6px;}
@@ -347,20 +350,18 @@
       display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;
       background:linear-gradient(to top,rgba(6,26,45,.72),transparent);}
 
-    /* ---------- Fullbredde foto-bånd ---------- */
-    /* Bildeteksten er bevisst satt som et galleriskilt: versaler, stor
-       bokstavavstand, liten grad, dempet farge — den samme typografien museer
-       og gallerier bruker. Det leser som «ekte sted», ikke som dekor. */
-    .foto-band{margin:0;position:relative;line-height:0;}
-    .foto-band img{width:100%;height:clamp(320px,52vh,560px);object-fit:cover;display:block;}
-    .foto-band figcaption{position:absolute;left:0;right:0;bottom:0;padding:56px 24px 22px;line-height:1.5;
-      display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;
-      background:linear-gradient(to top,rgba(6,26,45,.72),transparent);}
-    .foto-band .fb-sted{font-family:'Inter',sans-serif;text-transform:uppercase;letter-spacing:.22em;
-      font-size:.74rem;font-weight:600;color:#fff;}
-    .foto-band .fb-note{font-family:'Inter',sans-serif;font-size:.8rem;color:rgba(255,255,255,.72);}
+    /* FJERNET 2026-09-04 — .foto-band (+ .fb-sted/.fb-note): det fullbredde
+       "STEDET"-båndet under Om oss. Det viste det kollektive maleriet på
+       staffeli, og da samme bilde ble flyttet opp til Kollektivt maleri-
+       seksjonen sto bildet to ganger på siden. Eierne valgte å fjerne båndet
+       framfor å duplisere. Det fantes bare ÉN .foto-band i dokumentet, så
+       reglene tegner nå ingenting og er tatt bort i stedet for å bli liggende
+       som stillas. Ligger i git-loggen hvis båndet skal tilbake — da med et
+       ekte stedsfoto, som var den opprinnelige hensikten. */
     .pris-boks{background:var(--sand);border:1px solid var(--sand-mork);border-radius:16px;padding:24px 26px;margin-top:26px;}
-    .pris-boks .pris-stor{font-family:'Fraunces',serif;font-size:1.5rem;color:var(--leire-mork);margin-bottom:14px;}
+    /* FJERNET 2026-09-04 — .pris-boks .pris-stor: den store "Fra … kr"-linja i
+       Kollektivt maleri og Selskap. Begge seksjonene skal nå kun be om
+       et tilbud, så regelen tegner ingenting. Ligger i git-loggen. */
     .pris-liste{list-style:none;margin:0 0 14px;padding:0;}
     .pris-liste li{padding:8px 0;border-bottom:1px solid var(--sand-mork);color:var(--tekst);font-size:.97rem;}
     .pris-liste li:last-child{border-bottom:none;}
@@ -371,7 +372,7 @@
     .havvegg-foto:hover img{transform:scale(1.04);}
     /* Galleri «Fra studioet» */
     .galleri{background:var(--sand);}
-    .galleri-grid{display:grid;grid-template-columns:1.5fr 1fr;grid-template-rows:1fr 1fr;gap:14px;height:min(82vh,660px);}
+    .galleri-grid{display:grid;grid-template-columns:1.5fr 1fr;grid-template-rows:1fr 1fr;gap:14px;height:min(82vh,660px);height:min(82dvh,660px);}
     .galleri-item:first-child{grid-row:1 / span 2;}
     @media(max-width:700px){.galleri-grid{grid-template-columns:1fr;grid-template-rows:none;height:auto;}.galleri-item{aspect-ratio:1;}.galleri-item:first-child{grid-row:auto;}}
     .galleri-item{position:relative;display:block;text-decoration:none;border-radius:18px;overflow:hidden;box-shadow:0 12px 36px rgba(10,79,94,.14);cursor:pointer;}
@@ -395,9 +396,9 @@
     .galleri-item .overlegg .g-detalj{color:rgba(255,255,255,.74);font-family:'Inter',sans-serif;
       font-size:.76rem;line-height:1.4;}
     /* Lightbox */
-    #lightboks{border:none;padding:0;background:transparent;max-width:96vw;max-height:96vh;}
+    #lightboks{border:none;padding:0;background:transparent;max-width:96vw;max-height:96vh;max-height:96dvh;}
     #lightboks::backdrop{background:rgba(6,45,56,.93);backdrop-filter:blur(5px);}
-    #lightboks img{max-width:92vw;max-height:88vh;object-fit:contain;border-radius:12px;display:block;box-shadow:0 24px 70px rgba(0,0,0,.55);}
+    #lightboks img{max-width:92vw;max-height:88vh;max-height:88dvh;object-fit:contain;border-radius:12px;display:block;box-shadow:0 24px 70px rgba(0,0,0,.55);}
     #lightboks .lukk{position:fixed;top:18px;right:24px;background:#fff;color:var(--hav-dyp);border:none;width:46px;height:46px;border-radius:50%;font-size:1.7rem;line-height:1;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.3);}
     /* Respekter redusert bevegelse */
     @media(prefers-reduced-motion:reduce){
@@ -466,6 +467,42 @@
       .kar > .kort{flex-basis:80vw;}
       .kar-knapp{display:none;}
     }
+
+    /* ---------- Telefon (<=520px) ----------
+       Lagt til 2026-09-04. Siden hadde brytepunkter på 820px og 700px, men
+       ingenting for de breddene folk faktisk holder i hånda (360-430px).
+       Der gikk for mye av skjermen til luft: seksjonen ga 24px sideluft og
+       den indre div-en 24px til — 96px av 360px, over en fjerdedel, før
+       første bokstav. Polstring, luft og trykkflater er her satt for en
+       tommel i stedet for en musepeker. Ingenting skjules; alt skal fortsatt
+       kunne leses. */
+    @media(max-width:520px){
+      /* Sideluft skal legges på én gang. Seksjonen eier den, ikke div-en. */
+      .inn{padding-left:0;padding-right:0;}
+      section{padding-left:18px;padding-right:18px;}
+
+      /* Kortpolstringen var satt for et 320px-kort på skrivebord. På en
+         360px-skjerm spiser den lesebredden den skulle ramme inn. */
+      .kort{padding:30px 22px 26px;}
+      .kar > .kort{flex-basis:84vw;}
+      .barn-punkt{padding:22px 20px;}
+      .nyhet{padding:20px;}
+      .skjema{padding:26px 20px;border-radius:18px;}
+
+      /* Trykkflater. Språkknappene var ~29px høye og hamburgeren ~32px —
+         begge under de 44px som trengs for å treffes med tommelen. */
+      .sprak button{padding:12px 16px;font-size:.78rem;}
+      .meny-toggle{padding:9px 10px;}
+
+      /* Bildeteksten i galleriet kan ikke holde 24px innrykk på 360px. */
+      .galleri-item .overlegg{padding:14px;}
+
+      /* Hero: bunnluften var 120px, satt for å gi plass under scroll-hintet
+         på en stor skjerm. På telefon blir det bare tom flate å dra forbi. */
+      .hero{padding:54px 18px 88px;}
+      .scroll-hint{bottom:64px;}
+    }
+
     .magnetisk{will-change:transform;transition:transform .25s cubic-bezier(.2,.8,.2,1);}
     /* ---------- Tall + ord-avsløring ---------- */
     /* (markør-CSS fjernet 2026-08-07 sammen med effekten) */
@@ -523,9 +560,9 @@
       </a>
       <div class="meny">
         <a href="#opplevelser" data-no="Opplevelser" data-en="Experiences">Opplevelser</a>
-        <a href="#barneklubb" data-no="Barneklubb" data-en="Kids' Club">Barneklubb</a>
         <a href="#signatur" data-no="Kollektivt maleri" data-en="Collective painting">Kollektivt maleri</a>
         <a href="#selskap" data-no="Selskap" data-en="Parties">Selskap</a>
+        <a href="#barneklubb" data-no="Barneklubb" data-en="Kids' Club">Barneklubb</a>
         <a href="#galleri" data-no="Galleri" data-en="Gallery">Galleri</a>
         <a href="#om" data-no="Om oss" data-en="About">Om oss</a>
         <a href="#booking" class="knapp-liten" data-no="Book" data-en="Book">Book</a>
@@ -591,7 +628,11 @@
           <h3 data-no="For grupper" data-en="For groups">For grupper</h3>
           <p data-no="Bedrifter, bursdager og kollektivt maleri. Bedre i dårlig vær — nordlys-forsikring." data-en="Companies, birthdays and collective painting. Better in bad weather — your northern-lights insurance.">Bedrifter, bursdager og kollektivt maleri. Bedre i dårlig vær — nordlys-forsikring.</p>
           <div class="kort-bunn">
-            <span class="pris">fra 950 kr <span class="pris-enhet" data-no="per person · minimum 12 000 kr" data-en="per person · minimum NOK 12,000">per person · minimum 12 000 kr</span></span>
+            <!-- Konkret pris FJERNET 2026-09-04 etter ønske fra eierne. Kortet
+                 dekker bedrifter, bursdager og kollektivt maleri — de samme
+                 tingene som Selskap- og Kollektivt maleri-seksjonene, og de
+                 skal alle be om tilbud i stedet for å oppgi tall. -->
+            <span class="pris" data-no="Be om pris" data-en="Ask for a price">Be om pris</span>
             <span class="krok" data-no="Bedre i dårlig vær" data-en="Better in bad weather">Bedre i dårlig vær</span>
           </div>
         </div>
@@ -609,6 +650,74 @@
       <button class="kar-knapp next" aria-label="neste">›</button>
     </div>
   </section>
+
+  <!-- SIGNATUR / HAVVEGGEN -->
+  <section id="signatur" class="signatur">
+    <div class="signatur-flex">
+      <div class="tekst">
+        <div class="seksjon-eyebrow reveal v-venstre" data-no="LOFOTENS FØRSTE" data-en="LOFOTEN'S FIRST">LOFOTENS FØRSTE</div>
+        <h2 class="reveal v-venstre" data-no="Kollektivt maleri" data-en="Collective painting">Kollektivt maleri</h2>
+        <p class="kollektiv-undertittel reveal v-venstre" data-no="Ett bilde, mange hender." data-en="One picture, many hands.">Ett bilde, mange hender.</p>
+        <p class="reveal v-venstre delay-1" data-no="Vi deler ett bilde - et portrett, et Lofoten-motiv, eller deres eget foto - i 4 til 20 fliser. Hver av dere maler sin egen flis, og sammen setter vi dem til ett helt kunstverk." data-en="We split one picture - a portrait, a Lofoten motif, or your own photo - into 4 to 20 tiles. Each of you paints your own tile, and together we assemble them into one complete artwork.">Vi deler ett bilde - et portrett, et Lofoten-motiv, eller deres eget foto - i 4 til 20 fliser. Hver av dere maler sin egen flis, og sammen setter vi dem til ett helt kunstverk.</p>
+        <p class="reveal v-venstre delay-2" data-no="Ta med hele verket hjem sammen, eller ta hver deres flis og bygg bildet hjemme. En unik felles aktivitet for familier, venner, bedrifter og feiringer." data-en="Take the whole piece home together, or each take your own tile and build the picture at home. A unique shared activity for families, friends, companies and celebrations.">Ta med hele verket hjem sammen, eller ta hver deres flis og bygg bildet hjemme. En unik felles aktivitet for familier, venner, bedrifter og feiringer.</p>
+        <div class="pris-boks reveal v-venstre delay-2">
+          <!-- Konkret pris FJERNET 2026-09-04 etter ønske fra eierne: her og i
+               Selskap skal det kun stå "Be om et tilbud". Tallene er bevisst
+               IKKE gjengitt her — en HTML-kommentar sendes til hver besøkende og
+               er lesbar i "vis kilde", så prisen ville fortsatt ligget ute.
+               De to sprikende anslagene (memory-notatet 2026-06-20 mot
+               _kilder/Havstund-plan.md del 13) står i commit-meldingen. De er
+               fortsatt ikke avklart, og må avklares før dere priser en jobb. -->
+          <ul class="pris-liste">
+            <li data-no="Deres eget foto, et Lofoten-motiv, eller en overraskelse fra oss" data-en="Your own photo, a Lofoten motif, or a surprise from us">Deres eget foto, et Lofoten-motiv, eller en overraskelse fra oss</li>
+            <li data-no="Ingen kan lage det samme to ganger" data-en="No one can ever make the same one twice">Ingen kan lage det samme to ganger</li>
+          </ul>
+          <p class="pris-note" data-no="Fortell oss hvor mange dere er, så skreddersyr vi opplevelsen og verket for dere." data-en="Tell us how many you are, and we'll tailor the experience and the artwork for you.">Fortell oss hvor mange dere er, så skreddersyr vi opplevelsen og verket for dere.</p>
+          <a href="#booking" class="knapp magnetisk" style="margin-top:18px;" data-no="Be om et tilbud" data-en="Request a quote">Be om et tilbud</a>
+        </div>
+      </div>
+      <div class="reveal v-hoyre delay-1">
+        <div class="havvegg-foto">
+          <picture><source srcset="bilder/om-staffeli.webp" type="image/webp"><img src="bilder/om-staffeli.jpg" width="828" height="995" alt="Ferdig kollektivt maleri på staffeli — Lofoten-motiv delt i 30 fliser, malt av mange hender" loading="lazy" decoding="async" /></picture>
+        </div>
+        <p class="mosaikk-bildetekst" data-no="Et ekte kollektivt maleri - ett bilde delt i fliser, malt av mange hender." data-en="A real collective painting - one picture split into tiles, painted by many hands.">Et ekte kollektivt maleri - ett bilde delt i fliser, malt av mange hender.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SELSKAP OG BURSDAGSFEIRING
+       Ligger rett etter Kollektivt maleri: bildet her viser nettopp et
+       kollektivt maleri i bakgrunnen, så seksjonen fortsetter der den forrige
+       slapp — fra «hva det er» til «slik ser en feiring ut». Flyttet opp hit,
+       over barneklubben, 2026-09-04 etter ønske fra eierne. -->
+  <section id="selskap" class="selskap full"><div class="inn" style="max-width:1180px;margin:0 auto;">
+    <div class="selskap-flex">
+      <div class="reveal v-venstre">
+        <div class="seksjon-eyebrow" data-no="FOR SMÅ OG STORE" data-en="FOR ALL AGES">FOR SMÅ OG STORE</div>
+        <h2 data-no="Selskap og bursdagsfeiring" data-en="Parties and birthdays">Selskap og bursdagsfeiring</h2>
+        <p class="kollektiv-undertittel" data-no="Feir hos oss — med leire på hendene." data-en="Celebrate with us — with clay on your hands.">Feir hos oss — med leire på hendene.</p>
+        <p data-no="Vi holder bursdager, jubileer og småselskaper i studioet. Alle lager noe eget, og hver gjest tar med seg hjem det de har laget. Ingen som har vært her har fått den samme gaven to ganger." data-en="We host birthdays, anniversaries and small parties in the studio. Everyone makes something of their own, and every guest takes their piece home. No one who has been here has received the same gift twice.">Vi holder bursdager, jubileer og småselskaper i studioet. Alle lager noe eget, og hver gjest tar med seg hjem det de har laget. Ingen som har vært her har fått den samme gaven to ganger.</p>
+        <p data-no="Dere ordner kake og pynt — vi ordner leire, verktøy, bord og utsikt over havna. Vil dere male sammen i stedet, gjør vi det til et kollektivt maleri dere kan henge opp hjemme." data-en="You bring the cake and decorations — we bring clay, tools, tables and the view over the harbour. If you'd rather paint together, we'll turn it into a collective painting you can hang at home.">Dere ordner kake og pynt — vi ordner leire, verktøy, bord og utsikt over havna. Vil dere male sammen i stedet, gjør vi det til et kollektivt maleri dere kan henge opp hjemme.</p>
+        <div class="pris-boks">
+          <ul class="pris-liste">
+            <li data-no="Barnebursdag, voksenselskap, jubileum eller firmatur" data-en="Children's birthday, adult party, anniversary or company outing">Barnebursdag, voksenselskap, jubileum eller firmatur</li>
+            <li data-no="Alle lager sitt eget — og tar det med hjem" data-en="Everyone makes their own — and takes it home">Alle lager sitt eget — og tar det med hjem</li>
+            <li data-no="Bedre i dårlig vær enn i godt" data-en="Better in bad weather than good">Bedre i dårlig vær enn i godt</li>
+          </ul>
+          <p class="pris-note" data-no="Si hvor mange dere er og hvor gamle bursdagsbarnet er, så setter vi opp et opplegg som passer." data-en="Tell us how many you are and how old the birthday child is, and we'll put together something that fits.">Si hvor mange dere er og hvor gamle bursdagsbarnet er, så setter vi opp et opplegg som passer.</p>
+          <a href="#booking" class="knapp magnetisk" style="margin-top:18px;" data-no="Be om et tilbud" data-en="Request a quote">Be om et tilbud</a>
+        </div>
+      </div>
+      <figure class="selskap-foto reveal v-hoyre delay-1">
+        <picture>
+          <source srcset="bilder/selskap-bursdag.webp" type="image/webp">
+          <img src="bilder/selskap-bursdag.jpg" width="828" height="995" loading="lazy" decoding="async"
+               alt="Bursdagsfeiring på Havstund — muffins med lys, popcorn og kollektivt maleri, med utsikt over Ballstad havn" />
+        </picture>
+        <figcaption data-no="Bursdag i studioet · utsikt over Ballstad havn" data-en="A birthday in the studio · overlooking Ballstad harbour">Bursdag i studioet · utsikt over Ballstad havn</figcaption>
+      </figure>
+    </div>
+  </div></section>
 
   <svg class="bolge opp" viewBox="0 0 1440 90" preserveAspectRatio="none">
     <defs><linearGradient id="aurora" x1="0" y1="0" x2="1" y2="0.3">
@@ -655,76 +764,8 @@
     <path fill="url(#aurora2)" d="M0,40 C240,90 480,0 720,40 C960,80 1200,10 1440,45 L1440,0 L0,0 Z"></path>
   </svg>
 
-  <!-- SIGNATUR / HAVVEGGEN -->
-  <section id="signatur" class="signatur">
-    <div class="signatur-flex">
-      <div class="tekst">
-        <div class="seksjon-eyebrow reveal v-venstre" data-no="LOFOTENS FØRSTE" data-en="LOFOTEN'S FIRST">LOFOTENS FØRSTE</div>
-        <h2 class="reveal v-venstre" data-no="Kollektivt maleri" data-en="Collective painting">Kollektivt maleri</h2>
-        <p class="kollektiv-undertittel reveal v-venstre" data-no="Ett bilde, mange hender." data-en="One picture, many hands.">Ett bilde, mange hender.</p>
-        <p class="reveal v-venstre delay-1" data-no="Vi deler ett bilde - et portrett, et Lofoten-motiv, eller deres eget foto - i 4 til 20 fliser. Hver av dere maler sin egen flis, og sammen setter vi dem til ett helt kunstverk." data-en="We split one picture - a portrait, a Lofoten motif, or your own photo - into 4 to 20 tiles. Each of you paints your own tile, and together we assemble them into one complete artwork.">Vi deler ett bilde - et portrett, et Lofoten-motiv, eller deres eget foto - i 4 til 20 fliser. Hver av dere maler sin egen flis, og sammen setter vi dem til ett helt kunstverk.</p>
-        <p class="reveal v-venstre delay-2" data-no="Ta med hele verket hjem sammen, eller ta hver deres flis og bygg bildet hjemme. En unik felles aktivitet for familier, venner, bedrifter og feiringer." data-en="Take the whole piece home together, or each take your own tile and build the picture at home. A unique shared activity for families, friends, companies and celebrations.">Ta med hele verket hjem sammen, eller ta hver deres flis og bygg bildet hjemme. En unik felles aktivitet for familier, venner, bedrifter og feiringer.</p>
-        <div class="pris-boks reveal v-venstre delay-2">
-          <!-- Pris fra memory-notatet 2026-06-20 (Karri-godkjent estimat):
-               750 kr/person = én flis, minimum 4 personer. NB: kildeplanen
-               (_kilder/Havstund-plan.md, del 13) oppgir 1 200 kr/pp med minimum
-               18 000 kr for felles-kunst-event. De to tallene spriker — eierne
-               må avgjøre hvilket som gjelder før dette står lenge ute. -->
-          <div class="pris-stor"><span data-no="Fra" data-en="From">Fra</span> 750 kr <span style="font-family:'Inter',sans-serif;font-size:.92rem;font-weight:500;color:var(--myk);" data-no="per person · minimum 4 personer" data-en="per person · minimum 4 people">per person · minimum 4 personer</span></div>
-          <ul class="pris-liste">
-            <li data-no="4 personer ≈ 3 000 kr · 10 personer ≈ 7 500 kr · 20 personer ≈ 15 000 kr" data-en="4 people ≈ NOK 3,000 · 10 people ≈ NOK 7,500 · 20 people ≈ NOK 15,000">4 personer ≈ 3 000 kr · 10 personer ≈ 7 500 kr · 20 personer ≈ 15 000 kr</li>
-            <li data-no="Deres eget foto, et Lofoten-motiv, eller en overraskelse fra oss" data-en="Your own photo, a Lofoten motif, or a surprise from us">Deres eget foto, et Lofoten-motiv, eller en overraskelse fra oss</li>
-            <li data-no="Ingen kan lage det samme to ganger" data-en="No one can ever make the same one twice">Ingen kan lage det samme to ganger</li>
-          </ul>
-          <p class="pris-note" data-no="Fortell oss hvor mange dere er, så skreddersyr vi opplevelsen og verket for dere." data-en="Tell us how many you are, and we'll tailor the experience and the artwork for you.">Fortell oss hvor mange dere er, så skreddersyr vi opplevelsen og verket for dere.</p>
-          <a href="#booking" class="knapp magnetisk" style="margin-top:18px;" data-no="Be om et tilbud" data-en="Request a quote">Be om et tilbud</a>
-        </div>
-      </div>
-      <div class="reveal v-hoyre delay-1">
-        <div class="havvegg-foto">
-          <picture><source srcset="bilder/havvegg.webp" type="image/webp"><img src="bilder/havvegg.jpg" width="662" height="1040" alt="Havstund Havveggen — håndmalte fliser satt sammen til ett motiv" loading="lazy" decoding="async" /></picture>
-        </div>
-        <p class="mosaikk-bildetekst" data-no="Et ekte kollektivt maleri - ett bilde delt i fliser, malt av mange hender." data-en="A real collective painting - one picture split into tiles, painted by many hands.">Et ekte kollektivt maleri - ett bilde delt i fliser, malt av mange hender.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- SELSKAP OG BURSDAGSFEIRING
-       Plassert rett etter Kollektivt maleri med vilje: bildet viser nettopp et
-       kollektivt maleri i bakgrunnen, så seksjonen fortsetter der den forrige
-       slapp — fra «hva det er» til «slik ser en feiring ut». -->
-  <section id="selskap" class="selskap full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
-    <div class="selskap-flex">
-      <div class="reveal v-venstre">
-        <div class="seksjon-eyebrow" data-no="FOR SMÅ OG STORE" data-en="FOR ALL AGES">FOR SMÅ OG STORE</div>
-        <h2 data-no="Selskap og bursdagsfeiring" data-en="Parties and birthdays">Selskap og bursdagsfeiring</h2>
-        <p class="kollektiv-undertittel" data-no="Feir hos oss — med leire på hendene." data-en="Celebrate with us — with clay on your hands.">Feir hos oss — med leire på hendene.</p>
-        <p data-no="Vi holder bursdager, jubileer og småselskaper i studioet. Alle lager noe eget, og hver gjest tar med seg hjem det de har laget. Ingen som har vært her har fått den samme gaven to ganger." data-en="We host birthdays, anniversaries and small parties in the studio. Everyone makes something of their own, and every guest takes their piece home. No one who has been here has received the same gift twice.">Vi holder bursdager, jubileer og småselskaper i studioet. Alle lager noe eget, og hver gjest tar med seg hjem det de har laget. Ingen som har vært her har fått den samme gaven to ganger.</p>
-        <p data-no="Dere ordner kake og pynt — vi ordner leire, verktøy, bord og utsikt over havna. Vil dere male sammen i stedet, gjør vi det til et kollektivt maleri dere kan henge opp hjemme." data-en="You bring the cake and decorations — we bring clay, tools, tables and the view over the harbour. If you'd rather paint together, we'll turn it into a collective painting you can hang at home.">Dere ordner kake og pynt — vi ordner leire, verktøy, bord og utsikt over havna. Vil dere male sammen i stedet, gjør vi det til et kollektivt maleri dere kan henge opp hjemme.</p>
-        <div class="pris-boks">
-          <div class="pris-stor"><span data-no="Fra" data-en="From">Fra</span> 950 kr <span style="font-family:'Inter',sans-serif;font-size:.92rem;font-weight:500;color:var(--myk);" data-no="per person · minimum 12 000 kr" data-en="per person · minimum NOK 12,000">per person · minimum 12 000 kr</span></div>
-          <ul class="pris-liste">
-            <li data-no="Barnebursdag, voksenselskap, jubileum eller firmatur" data-en="Children's birthday, adult party, anniversary or company outing">Barnebursdag, voksenselskap, jubileum eller firmatur</li>
-            <li data-no="Alle lager sitt eget — og tar det med hjem" data-en="Everyone makes their own — and takes it home">Alle lager sitt eget — og tar det med hjem</li>
-            <li data-no="Bedre i dårlig vær enn i godt" data-en="Better in bad weather than good">Bedre i dårlig vær enn i godt</li>
-          </ul>
-          <p class="pris-note" data-no="Si hvor mange dere er og hvor gamle bursdagsbarnet er, så setter vi opp et opplegg som passer." data-en="Tell us how many you are and how old the birthday child is, and we'll put together something that fits.">Si hvor mange dere er og hvor gamle bursdagsbarnet er, så setter vi opp et opplegg som passer.</p>
-          <a href="#booking" class="knapp magnetisk" style="margin-top:18px;" data-no="Be om et tilbud" data-en="Request a quote">Be om et tilbud</a>
-        </div>
-      </div>
-      <figure class="selskap-foto reveal v-hoyre delay-1">
-        <picture>
-          <source srcset="bilder/selskap-bursdag.webp" type="image/webp">
-          <img src="bilder/selskap-bursdag.jpg" width="828" height="995" loading="lazy" decoding="async"
-               alt="Bursdagsfeiring på Havstund — muffins med lys, popcorn og kollektivt maleri, med utsikt over Ballstad havn" />
-        </picture>
-        <figcaption data-no="Bursdag i studioet · utsikt over Ballstad havn" data-en="A birthday in the studio · overlooking Ballstad harbour">Bursdag i studioet · utsikt over Ballstad havn</figcaption>
-      </figure>
-    </div>
-  </div></section>
-
   <!-- GALLERI / FRA STUDIOET -->
-  <section id="galleri" class="galleri full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
+  <section id="galleri" class="galleri full"><div class="inn" style="max-width:1180px;margin:0 auto;">
     <h2 class="seksjon-tittel reveal" data-no="Fra studioet" data-en="From the studio">Fra studioet</h2>
     <p class="seksjon-undertekst reveal delay-1" data-no="Smakebiter på det som skapes hos Havstund — glasur fra dette havet, i hver eneste form." data-en="A glimpse of what's created at Havstund — glaze from this sea, in every single piece.">Smakebiter på det som skapes hos Havstund — glasur fra dette havet, i hver eneste form.</p>
     <div class="galleri-grid">
@@ -745,7 +786,7 @@
        krus-01.webp … krus-32.webp. Til da vises <img>-en under, og seksjonen
        ser ut som et vanlig produktbilde. Ingen tom plass, ingen ødelagt
        tilstand. Se docs/FOTOGUIDE.md for opptaket. -->
-  <section id="snurr" class="snurr full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
+  <section id="snurr" class="snurr full"><div class="inn" style="max-width:1180px;margin:0 auto;">
     <h2 class="seksjon-tittel reveal" data-no="Snu på den" data-en="Turn it around">Snu på den</h2>
     <p class="seksjon-undertekst reveal delay-1" data-no="Dra for å se glasuren fra alle sider — slik den ser ut når du holder den i hånda." data-en="Drag to see the glaze from every side — the way it looks when you hold it.">Dra for å se glasuren fra alle sider — slik den ser ut når du holder den i hånda.</p>
 
@@ -764,7 +805,7 @@
   </div></section>
 
   <!-- STATS / TELLENDE TALL -->
-  <section id="stats" class="stats full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
+  <section id="stats" class="stats full"><div class="inn" style="max-width:1180px;margin:0 auto;">
     <h2 class="seksjon-tittel ordvis" data-no="Havstund i tall" data-en="Havstund in numbers">Havstund i tall</h2>
     <div class="seksjon-undertekst reveal delay-1" style="margin-bottom:48px;">&nbsp;</div>
     <div class="stats-grid">
@@ -776,30 +817,15 @@
   </div></section>
 
   <!-- OM OSS -->
-  <section id="om" class="om full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
+  <section id="om" class="om full"><div class="inn" style="max-width:1180px;margin:0 auto;">
     <h2 class="seksjon-tittel reveal" data-no="Om oss" data-en="About us">Om oss</h2>
     <p class="reveal delay-1" data-no="Havstund drives av to unge gründere — begge jordmødre i Lofoten. Den ene jobber med keramikk, den andre med kunst og maling." data-en="Havstund is run by two young founders — both midwives in Lofoten. One works with ceramics, the other with art and painting.">Havstund drives av to unge gründere — begge jordmødre i Lofoten. Den ene jobber med keramikk, den andre med kunst og maling.</p>
     <p class="reveal delay-1" data-no="At det nettopp er to jordmødre som står bak er ikke tilfeldig: til daglig tar de imot nytt liv her i Lofoten, og nå vil de gi barna og gjestene her en annen type omsorg — gleden og mestringen ved å skape noe ekte med egne hender." data-en="That two midwives are behind it is no coincidence: every day they welcome new life here in Lofoten, and now they want to give the children and guests here a different kind of care — the joy and mastery of making something real with your own hands.">At det nettopp er to jordmødre som står bak er ikke tilfeldig: til daglig tar de imot nytt liv her i Lofoten, og nå vil de gi barna og gjestene her en annen type omsorg — gleden og mestringen ved å skape noe ekte med egne hender.</p>
     <p class="sitat reveal delay-2" data-no="«Vi er det første stedet i Lofoten med et helårs keramikk- og kunsttilbud — og vi er her for å bli.»" data-en="“We are the first place in Lofoten with a year-round ceramics and art offering — and we are here to stay.”">«Vi er det første stedet i Lofoten med et helårs keramikk- og kunsttilbud — og vi er her for å bli.»</p>
   </div></section>
 
-  <!-- STEDET: fullbredde-bånd med ekte Ballstad-foto. Bildeteksten er satt som
-       et museums-/galleriskilt (sted · årstid · fotograf) — det er den billigste
-       troverdighets-markøren som finnes, og den er umulig å forfalske. -->
-  <figure class="foto-band reveal">
-    <picture>
-      <source srcset="bilder/om-staffeli.webp" type="image/webp">
-      <img src="bilder/om-staffeli.jpg" width="828" height="995" loading="lazy" decoding="async"
-           alt="Kollektivt maleri på staffeli i studioet — Lofoten-motiv delt i 30 fliser" />
-    </picture>
-    <figcaption>
-      <span class="fb-sted" data-no="Ytre Steinfjorden, Mærvoll" data-en="Ytre Steinfjorden, Mærvoll">Ytre Steinfjorden, Mærvoll</span>
-      <span class="fb-note" data-no="Kollektivt maleri · 30 fliser, mange hender" data-en="Collective painting · 30 tiles, many hands">Kollektivt maleri · 30 fliser, mange hender</span>
-    </figcaption>
-  </figure>
-
   <!-- NYHETER -->
-  <section id="nyheter" class="nyheter full"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
+  <section id="nyheter" class="nyheter full"><div class="inn" style="max-width:1180px;margin:0 auto;">
     <h2 class="seksjon-tittel reveal" data-no="Nyheter" data-en="News">Nyheter</h2>
     <p id="nyheterIntro" class="seksjon-undertekst reveal delay-1" data-no="Her legger vi ut alt nytt til dere — nyeste øverst." data-en="Here we post everything new — newest on top.">Her legger vi ut alt nytt til dere — nyeste øverst.</p>
     <div style="max-width:780px;margin:0 auto;">
@@ -812,7 +838,7 @@
   </div></section>
 
   <!-- BOOKING -->
-  <section id="booking" class="booking full seksjon-bg"><div style="max-width:1180px;margin:0 auto;padding:0 24px;">
+  <section id="booking" class="booking full seksjon-bg"><div class="inn" style="max-width:1180px;margin:0 auto;">
     <h2 class="seksjon-tittel reveal" data-no="Book en opplevelse" data-en="Book an experience">Book en opplevelse</h2>
     <p class="seksjon-undertekst reveal delay-1" data-no="Fyll ut, så tar vi kontakt for å bekrefte tid og plass." data-en="Fill in the form and we'll get in touch to confirm time and place.">Fyll ut, så tar vi kontakt for å bekrefte tid og plass.</p>
     <form class="skjema reveal delay-1" id="bookingSkjema" onsubmit="sendBooking(event)">
@@ -839,7 +865,7 @@
 
   <!-- ÅPNINGSTIDER -->
   <section id="apningstider" class="full" style="text-align:center;">
-    <div style="max-width:720px;margin:0 auto;padding:0 24px;">
+    <div class="inn" style="max-width:720px;margin:0 auto;">
       <h2 class="seksjon-tittel reveal" data-no="Åpningstider" data-en="Opening hours">Åpningstider</h2>
       <p class="seksjon-undertekst reveal delay-1" data-no="Når du finner oss i studioet på Ballstad." data-en="When you'll find us in the studio at Ballstad.">Når du finner oss i studioet på Ballstad.</p>
       <table class="apningstider-tabell reveal delay-1" style="margin:0 auto;border-collapse:collapse;min-width:280px;">
@@ -853,7 +879,7 @@
 
   <!-- FØLG OSS / INSTAGRAM -->
   <section id="instagram" class="full" style="background:var(--sand);text-align:center;">
-    <div style="max-width:760px;margin:0 auto;padding:0 24px;">
+    <div class="inn" style="max-width:760px;margin:0 auto;">
       <h2 class="seksjon-tittel reveal" data-no="Følg øyeblikkene våre" data-en="Follow our moments">Følg øyeblikkene våre</h2>
       <p class="seksjon-undertekst reveal delay-1" data-no="Se hverdagen i studioet — hender i leire, ovnsåpninger og Lofoten-lyset — på Instagram." data-en="See everyday life in the studio — hands in clay, kiln openings and the Lofoten light — on Instagram.">Se hverdagen i studioet — hender i leire, ovnsåpninger og Lofoten-lyset — på Instagram.</p>
       <a href="https://www.instagram.com/havstund/" target="_blank" rel="noopener" class="knapp reveal delay-1" style="background:linear-gradient(135deg,#f58529,#dd2a7b 55%,#8134af);display:inline-flex;align-items:center;gap:10px;">
