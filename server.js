@@ -152,6 +152,24 @@ app.get(/^\/(?!api).*/, (req, res, next) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// ---- Ukjent API-endepunkt -> ærlig JSON-404 ----
+// Uten denne falt /api/*-kall som ingen rute fanget ned i Express sin
+// innebygde 404-håndterer, og den svarer HTML: "Cannot GET /api/...".
+// Resten av API-et svarer JSON, så en klient som gjorde res.json() på svaret
+// fikk en parse-feil i stedet for en lesbar feilmelding — feilen så ut som noe
+// helt annet enn den var.
+//
+// app.use uten metode fanger ALLE verb med vilje: en POST mot et endepunkt som
+// ikke finnes skal svare like ærlig som en GET. Formen { ok: false, error }
+// matcher feil-middlewaren under, som er den andre catch-all-en på servernivå.
+//
+// MÅ stå etter at rutene er montert (inkludert brain-shim) og FØR
+// feil-middlewaren. Fil-lignende stier utenfor /api beholder Express sin
+// vanlige 404 — en nettleser som ber om en manglende .webp skal ikke ha JSON.
+app.use('/api', (req, res) => {
+  res.status(404).json({ ok: false, error: 'Ukjent endepunkt' });
+});
+
 // ---- Feil-middleware (MÅ stå sist, etter alle ruter) ----
 // Logger via pino og svarer 500.
 // 4 argumenter kreves for at Express skal gjenkjenne dette som error-handler.
