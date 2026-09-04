@@ -359,7 +359,9 @@
        som stillas. Ligger i git-loggen hvis båndet skal tilbake — da med et
        ekte stedsfoto, som var den opprinnelige hensikten. */
     .pris-boks{background:var(--sand);border:1px solid var(--sand-mork);border-radius:16px;padding:24px 26px;margin-top:26px;}
-    .pris-boks .pris-stor{font-family:'Fraunces',serif;font-size:1.5rem;color:var(--leire-mork);margin-bottom:14px;}
+    /* FJERNET 2026-09-04 — .pris-boks .pris-stor: den store "Fra … kr"-linja i
+       Kollektivt maleri og Selskap. Begge seksjonene skal nå kun be om
+       et tilbud, så regelen tegner ingenting. Ligger i git-loggen. */
     .pris-liste{list-style:none;margin:0 0 14px;padding:0;}
     .pris-liste li{padding:8px 0;border-bottom:1px solid var(--sand-mork);color:var(--tekst);font-size:.97rem;}
     .pris-liste li:last-child{border-bottom:none;}
@@ -626,7 +628,11 @@
           <h3 data-no="For grupper" data-en="For groups">For grupper</h3>
           <p data-no="Bedrifter, bursdager og kollektivt maleri. Bedre i dårlig vær — nordlys-forsikring." data-en="Companies, birthdays and collective painting. Better in bad weather — your northern-lights insurance.">Bedrifter, bursdager og kollektivt maleri. Bedre i dårlig vær — nordlys-forsikring.</p>
           <div class="kort-bunn">
-            <span class="pris">fra 950 kr <span class="pris-enhet" data-no="per person · minimum 12 000 kr" data-en="per person · minimum NOK 12,000">per person · minimum 12 000 kr</span></span>
+            <!-- Konkret pris FJERNET 2026-09-04 etter ønske fra eierne. Kortet
+                 dekker bedrifter, bursdager og kollektivt maleri — de samme
+                 tingene som Selskap- og Kollektivt maleri-seksjonene, og de
+                 skal alle be om tilbud i stedet for å oppgi tall. -->
+            <span class="pris" data-no="Be om pris" data-en="Ask for a price">Be om pris</span>
             <span class="krok" data-no="Bedre i dårlig vær" data-en="Better in bad weather">Bedre i dårlig vær</span>
           </div>
         </div>
@@ -655,14 +661,14 @@
         <p class="reveal v-venstre delay-1" data-no="Vi deler ett bilde - et portrett, et Lofoten-motiv, eller deres eget foto - i 4 til 20 fliser. Hver av dere maler sin egen flis, og sammen setter vi dem til ett helt kunstverk." data-en="We split one picture - a portrait, a Lofoten motif, or your own photo - into 4 to 20 tiles. Each of you paints your own tile, and together we assemble them into one complete artwork.">Vi deler ett bilde - et portrett, et Lofoten-motiv, eller deres eget foto - i 4 til 20 fliser. Hver av dere maler sin egen flis, og sammen setter vi dem til ett helt kunstverk.</p>
         <p class="reveal v-venstre delay-2" data-no="Ta med hele verket hjem sammen, eller ta hver deres flis og bygg bildet hjemme. En unik felles aktivitet for familier, venner, bedrifter og feiringer." data-en="Take the whole piece home together, or each take your own tile and build the picture at home. A unique shared activity for families, friends, companies and celebrations.">Ta med hele verket hjem sammen, eller ta hver deres flis og bygg bildet hjemme. En unik felles aktivitet for familier, venner, bedrifter og feiringer.</p>
         <div class="pris-boks reveal v-venstre delay-2">
-          <!-- Pris fra memory-notatet 2026-06-20 (Karri-godkjent estimat):
-               750 kr/person = én flis, minimum 4 personer. NB: kildeplanen
-               (_kilder/Havstund-plan.md, del 13) oppgir 1 200 kr/pp med minimum
-               18 000 kr for felles-kunst-event. De to tallene spriker — eierne
-               må avgjøre hvilket som gjelder før dette står lenge ute. -->
-          <div class="pris-stor"><span data-no="Fra" data-en="From">Fra</span> 750 kr <span style="font-family:'Inter',sans-serif;font-size:.92rem;font-weight:500;color:var(--myk);" data-no="per person · minimum 4 personer" data-en="per person · minimum 4 people">per person · minimum 4 personer</span></div>
+          <!-- Konkret pris FJERNET 2026-09-04 etter ønske fra eierne: her og i
+               Selskap skal det kun stå "Be om et tilbud". Tallene er bevisst
+               IKKE gjengitt her — en HTML-kommentar sendes til hver besøkende og
+               er lesbar i "vis kilde", så prisen ville fortsatt ligget ute.
+               De to sprikende anslagene (memory-notatet 2026-06-20 mot
+               _kilder/Havstund-plan.md del 13) står i commit-meldingen. De er
+               fortsatt ikke avklart, og må avklares før dere priser en jobb. -->
           <ul class="pris-liste">
-            <li data-no="4 personer ≈ 3 000 kr · 10 personer ≈ 7 500 kr · 20 personer ≈ 15 000 kr" data-en="4 people ≈ NOK 3,000 · 10 people ≈ NOK 7,500 · 20 people ≈ NOK 15,000">4 personer ≈ 3 000 kr · 10 personer ≈ 7 500 kr · 20 personer ≈ 15 000 kr</li>
             <li data-no="Deres eget foto, et Lofoten-motiv, eller en overraskelse fra oss" data-en="Your own photo, a Lofoten motif, or a surprise from us">Deres eget foto, et Lofoten-motiv, eller en overraskelse fra oss</li>
             <li data-no="Ingen kan lage det samme to ganger" data-en="No one can ever make the same one twice">Ingen kan lage det samme to ganger</li>
           </ul>
@@ -693,7 +699,6 @@
         <p data-no="Vi holder bursdager, jubileer og småselskaper i studioet. Alle lager noe eget, og hver gjest tar med seg hjem det de har laget. Ingen som har vært her har fått den samme gaven to ganger." data-en="We host birthdays, anniversaries and small parties in the studio. Everyone makes something of their own, and every guest takes their piece home. No one who has been here has received the same gift twice.">Vi holder bursdager, jubileer og småselskaper i studioet. Alle lager noe eget, og hver gjest tar med seg hjem det de har laget. Ingen som har vært her har fått den samme gaven to ganger.</p>
         <p data-no="Dere ordner kake og pynt — vi ordner leire, verktøy, bord og utsikt over havna. Vil dere male sammen i stedet, gjør vi det til et kollektivt maleri dere kan henge opp hjemme." data-en="You bring the cake and decorations — we bring clay, tools, tables and the view over the harbour. If you'd rather paint together, we'll turn it into a collective painting you can hang at home.">Dere ordner kake og pynt — vi ordner leire, verktøy, bord og utsikt over havna. Vil dere male sammen i stedet, gjør vi det til et kollektivt maleri dere kan henge opp hjemme.</p>
         <div class="pris-boks">
-          <div class="pris-stor"><span data-no="Fra" data-en="From">Fra</span> 950 kr <span style="font-family:'Inter',sans-serif;font-size:.92rem;font-weight:500;color:var(--myk);" data-no="per person · minimum 12 000 kr" data-en="per person · minimum NOK 12,000">per person · minimum 12 000 kr</span></div>
           <ul class="pris-liste">
             <li data-no="Barnebursdag, voksenselskap, jubileum eller firmatur" data-en="Children's birthday, adult party, anniversary or company outing">Barnebursdag, voksenselskap, jubileum eller firmatur</li>
             <li data-no="Alle lager sitt eget — og tar det med hjem" data-en="Everyone makes their own — and takes it home">Alle lager sitt eget — og tar det med hjem</li>
